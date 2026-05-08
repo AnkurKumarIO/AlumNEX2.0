@@ -1,5 +1,5 @@
 import React, { useState, useContext } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { AuthContext } from '../context/AuthContext';
 
@@ -100,9 +100,9 @@ export default function StudentLogin() {
           </button>
         </form>
 
-        <p style={{ textAlign: 'center', fontSize: '0.8rem', color: '#c7c4d8', marginTop: '1.25rem' }}>
-          Don't have an account?{' '}
-          <Link to="/student/register" style={{ color: '#c3c0ff', textDecoration: 'none', fontWeight: 600 }}>Register here</Link>
+        <p style={{ textAlign: 'center', fontSize: '0.75rem', color: '#9b98b8', marginTop: '1.25rem', lineHeight: 1.5 }}>
+          Accounts are created by your TNP coordinator.{' '}
+          <span style={{ color: '#ffb95f' }}>Contact your institution admin</span> if you need access.
         </p>
 
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>

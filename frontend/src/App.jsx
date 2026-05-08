@@ -4,13 +4,11 @@ import './index.css';
 import AlumNexLogo from './AlumNexLogo';
 import { AuthContext, AuthProvider } from './context/AuthContext';
 import LandingPage from './pages/LandingPage';
-import StudentRegistration from './pages/StudentRegistration';
 import StudentLogin from './pages/StudentLogin';
 import UnifiedLogin from './pages/UnifiedLogin';
 import ProfileSetup from './pages/ProfileSetup';
 import TNPLogin from './pages/TNPLogin';
 import AlumniLogin from './pages/AlumniLogin';
-import AlumniRegistration from './pages/AlumniRegistration';
 import Dashboard from './pages/Dashboard';
 import AlumniDashboard from './pages/AlumniDashboard';
 import TNPDashboard from './pages/TNPDashboard';
@@ -43,7 +41,6 @@ function PublicNavbar() {
       </Link>
       <div className="navbar-links">
         <Link to="/login">Sign In</Link>
-        <Link to="/student/register" className="nav-cta">Register</Link>
       </div>
     </nav>
   );
@@ -55,21 +52,22 @@ function App() {
       <Router>
         <PublicNavbar />
         <Routes>
-          <Route path="/"                      element={<LandingGuard />} />
-          <Route path="/login"                 element={<UnifiedLogin />} />
-          <Route path="/student/register"      element={<StudentRegistration />} />
-          <Route path="/auth/student/register"  element={<StudentRegistration />} />
-          <Route path="/student/login"         element={<StudentLogin />} />
-          <Route path="/profile-setup"         element={<ProfileSetup />} />
-          <Route path="/alumni/login"          element={<AlumniLogin />} />
-          <Route path="/alumni/register"       element={<AlumniRegistration />} />
-          <Route path="/auth/alumni/register"   element={<AlumniRegistration />} />
-          <Route path="/tnp/login"             element={<TNPLogin />} />
-          <Route path="/dashboard"             element={<DashboardRouter />} />
-          <Route path="/interview/:roomId"     element={<InterviewRoom />} />
+          <Route path="/"                       element={<LandingGuard />} />
+          <Route path="/login"                  element={<UnifiedLogin />} />
+          <Route path="/student/login"          element={<StudentLogin />} />
+          <Route path="/alumni/login"           element={<AlumniLogin />} />
+          <Route path="/tnp/login"              element={<TNPLogin />} />
+          <Route path="/profile-setup"          element={<ProfileSetup />} />
+          <Route path="/dashboard"              element={<DashboardRouter />} />
+          <Route path="/interview/:roomId"      element={<InterviewRoom />} />
           <Route path="/meet-interview/:roomId" element={<GoogleMeetInterviewRoom />} />
-          <Route path="/resume-analyzer"       element={<ResumeAnalyzer />} />
-          <Route path="*"                      element={<Navigate to="/login" replace />} />
+          <Route path="/resume-analyzer"        element={<ResumeAnalyzer />} />
+          {/* Self-registration removed — accounts created by TNP bulk upload */}
+          <Route path="/student/register"       element={<Navigate to="/login" replace />} />
+          <Route path="/auth/student/register"  element={<Navigate to="/login" replace />} />
+          <Route path="/alumni/register"        element={<Navigate to="/login" replace />} />
+          <Route path="/auth/alumni/register"   element={<Navigate to="/login" replace />} />
+          <Route path="*"                       element={<Navigate to="/login" replace />} />
         </Routes>
       </Router>
     </AuthProvider>

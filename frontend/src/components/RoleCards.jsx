@@ -9,8 +9,8 @@ const CARDS = [
     title: 'I am a Student',
     desc: 'Accelerate your career with AI-matched mentors, personalized internship insights, and real-world alumni journeys.',
     checks: ['AI Mentor Matching', 'Resume Intelligence'],
-    btnLabel: 'CREATE STUDENT ACCOUNT',
-    btnTo: '/student/register',
+    btnLabel: 'STUDENT LOGIN',
+    btnTo: '/login',
     glowColor: '99, 179, 237',
   },
   {
@@ -20,8 +20,8 @@ const CARDS = [
     title: 'I am an Alumnus',
     desc: 'Re-engage with your alma mater, mentor the next generation, and tap into an exclusive high-tier professional network.',
     checks: ['Giving & Mentorship', 'Executive Network'],
-    btnLabel: 'CREATE ALUMNI ACCOUNT',
-    btnTo: '/alumni/register',
+    btnLabel: 'ALUMNI LOGIN',
+    btnTo: '/login',
     glowColor: '99, 179, 237',
   },
   {

@@ -37,10 +37,11 @@ app.use('/requests',      require('./routes/requests'));
 app.use('/notifications', require('./routes/notifications'));
 app.use('/users',         require('./routes/users'));
 app.use('/alumni',        require('./routes/alumni'));
-app.use('/register',      require('./routes/register'));
+app.use('/register',      require('./routes/register')); // Bulk upload endpoints
 app.use('/stats',         require('./routes/stats'));
 app.use('/chat',          require('./routes/chat'));
 app.use('/meet',          require('./routes/meetRoutes'));
+app.use('/interview-records', require('./routes/interviewRecords')); // Alumni ratings
 
 // ── Socket.io ─────────────────────────────────────────────────────────────────
 const server = http.createServer(app);
@@ -73,9 +74,13 @@ app.get('/', (req, res) => {
     routes: [
       'GET  /health',
       'GET  /alumni',
-      'POST /auth/student/verify',
-      'POST /auth/tnp/login',
+      'POST /auth/student/login',
       'POST /auth/alumni/login',
+      'POST /auth/tnp/login',
+      'POST /register/bulk-students',
+      'POST /register/bulk-alumni',
+      'GET  /register/template/students',
+      'GET  /register/template/alumni',
       'POST /ai/resume-analyze',
       'POST /ai/interview-analytics',
       'POST /ai/profile-strength',
@@ -89,8 +94,8 @@ app.get('/', (req, res) => {
       'PATCH /users/:id/profile',
       'GET  /stats/platform',
       'GET  /stats/interviews?userId=',
-      'GET  /stats/pending-users',
-      'PATCH /stats/verify/:id',
+      'GET  /stats/mentorship',
+      'PATCH /interview-records/:id',
       'POST /chat/interview',
       'POST /chat/questions',
       'POST /meet/create',

@@ -309,7 +309,7 @@ export const api = {
   ),
 
   fetchAlumni: () => callOrMock(
-    () => fetch(`${API_BASE}/auth/alumni`).then(r => r.json()),
+    () => fetch(`${API_BASE}/alumni`).then(r => r.json()),
     async () => { await mockDelay(); return MOCK_USERS.alumni; }
   ),
 
