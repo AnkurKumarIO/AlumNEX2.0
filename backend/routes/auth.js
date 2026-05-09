@@ -2,6 +2,8 @@ const express = require('express');
 const router  = express.Router();
 const jwt     = require('jsonwebtoken');
 const supabase = require('../supabase');
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'alumnex_secret_2026';
 
@@ -11,6 +13,19 @@ function makeToken(user) {
     JWT_SECRET,
     { expiresIn: '7d' }
   );
+}
+
+// Upsert user into Prisma so all other routes (requests, notifications) can find them
+async function upsertPrismaUser({ id, role, name, email, department, profile_data }) {
+  try {
+    await prisma.user.upsert({
+      where: { id },
+      update: { name, email, department: department || 'General', profile_data: JSON.stringify(profile_data || {}) },
+      create: { id, role, name, email, department: department || 'General', verification_status: 'VERIFIED', profile_data: JSON.stringify(profile_data || {}) },
+    });
+  } catch (e) {
+    console.warn('[Auth] Prisma upsert failed:', e.message);
+  }
 }
 
 // ── POST /auth/student/register ───────────────────────────────────────────────
@@ -40,6 +55,9 @@ router.post('/student/register', async (req, res) => {
       profile_data:        { college, year, username },
     }).select().single();
     if (insertErr) throw insertErr;
+
+    // Mirror to Prisma so requests/notifications work
+    await upsertPrismaUser({ id: user.id, role: 'STUDENT', name, email, department, profile_data: { college, year, username } });
 
     res.json({ message: 'Registration successful', token: makeToken(user), user: { id: user.id, name: user.name, role: user.role, email: user.email } });
   } catch (err) {
@@ -75,6 +93,9 @@ router.post('/student/login', async (req, res) => {
     const { data: user } = await supabase.from('users').select('*').eq('email', userEmail).single();
     if (!user || user.role !== 'STUDENT') return res.status(401).json({ error: 'Not a student account.' });
 
+    // Mirror to Prisma on every login (keeps data in sync)
+    await upsertPrismaUser({ id: user.id, role: 'STUDENT', name: user.name, email: user.email, department: user.department, profile_data: user.profile_data });
+
     res.json({ message: 'Login successful', token: makeToken(user), user: { id: user.id, name: user.name, role: user.role, email: user.email, department: user.department, profile_data: user.profile_data } });
   } catch (err) {
     console.error('Student Login Error:', err.message);
@@ -109,6 +130,9 @@ router.post('/alumni/register', async (req, res) => {
     }).select().single();
     if (insertErr) throw insertErr;
 
+    // Mirror to Prisma
+    await upsertPrismaUser({ id: user.id, role: 'ALUMNI', name, email, department, profile_data: { username, company, batchYear } });
+
     res.json({ message: 'Alumni registration successful', token: makeToken(user), user: { id: user.id, name: user.name, role: user.role, email: user.email } });
   } catch (err) {
     console.error('Alumni Register Error:', err.message);
@@ -138,6 +162,9 @@ router.post('/alumni/login', async (req, res) => {
 
     const { data: user } = await supabase.from('users').select('*').eq('email', userEmail).single();
     if (!user || user.role !== 'ALUMNI') return res.status(401).json({ error: 'Not an alumni account.' });
+
+    // Mirror to Prisma on every login
+    await upsertPrismaUser({ id: user.id, role: 'ALUMNI', name: user.name, email: user.email, department: user.department, profile_data: user.profile_data });
 
     res.json({ message: 'Login successful', token: makeToken(user), user: { id: user.id, name: user.name, role: user.role, email: user.email, department: user.department, profile_data: user.profile_data } });
   } catch (err) {

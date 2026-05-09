@@ -120,7 +120,7 @@ server.on('error', err => {
 });
 
 server.listen(PORT, () => {
-  const baseUrl = isProduction ? `https://alumnex-backend.onrender.com` : `http://localhost:${PORT}`;
+  const baseUrl = isProduction ? `https://alumnex2-0.onrender.com` : `http://localhost:${PORT}`;
   console.log(`\n🚀 AlumNEX Backend running on ${baseUrl}`);
   console.log(`📡 Socket.io ready on ${baseUrl.replace('http', 'ws')}/interview`);
   console.log(`🗄️  Database: Supabase (PostgreSQL)`);

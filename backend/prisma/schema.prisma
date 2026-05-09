@@ -99,7 +99,7 @@ model InterviewRecord {
 
 model SessionFeedback {
   id              String   @id @default(uuid())
-  room_id         String
+  room_id         String   @unique
   topic           String?
   meet_link       String?
 
