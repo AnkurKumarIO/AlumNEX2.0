@@ -7,30 +7,14 @@ import AnalyticsTab from './TNPAnalytics';
 import SystemSettingsTab from './TNPSettings';
 import ComplianceTab from './TNPCompliance';
 import BulkUploadTab from './TNPBulkUpload';
+import DirectoryTab from './TNPDirectory';
 import { subscribeRealtimeSync } from '../lib/realtimeSync';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
-// ── Activity feed data (mentorship-focused) ───────────────────────────────────
-const FEED_PREVIEW = [
-  { icon: 'person_add',      color: '#4edea3', title: 'New Alumni Mentor Added',    desc: 'Priya Sharma (Google) account created via bulk upload.',       time: '2 minutes ago' },
-  { icon: 'event_available', color: '#ffb95f', title: '12 Sessions Completed',      desc: 'Mock interview batch for System Design concluded.',             time: '4 hours ago' },
-  { icon: 'handshake',       color: '#c3c0ff', title: 'Mentorship Match Created',   desc: 'Rohan Verma matched with Neha Gupta (Airbnb).',                time: '6 hours ago' },
-];
-
-const FULL_FEED = [
-  { icon: 'person_add',         color: '#4edea3', title: 'New Alumni Mentor Added',      desc: 'Priya Sharma (Google) account created via bulk upload.',                    time: '2 minutes ago',  category: 'Alumni' },
-  { icon: 'school',             color: '#c3c0ff', title: 'Student Batch Uploaded',        desc: '47 students from Batch 2025 added to the platform.',                        time: '1 hour ago',     category: 'Student' },
-  { icon: 'event_available',    color: '#ffb95f', title: '12 Sessions Completed',         desc: 'Mock interview batch for System Design concluded successfully.',              time: '4 hours ago',    category: 'Interview' },
-  { icon: 'handshake',          color: '#c3c0ff', title: 'Mentorship Match Created',      desc: 'Rohan Verma (Student) matched with Neha Gupta (Alumni, Airbnb).',            time: '6 hours ago',    category: 'Mentorship' },
-  { icon: 'star',               color: '#ffb95f', title: 'Top Mentor Recognised',         desc: 'Amit Joshi (Microsoft) rated 4.9/5 across 32 mentorship sessions.',          time: '8 hours ago',    category: 'Mentorship' },
-  { icon: 'psychology',         color: '#4edea3', title: 'Alumni Mentor Onboarded',       desc: 'Dr. Elena Rodriguez (PhD AI Ethics) completed profile setup.',               time: '10 hours ago',   category: 'Alumni' },
-  { icon: 'event_repeat',       color: '#c3c0ff', title: 'Session Rescheduled',           desc: 'Mock interview for Kavya Nair rescheduled to Oct 18th at 3:00 PM.',          time: '1 day ago',      category: 'Interview' },
-  { icon: 'group_add',          color: '#60a5fa', title: 'Batch 2025 Onboarding',         desc: '47 new students from Batch 2025 completed profile setup.',                   time: '2 days ago',     category: 'Student' },
-  { icon: 'cancel',             color: '#ffb4ab', title: 'Session Cancelled',             desc: 'Interview session between Arjun M. and Rahul V. was cancelled.',             time: '2 days ago',     category: 'Interview' },
-  { icon: 'analytics',          color: '#c3c0ff', title: 'Weekly Report Generated',       desc: 'Mentorship analytics report for Week 41 auto-generated.',                    time: '4 days ago',     category: 'System' },
-  { icon: 'notifications_active',color: '#4edea3', title: 'Session Reminder Sent',        desc: 'Automated reminder sent to 34 students with upcoming sessions.',              time: '4 days ago',     category: 'System' },
-  { icon: 'login',              color: '#c7c4d8', title: 'TNP Login',                     desc: 'Coordinator logged in from 192.168.1.10.',                                   time: '5 days ago',     category: 'System' },
+// ── Activity feed static fallback (shown when DB is empty) ────────────────────
+const FEED_FALLBACK = [
+  { id: 'fb-1', icon: 'info',   color: '#c7c4d8', title: 'No live activity yet', desc: 'Activity events will appear here as students and mentors interact with the platform.', time: new Date().toISOString(), category: 'System' },
 ];
 
 const CATEGORY_COLORS = {
@@ -43,8 +27,36 @@ const CATEGORY_COLORS = {
 
 function ActivityFeedTab() {
   const [filter, setFilter] = React.useState('All');
+  const [liveFeed, setLiveFeed] = React.useState([]);
+  const [feedLoading, setFeedLoading] = React.useState(true);
   const categories = ['All', 'Alumni', 'Student', 'Interview', 'Mentorship', 'System'];
-  const filtered = filter === 'All' ? FULL_FEED : FULL_FEED.filter(f => f.category === filter);
+
+  React.useEffect(() => {
+    setFeedLoading(true);
+    fetch(`${API_BASE}/stats/recent-activity`)
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          setLiveFeed(data);
+        } else {
+          setLiveFeed(FEED_FALLBACK);
+        }
+      })
+      .catch(() => setLiveFeed(FEED_FALLBACK))
+      .finally(() => setFeedLoading(false));
+  }, []);
+
+  const filtered = filter === 'All' ? liveFeed : liveFeed.filter(f => f.category === filter);
+
+  const timeAgo = (iso) => {
+    const diff = Date.now() - new Date(iso).getTime();
+    const m = Math.floor(diff / 60000);
+    if (m < 1) return 'just now';
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    return `${Math.floor(h / 24)}d ago`;
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -77,7 +89,7 @@ function ActivityFeedTab() {
                   <span style={{ fontWeight: 700, fontSize: '0.875rem', color: '#dae2fd' }}>{f.title}</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ background: `${CATEGORY_COLORS[f.category]}18`, color: CATEGORY_COLORS[f.category], padding: '0.15rem 0.5rem', borderRadius: 6, fontSize: '0.55rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{f.category}</span>
-                    <span style={{ fontSize: '0.6rem', color: 'rgba(199,196,216,0.45)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{f.time}</span>
+                    <span style={{ fontSize: '0.6rem', color: 'rgba(199,196,216,0.45)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{typeof f.time === 'string' && f.time.includes('T') ? timeAgo(f.time) : (f.time || '')}</span>
                   </div>
                 </div>
                 <p style={{ fontSize: '0.78rem', color: '#c7c4d8', lineHeight: 1.6, margin: 0 }}>{f.desc}</p>
@@ -112,19 +124,23 @@ export default function TNPDashboard() {
       .catch(() => {});
   }, []);
 
-  // Notifications — session-based events
+  // Notifications — live from API
   useEffect(() => {
-    const buildNotifs = () => {
-      const DEMO = [
-        { id: 'demo-1', type: 'session', title: 'Session Completed', desc: 'Rohan Verma completed a System Design session with Priya Sharma', time: new Date(Date.now() - 5 * 60000).toISOString(), icon: 'event_available', color: '#4edea3' },
-        { id: 'demo-2', type: 'match',   title: 'New Mentorship Match', desc: 'Kavya Nair matched with Amit Joshi (Microsoft)', time: new Date(Date.now() - 62 * 60000).toISOString(), icon: 'handshake', color: '#c3c0ff' },
-        { id: 'demo-3', type: 'upload',  title: 'Bulk Upload Complete', desc: '47 student accounts created from Batch 2025 CSV', time: new Date(Date.now() - 3 * 3600000).toISOString(), icon: 'cloud_upload', color: '#ffb95f' },
-      ];
-      setTnpNotifs(DEMO);
+    const fetchNotifs = () => {
+      fetch(`${API_BASE}/stats/recent-activity`)
+        .then(r => r.json())
+        .then(data => {
+          if (Array.isArray(data) && data.length > 0) {
+            setTnpNotifs(data.slice(0, 5)); // Show top 5 in bell dropdown
+          }
+        })
+        .catch(() => {});
     };
-    buildNotifs();
-    const unsubscribe = subscribeRealtimeSync(buildNotifs);
-    return () => unsubscribe();
+    fetchNotifs();
+    const unsubscribe = subscribeRealtimeSync(fetchNotifs);
+    // Also refresh every 30s
+    const interval = setInterval(fetchNotifs, 30000);
+    return () => { unsubscribe(); clearInterval(interval); };
   }, []);
 
   const unreadCount = tnpNotifs.filter(n => !seenNotifIds.includes(n.id)).length;
@@ -166,6 +182,7 @@ export default function TNPDashboard() {
   const TNP_NAV = [
     { icon: 'dashboard',        label: 'Dashboard',    tab: 'home' },
     { icon: 'cloud_upload',     label: 'Bulk Upload',  tab: 'upload' },
+    { icon: 'people',           label: 'Directory',    tab: 'directory' },
     { icon: 'analytics',        label: 'Analytics',    tab: 'analytics' },
     { icon: 'dynamic_feed',     label: 'Activity Feed',tab: 'activity' },
     { icon: 'policy',           label: 'Compliance',   tab: 'compliance' },
@@ -174,6 +191,7 @@ export default function TNPDashboard() {
 
   const renderContent = () => {
     if (activeTab === 'upload')     return <BulkUploadTab />;
+    if (activeTab === 'directory')  return <DirectoryTab />;
     if (activeTab === 'analytics')  return <AnalyticsTab />;
     if (activeTab === 'activity')   return <ActivityFeedTab />;
     if (activeTab === 'compliance') return <ComplianceTab logRole={logRole} setLogRole={setLogRole} logAction={logAction} setLogAction={setLogAction} logDate={logDate} setLogDate={setLogDate} />;
@@ -313,7 +331,7 @@ export default function TNPDashboard() {
 
         {/* Content */}
         <section style={{ marginTop: 64, padding: '2rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          {activeTab !== 'home' ? renderContent() : <HomeDashboard stats={stats} setActiveTab={setActiveTab} feedPreview={FEED_PREVIEW} />}
+          {activeTab !== 'home' ? renderContent() : <HomeDashboard stats={stats} setActiveTab={setActiveTab} />}
         </section>
       </main>
     </div>
@@ -321,7 +339,30 @@ export default function TNPDashboard() {
 }
 
 // ── Home Dashboard ────────────────────────────────────────────────────────────
-function HomeDashboard({ stats, setActiveTab, feedPreview }) {
+function HomeDashboard({ stats, setActiveTab }) {
+  const [feedPreview, setFeedPreview] = React.useState([]);
+
+  React.useEffect(() => {
+    fetch(`${API_BASE}/stats/recent-activity`)
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          setFeedPreview(data.slice(0, 3));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const timeAgo = (iso) => {
+    const diff = Date.now() - new Date(iso).getTime();
+    const m = Math.floor(diff / 60000);
+    if (m < 1) return 'just now';
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    return `${Math.floor(h / 24)}d ago`;
+  };
+
   return (
     <>
       {/* Page header */}
@@ -370,8 +411,8 @@ function HomeDashboard({ stats, setActiveTab, feedPreview }) {
               {[
                 { icon: 'cloud_upload',  label: 'Upload Students',  sub: 'Add student batch via CSV',    tab: 'upload',    color: '#c3c0ff' },
                 { icon: 'psychology',    label: 'Upload Alumni',    sub: 'Add mentor batch via CSV',     tab: 'upload',    color: '#4edea3' },
+                { icon: 'people',        label: 'User Directory',   sub: 'Browse all registered users',  tab: 'directory', color: '#f472b6' },
                 { icon: 'analytics',     label: 'View Analytics',   sub: 'Session & mentor insights',    tab: 'analytics', color: '#ffb95f' },
-                { icon: 'dynamic_feed',  label: 'Activity Feed',    sub: 'Recent platform events',       tab: 'activity',  color: '#60a5fa' },
               ].map(a => (
                 <button key={a.label} onClick={() => setActiveTab(a.tab)}
                   style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '1rem', background: '#131b2e', borderRadius: 14, border: `1px solid ${a.color}20`, cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s' }}
@@ -426,14 +467,16 @@ function HomeDashboard({ stats, setActiveTab, feedPreview }) {
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', position: 'relative' }}>
               <div style={{ position: 'absolute', left: 11, top: 8, bottom: 8, width: 1, background: 'rgba(70,69,85,0.3)' }} />
-              {feedPreview.map((f, i) => (
-                <div key={i} style={{ position: 'relative', paddingLeft: 36 }}>
+              {feedPreview.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '1rem', color: '#c7c4d8', fontSize: '0.78rem' }}>No recent activity. Events will appear as the platform is used.</div>
+              ) : feedPreview.map((f, i) => (
+                <div key={f.id || i} style={{ position: 'relative', paddingLeft: 36 }}>
                   <div style={{ position: 'absolute', left: 0, top: 0, width: 24, height: 24, borderRadius: '50%', background: `${f.color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}>
                     <span className="material-symbols-outlined" style={{ fontSize: 12, color: f.color, fontVariationSettings: "'FILL' 1" }}>{f.icon}</span>
                   </div>
                   <div style={{ fontWeight: 600, fontSize: '0.875rem', marginBottom: 4 }}>{f.title}</div>
                   <div style={{ fontSize: '0.75rem', color: '#c7c4d8', lineHeight: 1.5 }}>{f.desc}</div>
-                  <div style={{ fontSize: '0.6rem', color: 'rgba(199,196,216,0.5)', marginTop: 4, textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.1em' }}>{f.time}</div>
+                  <div style={{ fontSize: '0.6rem', color: 'rgba(199,196,216,0.5)', marginTop: 4, textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.1em' }}>{typeof f.time === 'string' && f.time.includes('T') ? timeAgo(f.time) : (f.time || '')}</div>
                 </div>
               ))}
             </div>

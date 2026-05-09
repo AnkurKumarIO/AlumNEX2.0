@@ -121,7 +121,7 @@ export default function Dashboard() {
   const [profileData, setProfileData] = useState({});
   const [aiProfileStrength, setAiProfileStrength] = useState(null);
 
-  const hasRealUserId = user?.id && !String(user.id).startsWith('stu-') && !String(user.id).startsWith('alm-');
+  const hasRealUserId = !!user?.id;
 
   // ── Real-time notifications using Supabase subscriptions ──────────────────
   const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications(user?.id);

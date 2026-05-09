@@ -129,6 +129,7 @@ router.post('/alumni/register', async (req, res) => {
       data: {
         id:                  authData.user.id,
         role:                'ALUMNI',
+        username:            username || null,
         name,
         email,
         department:          department || 'General',

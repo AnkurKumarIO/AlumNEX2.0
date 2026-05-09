@@ -54,40 +54,58 @@ async function sendWelcomeEmail({ to, name, username, password, role, loginUrl }
   if (!transporter) return { skipped: true, reason: 'Email not configured' };
   try {
     const roleLabel = role === 'STUDENT' ? 'Student' : 'Alumni Mentor';
-    const subject   = `Welcome to AlumNEX — Your ${roleLabel} Account`;
+    const roleColor = role === 'STUDENT' ? '#c3c0ff' : '#4edea3';
+    const subject   = `Welcome to AlumNEX — Your ${roleLabel} Account is Ready`;
     const html = `
 <!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><style>
-  body { font-family: Inter, Arial, sans-serif; background: #0b1326; color: #dae2fd; margin: 0; padding: 0; }
-  .container { max-width: 560px; margin: 40px auto; background: #171f33; border-radius: 16px; overflow: hidden; border: 1px solid rgba(195,192,255,0.15); }
-  .header { background: linear-gradient(135deg,#4f46e5,#c3c0ff); padding: 32px; text-align: center; }
-  .header h1 { color: #1d00a5; margin: 0; font-size: 1.75rem; font-weight: 900; letter-spacing: -0.03em; }
-  .header p { color: #1d00a5; margin: 8px 0 0; opacity: 0.8; font-size: 0.875rem; }
-  .body { padding: 32px; }
-  .greeting { font-size: 1.1rem; font-weight: 700; margin-bottom: 16px; }
-  .cred-box { background: #131b2e; border-radius: 12px; padding: 20px; margin: 20px 0; border: 1px solid rgba(195,192,255,0.15); }
-  .cred-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(70,69,85,0.2); }
-  .cred-row:last-child { border-bottom: none; }
-  .cred-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #c7c4d8; }
-  .cred-value { font-family: monospace; font-size: 1rem; font-weight: 700; color: #c3c0ff; }
-  .btn { display: block; width: fit-content; margin: 24px auto 0; padding: 14px 32px; background: linear-gradient(135deg,#4f46e5,#c3c0ff); color: #1d00a5; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 0.875rem; text-align: center; }
-  .note { font-size: 0.78rem; color: #c7c4d8; line-height: 1.6; margin-top: 24px; padding: 16px; background: rgba(255,185,95,0.08); border-radius: 10px; border-left: 3px solid #ffb95f; }
-  .footer { padding: 20px 32px; border-top: 1px solid rgba(70,69,85,0.2); text-align: center; font-size: 0.72rem; color: #c7c4d8; }
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
+  body{font-family:'Segoe UI',Inter,Arial,sans-serif;background:#f5f5f5;color:#1a1a2e;margin:0;padding:0;}
+  .wrap{max-width:600px;margin:32px auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);}
+  .header{background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);padding:36px 32px;text-align:center;}
+  .logo-row{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:8px;}
+  .logo-icon{width:44px;height:44px;background:linear-gradient(135deg,#4f46e5,#818cf8);border-radius:12px;display:flex;align-items:center;justify-content:center;}
+  .logo-text{font-size:1.6rem;font-weight:900;color:#ffffff;letter-spacing:-0.03em;}
+  .logo-text span{color:#818cf8;}
+  .header-sub{font-size:0.72rem;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:0.15em;margin-top:6px;}
+  .body{padding:32px;}
+  .greeting{font-size:1.15rem;font-weight:700;color:#1a1a2e;margin-bottom:16px;}
+  .role-badge{display:inline-block;background:${roleColor}20;color:${role === 'STUDENT' ? '#4f46e5' : '#059669'};padding:4px 12px;border-radius:20px;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:16px;}
+  .intro{color:#4a5568;line-height:1.7;font-size:0.875rem;margin-bottom:24px;}
+  .cred-box{background:#f8fafc;border-radius:12px;padding:0;margin:24px 0;border:1px solid #e2e8f0;overflow:hidden;}
+  .cred-header{background:#1a1a2e;padding:12px 20px;}
+  .cred-header span{color:#ffffff;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;}
+  .cred-row{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid #e2e8f0;}
+  .cred-row:last-child{border-bottom:none;}
+  .cred-label{font-size:0.75rem;font-weight:600;color:#718096;text-transform:uppercase;letter-spacing:0.08em;}
+  .cred-value{font-family:'Courier New',monospace;font-size:0.95rem;font-weight:700;color:#1a1a2e;}
+  .btn{display:block;width:fit-content;margin:28px auto 0;padding:14px 40px;background:linear-gradient(135deg,#4f46e5,#818cf8);color:#ffffff;text-decoration:none;border-radius:12px;font-weight:700;font-size:0.9rem;text-align:center;box-shadow:0 4px 14px rgba(79,70,229,0.3);}
+  .note{font-size:0.78rem;color:#718096;line-height:1.6;margin-top:24px;padding:16px;background:#fffbeb;border-radius:10px;border-left:3px solid #f59e0b;}
+  .note strong{color:#92400e;}
+  .footer{padding:24px 32px;border-top:1px solid #e2e8f0;text-align:center;background:#f8fafc;}
+  .footer-brand{font-size:0.7rem;font-weight:700;color:#4f46e5;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;}
+  .footer-inst{font-size:0.72rem;color:#a0aec0;line-height:1.6;}
 </style></head>
 <body>
-  <div class="container">
+  <div class="wrap">
     <div class="header">
-      <h1>AlumNEX</h1>
-      <p>Mentorship & Mock Interview Platform</p>
+      <div class="logo-row">
+        <div class="logo-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5z" fill="#ffffff" opacity="0.9"/><path d="M2 17l10 5 10-5" stroke="#ffffff" stroke-width="2" fill="none" opacity="0.6"/><path d="M2 12l10 5 10-5" stroke="#ffffff" stroke-width="2" fill="none" opacity="0.8"/></svg>
+        </div>
+        <div class="logo-text">Alum<span>NEX</span></div>
+      </div>
+      <div class="header-sub">VNIT Training & Placement Cell — Mentorship Platform</div>
     </div>
     <div class="body">
       <div class="greeting">Hi ${name} 👋</div>
-      <p style="color:#c7c4d8;line-height:1.6;font-size:0.875rem;">
-        Your <strong style="color:#dae2fd">${roleLabel}</strong> account on AlumNEX has been created by your TNP coordinator.
-        Use the credentials below to sign in.
+      <div class="role-badge">${roleLabel} Account</div>
+      <p class="intro">
+        Your <strong>${roleLabel}</strong> account on AlumNEX has been created by the VNIT T&P Cell.
+        Use the credentials below to sign in and ${role === 'STUDENT' ? 'connect with alumni mentors for mock interviews' : 'start mentoring students through mock interviews'}.
       </p>
       <div class="cred-box">
+        <div class="cred-header"><span>🔑 Your Login Credentials</span></div>
         <div class="cred-row">
           <span class="cred-label">Username</span>
           <span class="cred-value">${username}</span>
@@ -103,12 +121,16 @@ async function sendWelcomeEmail({ to, name, username, password, role, loginUrl }
       </div>
       <a href="${loginUrl}" class="btn">Sign In to AlumNEX →</a>
       <div class="note">
-        ⚠️ <strong>Change your password</strong> after your first login. Keep these credentials safe and do not share them.
+        ⚠️ <strong>Change your password</strong> after your first login. Keep these credentials safe and do not share them with anyone.
       </div>
     </div>
     <div class="footer">
-      AlumNEX — Bridging Campus and Career<br>
-      This is an automated message. Do not reply.
+      <div class="footer-brand">AlumNEX — Bridging Campus & Career</div>
+      <div class="footer-inst">
+        VNIT Training & Placement Cell<br>
+        Visvesvaraya National Institute of Technology, Nagpur<br>
+        This is an automated message. Do not reply.
+      </div>
     </div>
   </div>
 </body>
@@ -277,7 +299,8 @@ router.post('/bulk-students', async (req, res) => {
             }).then(emailResult => {
               const createdRec = results.created.find(r => r.email === email);
               if (createdRec) createdRec.emailSent = emailResult.sent || false;
-            }).catch(console.error)
+              return emailResult; // Must return so Promise.allSettled captures it
+            }).catch(err => { console.error(err); return { skipped: true }; })
           );
         }
       } catch (err) {
@@ -285,8 +308,9 @@ router.post('/bulk-students', async (req, res) => {
       }
     }
 
-    // Let emails send in background
-    Promise.allSettled(emailPromises);
+    // Wait for emails to settle so we can report accurate counts
+    const emailResults = await Promise.allSettled(emailPromises);
+    const emailsSent = emailResults.filter(r => r.status === 'fulfilled' && r.value?.sent).length;
 
     res.json({
       message: `Bulk upload complete. Created: ${results.created.length}, Skipped: ${results.skipped.length}, Failed: ${results.failed.length}`,
@@ -295,7 +319,7 @@ router.post('/bulk-students', async (req, res) => {
         created: results.created.length,
         skipped: results.skipped.length,
         failed:  results.failed.length,
-        emailsSent: 0,
+        emailsSent,
       },
       results,
     });
@@ -390,7 +414,8 @@ router.post('/bulk-alumni', async (req, res) => {
             }).then(emailResult => {
               const createdRec = results.created.find(r => r.email === email);
               if (createdRec) createdRec.emailSent = emailResult.sent || false;
-            }).catch(console.error)
+              return emailResult; // Must return so Promise.allSettled captures it
+            }).catch(err => { console.error(err); return { skipped: true }; })
           );
         }
       } catch (err) {
@@ -398,8 +423,9 @@ router.post('/bulk-alumni', async (req, res) => {
       }
     }
 
-    // Let emails send in background
-    Promise.allSettled(emailPromises);
+    // Wait for emails to settle so we can report accurate counts
+    const emailResults = await Promise.allSettled(emailPromises);
+    const emailsSent = emailResults.filter(r => r.status === 'fulfilled' && r.value?.sent).length;
 
     res.json({
       message: `Bulk upload complete. Created: ${results.created.length}, Skipped: ${results.skipped.length}, Failed: ${results.failed.length}`,
@@ -408,7 +434,7 @@ router.post('/bulk-alumni', async (req, res) => {
         created: results.created.length,
         skipped: results.skipped.length,
         failed:  results.failed.length,
-        emailsSent: 0,
+        emailsSent,
       },
       results,
     });
