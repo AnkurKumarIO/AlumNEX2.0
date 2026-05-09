@@ -130,67 +130,41 @@ async function sendWelcomeEmail({ to, name, username, password, role, loginUrl }
 
 // ── Core account creator ──────────────────────────────────────────────────────
 async function createUser({ email, password, username, role, name, department, profileData }) {
-  if (!supabase) throw new Error('Supabase not configured');
-
-  // Check duplicate by email
-  const { data: existing } = await supabase
-    .from('users')
-    .select('id')
-    .eq('email', email)
-    .single();
+  // Check duplicate by email in Prisma
+  const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) return { skipped: true, email, username, reason: 'Email already exists' };
 
-  // Check duplicate by username
-  const { data: existingUser } = await supabase
-    .from('users')
-    .select('id')
-    .eq('profile_data->>username', username)
-    .maybeSingle();
-  if (existingUser) return { skipped: true, email, username, reason: 'Username already exists' };
-
-  // Create Supabase auth user
-  const { data: authData, error: authErr } = await supabase.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
+  // Check duplicate by username in Prisma
+  const allWithRole = await prisma.user.findMany({ where: { role } });
+  const usernameExists = allWithRole.some(u => {
+    try { return JSON.parse(u.profile_data || '{}').username === username; } catch { return false; }
   });
-  if (authErr) throw new Error(`Auth error for ${email}: ${authErr.message}`);
+  if (usernameExists) return { skipped: true, email, username, reason: 'Username already exists' };
 
-  // Insert profile row — username stored in profile_data for login lookup
-  const { data: user, error: insertErr } = await supabase
-    .from('users')
-    .insert({
-      id:                  authData.user.id,
+  // Create Supabase Auth user (for login)
+  let authId = null;
+  if (supabase) {
+    const { data: authData, error: authErr } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+    });
+    if (authErr) throw new Error(`Auth error for ${email}: ${authErr.message}`);
+    authId = authData.user.id;
+  }
+
+  // Write to Prisma (primary DB)
+  const user = await prisma.user.create({
+    data: {
+      id:                  authId || undefined, // use Supabase UUID if available
       role,
       name,
       email,
       department:          department || 'General',
       verification_status: 'VERIFIED',
-      profile_data:        { ...profileData, username },
-    })
-    .select()
-    .single();
-
-  if (insertErr) throw new Error(`DB error for ${email}: ${insertErr.message}`);
-
-  // Mirror to Prisma so requests/notifications/alumni listing work
-  try {
-    await prisma.user.upsert({
-      where: { id: authData.user.id },
-      update: { name, email, department: department || 'General', profile_data: JSON.stringify({ ...profileData, username }) },
-      create: {
-        id: authData.user.id,
-        role,
-        name,
-        email,
-        department: department || 'General',
-        verification_status: 'VERIFIED',
-        profile_data: JSON.stringify({ ...profileData, username }),
-      },
-    });
-  } catch (prismaErr) {
-    console.warn(`[Register] Prisma mirror failed for ${email}:`, prismaErr.message);
-  }
+      profile_data:        JSON.stringify({ ...profileData, username }),
+    },
+  });
 
   return { created: true, email, name, username, password, user };
 }
