@@ -1,7 +1,7 @@
 import React from 'react';
-import DualAgentInterviewRoom from '../DualAgentInterviewRoom';
+import GoogleMeetInterviewRoom from '../GoogleMeetInterviewRoom';
 
-// No auth guard — anyone with the room link can join as a guest
+// No auth guard — anyone with the room link can join
 export default function InterviewRoom() {
-  return <DualAgentInterviewRoom />;
+  return <GoogleMeetInterviewRoom />;
 }

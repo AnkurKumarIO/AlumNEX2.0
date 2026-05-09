@@ -13,7 +13,6 @@ import Dashboard from './pages/Dashboard';
 import AlumniDashboard from './pages/AlumniDashboard';
 import TNPDashboard from './pages/TNPDashboard';
 import InterviewRoom from './pages/InterviewRoom';
-import GoogleMeetInterviewRoom from './GoogleMeetInterviewRoom';
 import ResumeAnalyzer from './pages/ResumeAnalyzer';
 
 function DashboardRouter() {
@@ -60,7 +59,6 @@ function App() {
           <Route path="/profile-setup"          element={<ProfileSetup />} />
           <Route path="/dashboard"              element={<DashboardRouter />} />
           <Route path="/interview/:roomId"      element={<InterviewRoom />} />
-          <Route path="/meet-interview/:roomId" element={<GoogleMeetInterviewRoom />} />
           <Route path="/resume-analyzer"        element={<ResumeAnalyzer />} />
           {/* Self-registration removed — accounts created by TNP bulk upload */}
           <Route path="/student/register"       element={<Navigate to="/login" replace />} />

@@ -42,6 +42,7 @@ app.use('/stats',         require('./routes/stats'));
 app.use('/chat',          require('./routes/chat'));
 app.use('/meet',          require('./routes/meetRoutes'));
 app.use('/interview-records', require('./routes/interviewRecords')); // Alumni ratings
+app.use('/feedback',          require('./routes/feedback'));          // Session feedback
 
 // ── Socket.io ─────────────────────────────────────────────────────────────────
 const server = http.createServer(app);

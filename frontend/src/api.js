@@ -464,6 +464,30 @@ export const api = {
       };
     }
   ),
+
+  // ─── Session Feedback ────────────────────────────────────────────────────
+  
+  submitFeedback: (data) => callOrMock(
+    () => fetch(`${API_BASE}/feedback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }).then(r => r.json()),
+    async () => {
+      await mockDelay(400);
+      return { success: true, session: { id: `mock-${Date.now()}`, ...data } };
+    }
+  ),
+
+  getUserFeedback: (userId) => callOrMock(
+    () => fetch(`${API_BASE}/feedback/user/${userId}`).then(r => r.json()),
+    async () => { await mockDelay(300); return []; }
+  ),
+
+  getRoomFeedback: (roomId) => callOrMock(
+    () => fetch(`${API_BASE}/feedback/room/${roomId}`).then(r => r.json()),
+    async () => { await mockDelay(200); return null; }
+  ),
 };
 
 export const SOCKET_URL = ROOT_BASE;

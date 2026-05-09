@@ -102,7 +102,7 @@ function MentorBookModal({ mentor, studentName, onClose, onSent }) {
 const NAV_ITEMS = [
   { icon: 'dashboard',   label: 'Dashboard',          tab: 'home' },
   { icon: 'group',       label: 'Directory',           tab: 'directory' },
-  { icon: 'psychology',  label: 'Alumni Intelligence', tab: 'analytics' },
+  { icon: 'history',     label: 'Session History',     tab: 'analytics' },
   { icon: 'chat_bubble', label: 'Messages',            tab: 'messages' },
   { icon: 'settings',    label: 'Settings',            tab: 'settings' },
 ];
@@ -529,7 +529,7 @@ export default function Dashboard() {
           <nav style={{ display: 'flex', gap: '1.5rem' }}>
             {[
               { label: 'Network',     tab: 'directory' },
-              { label: 'Insights',    tab: 'analytics' },
+              { label: 'Session History', tab: 'analytics' },
               { label: 'Mentorship',  tab: 'premium'   },
               { label: 'Messages',    tab: 'messages'  },
             ].map((t) => (
