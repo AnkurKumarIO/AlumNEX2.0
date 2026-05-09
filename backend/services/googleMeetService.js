@@ -10,10 +10,10 @@
  * @returns {string} Google Meet URL
  */
 function generateSimpleMeetLink(roomId) {
-  // Create a unique, readable code
-  const timestamp = Date.now().toString(36);
-  const randomPart = Math.random().toString(36).substring(2, 7);
-  const code = `alumnex-${roomId}-${timestamp}${randomPart}`;
+  // Google Meet codes are 10 characters: 3-4-3 letters (aaa-bbbb-ccc)
+  const letters = 'abcdefghijklmnopqrstuvwxyz';
+  const rand = (len) => Array.from({length: len}, () => letters[Math.floor(Math.random() * letters.length)]).join('');
+  const code = `${rand(3)}-${rand(4)}-${rand(3)}`;
   
   return `https://meet.google.com/${code}`;
 }
@@ -25,8 +25,30 @@ function generateSimpleMeetLink(roomId) {
  * @returns {string} Google Meet URL
  */
 function generateConsistentMeetLink(roomId) {
-  // Create a hash-like code from roomId for consistency
-  const code = `alumnex-${roomId}`.toLowerCase().replace(/[^a-z0-9-]/g, '');
+  // Create a 10-char hash-like code from roomId for consistency
+  // We want to map the roomId to a 3-4-3 letter pattern
+  const hash = roomId.split('').reduce((a, b) => {
+    a = ((a << 5) - a) + b.charCodeAt(0);
+    return a & a;
+  }, 0);
+  
+  const letters = 'abcdefghijklmnopqrstuvwxyz';
+  const getLetters = (seed, len) => {
+    let res = '';
+    let val = Math.abs(seed);
+    for (let i = 0; i < len; i++) {
+      res += letters[val % letters.length];
+      val = Math.floor(val / letters.length);
+      if (val === 0) val = seed + i; // prevent empty
+    }
+    return res;
+  };
+
+  const p1 = getLetters(hash, 3);
+  const p2 = getLetters(hash + 123, 4);
+  const p3 = getLetters(hash + 456, 3);
+  
+  const code = `${p1}-${p2}-${p3}`;
   return `https://meet.google.com/${code}`;
 }
 

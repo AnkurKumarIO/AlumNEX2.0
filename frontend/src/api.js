@@ -412,9 +412,11 @@ export const api = {
     }).then(r => r.json()),
     async () => {
       await mockDelay(300);
+      // Generate a valid-format code for mock
+      const code = 'abc-defg-hij'; 
       return {
         success: true,
-        meetLink: `https://meet.google.com/alumnex-${roomId}`,
+        meetLink: `https://meet.google.com/${code}`,
         roomId,
         title: title || `AlumNEX Interview - Room ${roomId}`,
       };
@@ -425,9 +427,10 @@ export const api = {
     () => fetch(`${API_BASE}/meet/${roomId}`).then(r => r.json()),
     async () => {
       await mockDelay(200);
+      const code = 'abc-defg-hij';
       return {
         success: true,
-        meetLink: `https://meet.google.com/alumnex-${roomId}`,
+        meetLink: `https://meet.google.com/${code}`,
         roomId,
       };
     }

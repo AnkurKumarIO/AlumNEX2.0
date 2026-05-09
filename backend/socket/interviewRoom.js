@@ -93,6 +93,12 @@ module.exports = (io) => {
       socket.to(roomId).emit('chat_message', msg);
     });
 
+    // ── Meeting link update — sync across participants ──────────────────
+    socket.on('update_meet_link', (roomId, meetLink) => {
+      socket.to(roomId).emit('update_meet_link', meetLink);
+      console.log(`[${roomId}] Meet link updated by ${socket.data?.userId}`);
+    });
+
     // ── Hand raise ───────────────────────────────────────────────────────
     socket.on('hand_raised', (roomId, userId) => {
       socket.to(roomId).emit('hand_raised', userId);

@@ -38,6 +38,7 @@ export default function GoogleMeetInterviewRoom() {
   const [feedbackMsg, setFeedbackMsg] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [meetOpened, setMeetOpened] = useState(false);
+  const [isEditingLink, setIsEditingLink] = useState(false);
 
   const socketRef = useRef(null);
   const timerRef = useRef(null);
@@ -67,6 +68,7 @@ export default function GoogleMeetInterviewRoom() {
     socket.on('user-connected', (uid) => { setPeerName(uid); setPeerPresent(true); });
     socket.on('user-disconnected', () => setPeerPresent(false));
     socket.on('chat_message', (msg) => setChatMessages(p => [...p, msg]));
+    socket.on('update_meet_link', (link) => setMeetLink(link));
     socket.on('session_ended', () => setEnded(true));
 
     timerRef.current = setInterval(() => setElapsed(e => e + 1), 1000);
@@ -118,8 +120,14 @@ export default function GoogleMeetInterviewRoom() {
   };
 
   const openMeet = () => {
+    if (!meetLink) return;
     window.open(meetLink, '_blank', 'noopener,noreferrer');
     setMeetOpened(true);
+  };
+
+  const updateLink = (newLink) => {
+    setMeetLink(newLink);
+    socketRef.current?.emit('update_meet_link', roomId, newLink);
   };
 
   // ── Feedback Screen ──
@@ -239,14 +247,42 @@ export default function GoogleMeetInterviewRoom() {
                 </p>
 
                 <div style={{ background:'#222a3d', borderRadius:12, padding:'1rem', marginBottom:'1.5rem', maxWidth:600, width:'100%' }}>
-                  <div style={{ fontSize:'0.65rem', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.1em', color:'#c7c4d8', marginBottom:'0.5rem' }}>Meeting Link</div>
-                  <div style={{ display:'flex', alignItems:'center', gap:'0.5rem' }}>
-                    <input value={meetLink} readOnly style={{ flex:1, background:'#131b2e', border:'1px solid rgba(70,69,85,0.3)', borderRadius:8, padding:'0.6rem', color:'#dae2fd', fontSize:'0.8rem', fontFamily:'monospace' }} />
-                    <button onClick={() => navigator.clipboard.writeText(meetLink)}
-                      style={{ padding:'0.6rem 1rem', background:'rgba(195,192,255,0.15)', color:'#c3c0ff', border:'1px solid rgba(195,192,255,0.2)', borderRadius:8, fontWeight:700, fontSize:'0.75rem', cursor:'pointer', whiteSpace:'nowrap' }}>
-                      📋 Copy
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'0.5rem' }}>
+                    <div style={{ fontSize:'0.65rem', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.1em', color:'#c7c4d8' }}>Meeting Link</div>
+                    <button onClick={() => setIsEditingLink(!isEditingLink)} style={{ background:'none', border:'none', color:'#c3c0ff', fontSize:'0.65rem', fontWeight:700, cursor:'pointer', padding:0 }}>
+                      {isEditingLink ? 'Done' : 'Edit Link'}
                     </button>
                   </div>
+                  <div style={{ display:'flex', alignItems:'center', gap:'0.5rem' }}>
+                    <input 
+                      value={meetLink} 
+                      readOnly={!isEditingLink}
+                      onChange={(e) => updateLink(e.target.value)}
+                      placeholder="Paste meeting link here..."
+                      style={{ 
+                        flex:1, 
+                        background: isEditingLink ? '#131b2e' : '#131b2e', 
+                        border: isEditingLink ? '1px solid #4f46e5' : '1px solid rgba(70,69,85,0.3)', 
+                        borderRadius:8, 
+                        padding:'0.6rem', 
+                        color: isEditingLink ? '#fff' : '#dae2fd', 
+                        fontSize:'0.8rem', 
+                        fontFamily:'monospace',
+                        outline: 'none'
+                      }} 
+                    />
+                    {!isEditingLink && (
+                      <button onClick={() => navigator.clipboard.writeText(meetLink)}
+                        style={{ padding:'0.6rem 1rem', background:'rgba(195,192,255,0.15)', color:'#c3c0ff', border:'1px solid rgba(195,192,255,0.2)', borderRadius:8, fontWeight:700, fontSize:'0.75rem', cursor:'pointer', whiteSpace:'nowrap' }}>
+                        📋 Copy
+                      </button>
+                    )}
+                  </div>
+                  {isEditingLink && (
+                    <div style={{ fontSize:'0.65rem', color:'#c7c4d8', marginTop:8, textAlign:'left' }}>
+                      Change this if the auto-generated link is invalid. It will sync for both participants.
+                    </div>
+                  )}
                 </div>
 
                 <button onClick={openMeet}
