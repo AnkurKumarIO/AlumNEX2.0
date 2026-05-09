@@ -149,14 +149,37 @@ async function createUser({ email, password, username, role, name, department, p
       password,
       email_confirm: true,
     });
-    if (authErr) throw new Error(`Auth error for ${email}: ${authErr.message}`);
-    authId = authData.user.id;
+
+    if (authErr) {
+      // If user already exists in Supabase Auth, look up their ID and sync to Prisma
+      if (authErr.message && authErr.message.includes('already been registered')) {
+        const { data: listData } = await supabase.auth.admin.listUsers();
+        const existingAuthUser = (listData?.users || []).find(u => u.email === email);
+        if (existingAuthUser) {
+          authId = existingAuthUser.id;
+          console.log(`[Register] Supabase Auth user already exists for ${email}, syncing to Prisma`);
+        } else {
+          throw new Error(`Auth error for ${email}: ${authErr.message}`);
+        }
+      } else {
+        throw new Error(`Auth error for ${email}: ${authErr.message}`);
+      }
+    } else {
+      authId = authData.user.id;
+    }
   }
 
   // Write to Prisma (primary DB)
-  const user = await prisma.user.create({
-    data: {
-      id:                  authId || undefined, // use Supabase UUID if available
+  const user = await prisma.user.upsert({
+    where: { email },
+    update: {
+      name,
+      department: department || 'General',
+      verification_status: 'VERIFIED',
+      profile_data: JSON.stringify({ ...profileData, username }),
+    },
+    create: {
+      id:                  authId || undefined,
       role,
       name,
       email,
