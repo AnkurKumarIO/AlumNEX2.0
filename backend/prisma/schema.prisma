@@ -50,6 +50,10 @@ model InterviewRequest {
 
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt
+
+  @@index([student_id])
+  @@index([alumni_id])
+  @@index([status])
 }
 
 model Notification {
@@ -64,6 +68,9 @@ model Notification {
   user        User     @relation(fields: [user_id], references: [id])
 
   createdAt   DateTime @default(now())
+
+  @@index([user_id])
+  @@index([user_id, read])
 }
 
 model ScheduleSlot {
@@ -95,6 +102,9 @@ model InterviewRecord {
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  @@index([student_id])
+  @@index([alumni_id])
 }
 
 model SessionFeedback {

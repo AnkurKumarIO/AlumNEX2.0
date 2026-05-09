@@ -346,7 +346,7 @@ export default function Dashboard() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
           <div>
             <h2 style={{ fontSize: '1.75rem', fontWeight: 700, letterSpacing: '-0.02em' }}>Welcome back, {firstName}</h2>
-            <p style={{ fontSize: '0.875rem', color: '#c7c4d8', marginTop: 4 }}>Your career trajectory is up 12% this month.</p>
+            <p style={{ fontSize: '0.875rem', color: '#c7c4d8', marginTop: 4 }}>Here's an overview of your mentorship journey so far.</p>
           </div>
           <div style={{ display: 'flex', gap: 12 }}>
             <button onClick={() => setActiveTab('analytics')} style={btnOutline}>View Analytics</button>
@@ -719,7 +719,7 @@ export default function Dashboard() {
         </section>
 
         <footer style={{ marginTop: 'auto', padding: '3rem 2rem', borderTop: '1px solid rgba(70,69,85,0.2)', background: '#0b1326', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <p style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#c7c4d8', opacity: 0.8 }}>Â© 2026 AlumNEX. The Intelligence Platform.</p>
+          <p style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#c7c4d8', opacity: 0.8 }}>&copy; 2026 AlumNEX. The Intelligence Platform.</p>
           <div style={{ display: 'flex', gap: '1.5rem' }}>
             {['Privacy','Terms','API','Contact'].map(l => <a key={l} href="#" style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#c7c4d8', textDecoration: 'none' }}>{l}</a>)}
           </div>

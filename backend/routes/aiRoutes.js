@@ -11,7 +11,6 @@ const { execFile } = require('child_process');
 const { promisify } = require('util');
 const OpenAI  = require('openai');
 const cheerio = require('cheerio');
-const { PrismaClient } = require('@prisma/client');
 
 let pdfImgConvert = null;
 try {
@@ -32,7 +31,7 @@ const {
   extractTextViaHuggingFace
 } = require('../services/aiService');
 
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 const upload = multer({ dest: 'uploads/', limits: { fileSize: 10 * 1024 * 1024 } });
 
 // ── OCR Helpers transitioned to OpenAI (in aiService.js) ───────────────────

@@ -139,7 +139,7 @@ export async function sendRequest({ studentName, studentId, alumniName, alumniRo
 // Normalize DB status (PENDING/ACCEPTED/SLOT_BOOKED/DECLINED) → local (pending/accepted/slot_booked/declined)
 function normalizeStatus(status) {
   if (!status) return 'pending';
-  return status.toLowerCase().replace('slot_booked', 'slot_booked');
+  return status.toLowerCase();
 }
 
 // ── Get all requests (for alumni dashboard) ───────────────────────────────────

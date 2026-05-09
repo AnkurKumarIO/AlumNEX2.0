@@ -2,8 +2,7 @@ const express = require('express');
 const router  = express.Router();
 const jwt     = require('jsonwebtoken');
 const supabase = require('../supabase');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma   = require('../lib/prisma');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'alumnex_secret_2026';
 
@@ -75,12 +74,15 @@ router.post('/student/login', async (req, res) => {
     // Support both email and username login — look up in Prisma
     let userEmail = email;
     if (!userEmail && username) {
-      const students = await prisma.user.findMany({ where: { role: 'STUDENT' } });
-      const match = students.find(u => {
-        try {
-          const pd = JSON.parse(u.profile_data || '{}');
-          return pd.username === username || u.email === username;
-        } catch { return u.email === username; }
+      // Use indexed username column first, then try email match — O(1) instead of O(N)
+      const match = await prisma.user.findFirst({
+        where: {
+          role: 'STUDENT',
+          OR: [
+            { username: username },
+            { email: username },
+          ],
+        },
       });
       if (!match) return res.status(401).json({ error: 'Invalid credentials.' });
       userEmail = match.email;
@@ -150,12 +152,15 @@ router.post('/alumni/login', async (req, res) => {
     // Support both email and username login — look up in Prisma
     let userEmail = email;
     if (!userEmail && username) {
-      const alumni = await prisma.user.findMany({ where: { role: 'ALUMNI' } });
-      const match = alumni.find(u => {
-        try {
-          const pd = JSON.parse(u.profile_data || '{}');
-          return pd.username === username || u.email === username;
-        } catch { return u.email === username; }
+      // Use indexed username column first, then try email match — O(1) instead of O(N)
+      const match = await prisma.user.findFirst({
+        where: {
+          role: 'ALUMNI',
+          OR: [
+            { username: username },
+            { email: username },
+          ],
+        },
       });
       if (!match) return res.status(401).json({ error: 'Invalid credentials.' });
       userEmail = match.email;

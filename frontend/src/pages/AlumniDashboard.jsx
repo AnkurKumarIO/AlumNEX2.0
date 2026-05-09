@@ -724,7 +724,9 @@ export default function AlumniDashboard() {
   // Profile dropdown
   const [showProfile, setShowProfile] = useState(false);
   const [editProfile, setEditProfile] = useState(false);
-  const savedProfile = JSON.parse(localStorage.getItem('alumnex_profile') || '{}');
+  const [savedProfile] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('alumnex_profile') || '{}'); } catch { return {}; }
+  });
   const [profileForm, setProfileForm] = useState({
     username: savedProfile.username || user?.name || '',
     email:    savedProfile.email    || '',

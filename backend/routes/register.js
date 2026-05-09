@@ -2,8 +2,7 @@ const express  = require('express');
 const router   = express.Router();
 const supabase = require('../supabase');
 const nodemailer = require('nodemailer');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 
 // ── Email transporter ─────────────────────────────────────────────────────────
 let transporter = null;
@@ -129,17 +128,16 @@ async function sendWelcomeEmail({ to, name, username, password, role, loginUrl }
 }
 
 // ── Core account creator ──────────────────────────────────────────────────────
-async function createUser({ email, password, username, role, name, department, profileData }) {
-  // Check duplicate by email in Prisma
-  const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) return { skipped: true, email, username, reason: 'Email already exists' };
-
-  // Check duplicate by username in Prisma
-  const allWithRole = await prisma.user.findMany({ where: { role } });
-  const usernameExists = allWithRole.some(u => {
-    try { return JSON.parse(u.profile_data || '{}').username === username; } catch { return false; }
-  });
-  if (usernameExists) return { skipped: true, email, username, reason: 'Username already exists' };
+async function createUser({ email, password, username, role, name, department, profileData, skipDuplicateCheck = false }) {
+  if (!skipDuplicateCheck) {
+    const existing = await prisma.user.findFirst({
+      where: { OR: [{ email }, { username }] }
+    });
+    if (existing) {
+      if (existing.email === email) return { skipped: true, email, username, reason: 'Email already exists' };
+      if (existing.username === username) return { skipped: true, email, username, reason: 'Username already exists' };
+    }
+  }
 
   // Create Supabase Auth user (for login)
   let authId = null;
@@ -173,6 +171,7 @@ async function createUser({ email, password, username, role, name, department, p
   const user = await prisma.user.upsert({
     where: { email },
     update: {
+      username,
       name,
       department: department || 'General',
       verification_status: 'VERIFIED',
@@ -180,6 +179,7 @@ async function createUser({ email, password, username, role, name, department, p
     },
     create: {
       id:                  authId || undefined,
+      username,
       role,
       name,
       email,
@@ -205,17 +205,44 @@ router.post('/bulk-students', async (req, res) => {
     const loginUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/login`;
     const results  = { created: [], skipped: [], failed: [] };
 
+    // Pre-fetch existing users to avoid O(N) DB queries per user
+    const existingUsers = await prisma.user.findMany({
+      select: { email: true, username: true, profile_data: true }
+    });
+    const existingEmails = new Set(existingUsers.map(u => u.email.toLowerCase()));
+    const existingUsernames = new Set(existingUsers.map(u => u.username).filter(Boolean));
+    existingUsers.forEach(u => {
+      try {
+        const pd = JSON.parse(u.profile_data || '{}');
+        if (pd.username) existingUsernames.add(pd.username);
+      } catch {}
+    });
+
+    const emailPromises = [];
+
     for (const s of students) {
       if (!s.name || !s.email) {
         results.failed.push({ email: s.email || '?', reason: 'name and email are required' });
         continue;
       }
       try {
+        const email = s.email.trim().toLowerCase();
         const username = generateStudentUsername(s.rollNo, s.name, s.year);
+
+        // In-memory duplicate check
+        if (existingEmails.has(email)) {
+          results.skipped.push({ skipped: true, email, username, reason: 'Email already exists' });
+          continue;
+        }
+        if (existingUsernames.has(username)) {
+          results.skipped.push({ skipped: true, email, username, reason: 'Username already exists' });
+          continue;
+        }
+
         const password = generatePassword(username);
 
         const result = await createUser({
-          email:      s.email.trim().toLowerCase(),
+          email,
           password,
           username,
           role:       'STUDENT',
@@ -226,26 +253,40 @@ router.post('/bulk-students', async (req, res) => {
             year:      s.year      || '',
             rollNo:    s.rollNo    || username,
           },
+          skipDuplicateCheck: true,
         });
 
         if (result.skipped) {
           results.skipped.push(result);
         } else {
-          // Send welcome email
-          const emailResult = await sendWelcomeEmail({
-            to: s.email.trim().toLowerCase(),
-            name: s.name.trim(),
-            username,
-            password,
-            role: 'STUDENT',
-            loginUrl,
-          });
-          results.created.push({ ...result, emailSent: emailResult.sent || false });
+          // Track to avoid duplicates in the same batch
+          existingEmails.add(email);
+          existingUsernames.add(username);
+
+          results.created.push({ ...result, emailSent: false });
+
+          // Send welcome email asynchronously
+          emailPromises.push(
+            sendWelcomeEmail({
+              to: email,
+              name: s.name.trim(),
+              username,
+              password,
+              role: 'STUDENT',
+              loginUrl,
+            }).then(emailResult => {
+              const createdRec = results.created.find(r => r.email === email);
+              if (createdRec) createdRec.emailSent = emailResult.sent || false;
+            }).catch(console.error)
+          );
         }
       } catch (err) {
         results.failed.push({ email: s.email, reason: err.message });
       }
     }
+
+    // Let emails send in background
+    Promise.allSettled(emailPromises);
 
     res.json({
       message: `Bulk upload complete. Created: ${results.created.length}, Skipped: ${results.skipped.length}, Failed: ${results.failed.length}`,
@@ -254,7 +295,7 @@ router.post('/bulk-students', async (req, res) => {
         created: results.created.length,
         skipped: results.skipped.length,
         failed:  results.failed.length,
-        emailsSent: results.created.filter(r => r.emailSent).length,
+        emailsSent: 0,
       },
       results,
     });
@@ -277,17 +318,44 @@ router.post('/bulk-alumni', async (req, res) => {
     const loginUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/login`;
     const results  = { created: [], skipped: [], failed: [] };
 
+    // Pre-fetch existing users to avoid O(N) DB queries per user
+    const existingUsers = await prisma.user.findMany({
+      select: { email: true, username: true, profile_data: true }
+    });
+    const existingEmails = new Set(existingUsers.map(u => u.email.toLowerCase()));
+    const existingUsernames = new Set(existingUsers.map(u => u.username).filter(Boolean));
+    existingUsers.forEach(u => {
+      try {
+        const pd = JSON.parse(u.profile_data || '{}');
+        if (pd.username) existingUsernames.add(pd.username);
+      } catch {}
+    });
+
+    const emailPromises = [];
+
     for (const a of alumni) {
       if (!a.name || !a.email) {
         results.failed.push({ email: a.email || '?', reason: 'name and email are required' });
         continue;
       }
       try {
+        const email = a.email.trim().toLowerCase();
         const username = generateAlumniUsername(a.name, a.batchYear);
+
+        // In-memory duplicate check
+        if (existingEmails.has(email)) {
+          results.skipped.push({ skipped: true, email, username, reason: 'Email already exists' });
+          continue;
+        }
+        if (existingUsernames.has(username)) {
+          results.skipped.push({ skipped: true, email, username, reason: 'Username already exists' });
+          continue;
+        }
+
         const password = generatePassword(username);
 
         const result = await createUser({
-          email:      a.email.trim().toLowerCase(),
+          email,
           password,
           username,
           role:       'ALUMNI',
@@ -298,25 +366,40 @@ router.post('/bulk-alumni', async (req, res) => {
             jobTitle:  a.jobTitle  || '',
             batchYear: a.batchYear || '',
           },
+          skipDuplicateCheck: true,
         });
 
         if (result.skipped) {
           results.skipped.push(result);
         } else {
-          const emailResult = await sendWelcomeEmail({
-            to: a.email.trim().toLowerCase(),
-            name: a.name.trim(),
-            username,
-            password,
-            role: 'ALUMNI',
-            loginUrl,
-          });
-          results.created.push({ ...result, emailSent: emailResult.sent || false });
+          // Track to avoid duplicates in the same batch
+          existingEmails.add(email);
+          existingUsernames.add(username);
+
+          results.created.push({ ...result, emailSent: false });
+
+          // Send welcome email asynchronously
+          emailPromises.push(
+            sendWelcomeEmail({
+              to: email,
+              name: a.name.trim(),
+              username,
+              password,
+              role: 'ALUMNI',
+              loginUrl,
+            }).then(emailResult => {
+              const createdRec = results.created.find(r => r.email === email);
+              if (createdRec) createdRec.emailSent = emailResult.sent || false;
+            }).catch(console.error)
+          );
         }
       } catch (err) {
         results.failed.push({ email: a.email, reason: err.message });
       }
     }
+
+    // Let emails send in background
+    Promise.allSettled(emailPromises);
 
     res.json({
       message: `Bulk upload complete. Created: ${results.created.length}, Skipped: ${results.skipped.length}, Failed: ${results.failed.length}`,
@@ -325,7 +408,7 @@ router.post('/bulk-alumni', async (req, res) => {
         created: results.created.length,
         skipped: results.skipped.length,
         failed:  results.failed.length,
-        emailsSent: results.created.filter(r => r.emailSent).length,
+        emailsSent: 0,
       },
       results,
     });
