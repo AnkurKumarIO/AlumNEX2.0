@@ -15,7 +15,12 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.
   );
   oauth2Client.setCredentials({ refresh_token: process.env.GOOGLE_REFRESH_TOKEN });
   gmail = google.gmail({ version: 'v1', auth: oauth2Client });
-  console.log('✅ Gmail API configured and ready.');
+  console.log('✅ Gmail API configured and ready (Primary Delivery).');
+} else {
+  console.log('⚠️ Gmail API partially configured. Missing:');
+  if (!process.env.GOOGLE_CLIENT_ID) console.log('   - GOOGLE_CLIENT_ID');
+  if (!process.env.GOOGLE_CLIENT_SECRET) console.log('   - GOOGLE_CLIENT_SECRET');
+  if (!process.env.GOOGLE_REFRESH_TOKEN) console.log('   - GOOGLE_REFRESH_TOKEN');
 }
 
 // ── Email transporter (Legacy Fallback) ───────────────────────────────────────
