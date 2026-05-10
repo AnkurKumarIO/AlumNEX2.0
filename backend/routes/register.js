@@ -15,6 +15,9 @@ if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
     pool:   true, // Use pooling for bulk emails
     maxConnections: 5,
     maxMessages: 100,
+    family: 4, // Force IPv4 to prevent IPv6 routing timeouts on Render
+    logger: true,
+    debug:  true,
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
