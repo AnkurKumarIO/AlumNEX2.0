@@ -76,6 +76,59 @@ async function sendWelcomeEmail({ to, name, username, password, role, loginUrl }
     if (status === 'failed') emailQueue.failedCount++;
   };
 
+  // 1. Try Resend first (Bypasses firewalls)
+  if (process.env.RESEND_API_KEY) {
+    try {
+      console.log(`[EMAIL-DEBUG] Attempting send via Resend API for ${to}`);
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.RESEND_API_KEY}`
+        },
+        body: JSON.stringify({
+          from: 'AlumNEX <onboarding@resend.dev>', // Defaults to onboarding for free tier
+          to: to,
+          subject: `Welcome to AlumNEX, ${name}!`,
+          html: `
+            <div style="font-family: 'Inter', sans-serif; color: #1a1a1a; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+              <div style="background: #4f46e5; padding: 32px; text-align: center;">
+                <h1 style="color: white; margin: 0; font-size: 24px;">Welcome to AlumNEX</h1>
+              </div>
+              <div style="padding: 40px 32px; background: white;">
+                <p style="font-size: 16px; margin-bottom: 24px;">Hello <strong>${name}</strong>,</p>
+                <p style="font-size: 16px; line-height: 1.6; color: #4b5563;">Your account has been created successfully. You can now log in using the credentials below:</p>
+                <div style="background: #f9fafb; border-radius: 8px; padding: 24px; margin: 32px 0;">
+                  <p style="margin: 0 0 12px 0;"><strong>Username:</strong> <code style="background: #e5e7eb; padding: 2px 6px; borderRadius: 4px;">${username}</code></p>
+                  <p style="margin: 0;"><strong>Password:</strong> <code style="background: #e5e7eb; padding: 2px 6px; borderRadius: 4px;">${password}</code></p>
+                </div>
+                <div style="text-align: center; margin-top: 32px;">
+                  <a href="${loginUrl}" style="background: #4f46e5; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">Log In to Your Account</a>
+                </div>
+              </div>
+              <div style="background: #f9fafb; padding: 24px; text-align: center; border-top: 1px solid #e2e8f0;">
+                <p style="font-size: 14px; color: #9ca3af; margin: 0;">Developed by <strong>The Tesseract</strong></p>
+              </div>
+            </div>
+          `
+        })
+      });
+      
+      const data = await res.json();
+      if (res.ok) {
+        console.log(`[EMAIL-DEBUG] ✅ Sent via Resend: ${data.id}`);
+        updateQueueStatus('sent', null);
+        return { sent: true };
+      } else {
+        console.warn(`[EMAIL-DEBUG] ⚠️ Resend API error: ${data.message || JSON.stringify(data)}`);
+        // Fallback to SMTP if Resend fails (e.g. unverified domain for others)
+      }
+    } catch (err) {
+      console.error('[EMAIL-DEBUG] ❌ Resend fetch error:', err.message);
+    }
+  }
+
+  // 2. Fallback to SMTP (Nodemailer)
   if (!transporter) {
     console.log('[EMAIL-DEBUG] ❌ transporter is NULL — skipping email');
     updateQueueStatus('failed', 'Email not configured');
