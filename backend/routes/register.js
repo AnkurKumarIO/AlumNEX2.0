@@ -7,28 +7,19 @@ const prisma = require('../lib/prisma');
 // ── Email transporter ─────────────────────────────────────────────────────────
 let transporter = null;
 if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-  const port = parseInt(process.env.EMAIL_PORT || '587');
+  // Using service: 'gmail' shorthand which handles port/host/secure/TLS defaults
   transporter = nodemailer.createTransport({
-    host:   process.env.EMAIL_HOST || 'smtp.gmail.com',
-    port:   port,
-    secure: port === 465, // true for 465, false for 587
-    // Removed pooling to prevent Gmail from dropping concurrent connection bursts
-    family: 4, // Force IPv4 to prevent IPv6 routing timeouts on Render
-    logger: true,
-    debug:  true,
+    service: 'gmail',
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
-    tls: {
-      rejectUnauthorized: false,
-      minVersion: 'TLSv1.2'
-    },
-    connectionTimeout: 20000,
-    greetingTimeout: 20000,
+    // Still forcing IPv4 as it is required for Render/Google handshake reliability
+    family: 4,
+    connectionTimeout: 30000,
     socketTimeout: 30000,
   });
-  console.log(`✅ Email transporter configured (Port: ${port}, Secure: ${port === 465})`);
+  console.log('✅ Email transporter configured (using Gmail Service)');
 } else {
   console.log('ℹ️  EMAIL_USER/EMAIL_PASS not set — emails will be skipped');
 }
