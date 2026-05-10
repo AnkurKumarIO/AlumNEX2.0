@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
@@ -112,7 +112,27 @@ export default function BulkUploadTab() {
   const [uploadResult, setUploadResult] = useState(null);
   const [error, setError]         = useState('');
   const [dragOver, setDragOver]   = useState(false);
+  const [queueStatus, setQueueStatus] = useState(null); // { pending, sentCount, failedCount, history }
   const fileRef = useRef();
+
+  // Poll email queue status
+  useEffect(() => {
+    const fetchQueue = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/register/email-queue`);
+        if (res.ok) {
+          const data = await res.json();
+          setQueueStatus(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch queue status', err);
+      }
+    };
+    
+    fetchQueue();
+    const interval = setInterval(fetchQueue, 3000); // Poll every 3s
+    return () => clearInterval(interval);
+  }, []);
 
   const fields = type === 'students' ? STUDENT_FIELDS : ALUMNI_FIELDS;
 
@@ -174,6 +194,13 @@ export default function BulkUploadTab() {
 
   const downloadTemplate = () => {
     window.open(`${API_BASE}/register/template/${type}`, '_blank');
+  };
+
+  const clearHistory = async () => {
+    try {
+      await fetch(`${API_BASE}/register/email-queue/clear`, { method: 'DELETE' });
+      setQueueStatus(prev => prev ? { ...prev, history: [] } : null);
+    } catch (err) {}
   };
 
   return (
@@ -309,6 +336,54 @@ export default function BulkUploadTab() {
             </div>
           )}
         </>
+      )}
+
+      {/* Live Email Queue Status */}
+      {queueStatus && (queueStatus.pending.length > 0 || queueStatus.history.length > 0) && (
+        <div style={{ marginTop: '2rem', background: '#131b2e', borderRadius: 16, padding: '1.5rem', border: '1px solid rgba(96,165,250,0.2)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#dae2fd', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span className="material-symbols-outlined" style={{ color: '#60a5fa' }}>mail</span>
+              Live Email Queue
+            </h3>
+            <button onClick={clearHistory} style={{ background: 'transparent', border: 'none', color: '#718096', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }}>Clear History</button>
+          </div>
+          
+          <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div style={{ flex: 1, background: '#171f33', padding: '1rem', borderRadius: 12, border: '1px solid rgba(195,192,255,0.1)' }}>
+              <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#c3c0ff' }}>{queueStatus.pending.length}</div>
+              <div style={{ fontSize: '0.7rem', color: '#c7c4d8', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700 }}>Pending</div>
+            </div>
+            <div style={{ flex: 1, background: '#171f33', padding: '1rem', borderRadius: 12, border: '1px solid rgba(78,222,163,0.1)' }}>
+              <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#4edea3' }}>{queueStatus.sentCount}</div>
+              <div style={{ fontSize: '0.7rem', color: '#c7c4d8', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700 }}>Sent Successfully</div>
+            </div>
+            <div style={{ flex: 1, background: '#171f33', padding: '1rem', borderRadius: 12, border: '1px solid rgba(255,180,171,0.1)' }}>
+              <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#ffb4ab' }}>{queueStatus.failedCount}</div>
+              <div style={{ fontSize: '0.7rem', color: '#c7c4d8', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700 }}>Failed</div>
+            </div>
+          </div>
+
+          {queueStatus.history.length > 0 && (
+            <div style={{ maxHeight: 200, overflowY: 'auto', background: '#171f33', borderRadius: 12, border: '1px solid rgba(70,69,85,0.15)' }}>
+              {queueStatus.history.map((item, idx) => (
+                <div key={idx} style={{ padding: '0.75rem 1rem', borderBottom: '1px solid rgba(70,69,85,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <span style={{ fontSize: '0.8rem', color: '#dae2fd', fontWeight: 600 }}>{item.email}</span>
+                    {item.reason && <span style={{ fontSize: '0.7rem', color: '#ffb4ab' }}>{item.reason}</span>}
+                  </div>
+                  <div>
+                    {item.status === 'sent' ? (
+                      <span style={{ background: 'rgba(78,222,163,0.15)', color: '#4edea3', padding: '0.2rem 0.6rem', borderRadius: 6, fontSize: '0.65rem', fontWeight: 700 }}>✓ Sent</span>
+                    ) : (
+                      <span style={{ background: 'rgba(255,180,171,0.15)', color: '#ffb4ab', padding: '0.2rem 0.6rem', borderRadius: 6, fontSize: '0.65rem', fontWeight: 700 }}>✗ Failed</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

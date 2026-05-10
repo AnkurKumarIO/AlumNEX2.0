@@ -63,11 +63,33 @@ function generatePassword(username) {
   return `${username}@AlumNEX`;
 }
 
+// ── Global Email Queue State ──────────────────────────────────────────────────
+// To sync across different browsers in real-time
+const emailQueue = {
+  pending: [],
+  sentCount: 0,
+  failedCount: 0,
+  history: [], // Keep last 50 processed for history
+};
+
 // ── Email sender ──────────────────────────────────────────────────────────────
 async function sendWelcomeEmail({ to, name, username, password, role, loginUrl }) {
   console.log(`[EMAIL-DEBUG] sendWelcomeEmail called for ${to}, transporter=${!!transporter}`);
+  
+  // Track in queue
+  emailQueue.pending.push(to);
+
+  const updateQueueStatus = (status, reason) => {
+    emailQueue.pending = emailQueue.pending.filter(e => e !== to);
+    emailQueue.history.unshift({ email: to, status, reason, time: new Date() });
+    if (emailQueue.history.length > 50) emailQueue.history.pop();
+    if (status === 'sent') emailQueue.sentCount++;
+    if (status === 'failed') emailQueue.failedCount++;
+  };
+
   if (!transporter) {
     console.log('[EMAIL-DEBUG] ❌ transporter is NULL — skipping email');
+    updateQueueStatus('failed', 'Email not configured');
     return { skipped: true, reason: 'Email not configured' };
   }
   try {
@@ -161,9 +183,11 @@ async function sendWelcomeEmail({ to, name, username, password, role, loginUrl }
       html,
     });
     console.log(`[EMAIL-DEBUG] ✅ Email sent successfully to ${to}`);
+    updateQueueStatus('sent', null);
     return { sent: true };
   } catch (err) {
     console.error(`[EMAIL-DEBUG] ❌ Email FAILED for ${to}:`, err.message);
+    updateQueueStatus('failed', err.message);
     try { require('fs').appendFileSync('scratch/email_error.txt', new Date().toISOString() + ' - ' + to + ' - ' + err.message + '\n'); } catch (e) {}
     return { skipped: true, reason: err.message };
   }
@@ -504,6 +528,24 @@ router.get('/template/alumni', (req, res) => {
   res.setHeader('Content-Type', 'text/csv');
   res.setHeader('Content-Disposition', 'attachment; filename="alumni_template.csv"');
   res.send(csv);
+});
+
+// ── GET /register/email-queue ────────────────────────────────────────────────
+// Fetches the real-time queue status for the dashboard
+router.get('/email-queue', (req, res) => {
+  res.json({
+    pending: emailQueue.pending,
+    sentCount: emailQueue.sentCount,
+    failedCount: emailQueue.failedCount,
+    history: emailQueue.history,
+  });
+});
+
+// ── DELETE /register/email-queue/clear ───────────────────────────────────────
+// Optionally clear the history
+router.delete('/email-queue/clear', (req, res) => {
+  emailQueue.history = [];
+  res.json({ success: true });
 });
 
 module.exports = router;
