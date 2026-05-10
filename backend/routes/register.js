@@ -336,6 +336,7 @@ async function createUser({ email, password, username, role, name, department, p
     where: { email },
     update: {
       username,
+      password, // Save plain text password in Prisma for reference/admin use
       name,
       department: department || 'General',
       verification_status: 'VERIFIED',
@@ -344,6 +345,7 @@ async function createUser({ email, password, username, role, name, department, p
     create: {
       id:                  authId || undefined,
       username,
+      password, // Save plain text password in Prisma for reference/admin use
       role,
       name,
       email,
