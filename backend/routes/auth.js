@@ -79,8 +79,8 @@ router.post('/student/login', async (req, res) => {
         where: {
           role: 'STUDENT',
           OR: [
-            { username: username },
-            { email: username },
+            { username: { equals: username, mode: 'insensitive' } },
+            { email: { equals: username, mode: 'insensitive' } },
           ],
         },
       });
@@ -158,8 +158,8 @@ router.post('/alumni/login', async (req, res) => {
         where: {
           role: 'ALUMNI',
           OR: [
-            { username: username },
-            { email: username },
+            { username: { equals: username, mode: 'insensitive' } },
+            { email: { equals: username, mode: 'insensitive' } },
           ],
         },
       });
