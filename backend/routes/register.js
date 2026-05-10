@@ -139,6 +139,7 @@ async function sendWelcomeEmail({ to, name, username, password, role, loginUrl }
       <div class="footer-brand">AlumNEX — Bridging Campus & Career</div>
       <div class="footer-inst">
         College Training & Placement Office<br>
+        Developed by <strong>The Tesseract</strong><br>
         This is an automated message. Do not reply.
       </div>
     </div>
