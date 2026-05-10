@@ -5,35 +5,15 @@ import AlumNexLogo from '../AlumNexLogo';
 import LogoutConfirmModal from '../components/LogoutConfirmModal';
 import AnalyticsTab from './TNPAnalytics';
 import SystemSettingsTab from './TNPSettings';
-import ComplianceTab from './TNPCompliance';
+
 import BulkUploadTab from './TNPBulkUpload';
 import { subscribeRealtimeSync } from '../lib/realtimeSync';
+import { api } from '../api';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
-// ── Activity feed data (mentorship-focused) ───────────────────────────────────
-const FEED_PREVIEW = [
-  { icon: 'person_add',      color: '#4edea3', title: 'New Alumni Mentor Added',    desc: 'Priya Sharma (Google) account created via bulk upload.',       time: '2 minutes ago' },
-  { icon: 'event_available', color: '#ffb95f', title: '12 Sessions Completed',      desc: 'Mock interview batch for System Design concluded.',             time: '4 hours ago' },
-  { icon: 'handshake',       color: '#c3c0ff', title: 'Mentorship Match Created',   desc: 'Rohan Verma matched with Neha Gupta (Airbnb).',                time: '6 hours ago' },
-];
-
-const FULL_FEED = [
-  { icon: 'person_add',         color: '#4edea3', title: 'New Alumni Mentor Added',      desc: 'Priya Sharma (Google) account created via bulk upload.',                    time: '2 minutes ago',  category: 'Alumni' },
-  { icon: 'school',             color: '#c3c0ff', title: 'Student Batch Uploaded',        desc: '47 students from Batch 2025 added to the platform.',                        time: '1 hour ago',     category: 'Student' },
-  { icon: 'event_available',    color: '#ffb95f', title: '12 Sessions Completed',         desc: 'Mock interview batch for System Design concluded successfully.',              time: '4 hours ago',    category: 'Interview' },
-  { icon: 'handshake',          color: '#c3c0ff', title: 'Mentorship Match Created',      desc: 'Rohan Verma (Student) matched with Neha Gupta (Alumni, Airbnb).',            time: '6 hours ago',    category: 'Mentorship' },
-  { icon: 'star',               color: '#ffb95f', title: 'Top Mentor Recognised',         desc: 'Amit Joshi (Microsoft) rated 4.9/5 across 32 mentorship sessions.',          time: '8 hours ago',    category: 'Mentorship' },
-  { icon: 'psychology',         color: '#4edea3', title: 'Alumni Mentor Onboarded',       desc: 'Dr. Elena Rodriguez (PhD AI Ethics) completed profile setup.',               time: '10 hours ago',   category: 'Alumni' },
-  { icon: 'event_repeat',       color: '#c3c0ff', title: 'Session Rescheduled',           desc: 'Mock interview for Kavya Nair rescheduled to Oct 18th at 3:00 PM.',          time: '1 day ago',      category: 'Interview' },
-  { icon: 'group_add',          color: '#60a5fa', title: 'Batch 2025 Onboarding',         desc: '47 new students from Batch 2025 completed profile setup.',                   time: '2 days ago',     category: 'Student' },
-  { icon: 'cancel',             color: '#ffb4ab', title: 'Session Cancelled',             desc: 'Interview session between Arjun M. and Rahul V. was cancelled.',             time: '2 days ago',     category: 'Interview' },
-  { icon: 'analytics',          color: '#c3c0ff', title: 'Weekly Report Generated',       desc: 'Mentorship analytics report for Week 41 auto-generated.',                    time: '4 days ago',     category: 'System' },
-  { icon: 'notifications_active',color: '#4edea3', title: 'Session Reminder Sent',        desc: 'Automated reminder sent to 34 students with upcoming sessions.',              time: '4 days ago',     category: 'System' },
-  { icon: 'login',              color: '#c7c4d8', title: 'TNP Login',                     desc: 'Coordinator logged in from 192.168.1.10.',                                   time: '5 days ago',     category: 'System' },
-];
-
-const CATEGORY_COLORS = {
+// ── Default category colors (fallback if DB config not loaded) ────────────────
+const DEFAULT_CATEGORY_COLORS = {
   Alumni:     '#4edea3',
   Student:    '#60a5fa',
   Interview:  '#ffb95f',
@@ -43,8 +23,40 @@ const CATEGORY_COLORS = {
 
 function ActivityFeedTab() {
   const [filter, setFilter] = React.useState('All');
+  const [feedData, setFeedData] = React.useState([]);
+  const [categoryColors, setCategoryColors] = React.useState(DEFAULT_CATEGORY_COLORS);
+  const [loading, setLoading] = React.useState(true);
   const categories = ['All', 'Alumni', 'Student', 'Interview', 'Mentorship', 'System'];
-  const filtered = filter === 'All' ? FULL_FEED : FULL_FEED.filter(f => f.category === filter);
+
+  React.useEffect(() => {
+    Promise.all([
+      api.getActivityLogs(50).catch(() => []),
+      api.getPlatformConfigKey('category_colors').catch(() => null),
+    ]).then(([logs, colors]) => {
+      if (Array.isArray(logs) && logs.length > 0) {
+        setFeedData(logs.map(l => ({
+          icon: l.icon,
+          color: l.color,
+          title: l.title,
+          desc: l.desc,
+          category: l.category || 'System',
+          time: l.createdAt ? new Date(l.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '',
+        })));
+      }
+      if (colors && typeof colors === 'object') setCategoryColors({ ...DEFAULT_CATEGORY_COLORS, ...colors });
+      setLoading(false);
+    });
+  }, []);
+
+  const filtered = filter === 'All' ? feedData : feedData.filter(f => f.category === filter);
+
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 200, color: '#c7c4d8', gap: 10 }}>
+      <span className="material-symbols-outlined" style={{ fontSize: 24, opacity: 0.4, animation: 'spin 1s linear infinite' }}>progress_activity</span>
+      Loading activity feed...
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -58,7 +70,7 @@ function ActivityFeedTab() {
             <button key={cat} onClick={() => setFilter(cat)} style={{
               padding: '0.3rem 0.75rem', borderRadius: 20, fontSize: '0.65rem', fontWeight: 700,
               textTransform: 'uppercase', letterSpacing: '0.08em', cursor: 'pointer', border: 'none',
-              background: filter === cat ? (CATEGORY_COLORS[cat] || '#c3c0ff') : 'rgba(70,69,85,0.2)',
+              background: filter === cat ? (categoryColors[cat] || '#c3c0ff') : 'rgba(70,69,85,0.2)',
               color: filter === cat ? '#0b1326' : '#c7c4d8', transition: 'all 0.2s',
             }}>{cat}</button>
           ))}
@@ -67,6 +79,12 @@ function ActivityFeedTab() {
       <div style={{ background: '#131b2e', borderRadius: 20, padding: '1.5rem', position: 'relative' }}>
         <div style={{ position: 'absolute', left: 35, top: 24, bottom: 24, width: 1, background: 'rgba(70,69,85,0.25)' }} />
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {filtered.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '2rem', color: '#c7c4d8', opacity: 0.5 }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 36, display: 'block', marginBottom: 8 }}>inbox</span>
+              No activity logs yet
+            </div>
+          )}
           {filtered.map((f, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 16, position: 'relative' }}>
               <div style={{ width: 24, height: 24, borderRadius: '50%', background: `${f.color}20`, border: `1px solid ${f.color}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, zIndex: 1, marginTop: 2 }}>
@@ -76,7 +94,7 @@ function ActivityFeedTab() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, flexWrap: 'wrap', gap: 6 }}>
                   <span style={{ fontWeight: 700, fontSize: '0.875rem', color: '#dae2fd' }}>{f.title}</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ background: `${CATEGORY_COLORS[f.category]}18`, color: CATEGORY_COLORS[f.category], padding: '0.15rem 0.5rem', borderRadius: 6, fontSize: '0.55rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{f.category}</span>
+                    <span style={{ background: `${categoryColors[f.category] || '#94a3b8'}18`, color: categoryColors[f.category] || '#94a3b8', padding: '0.15rem 0.5rem', borderRadius: 6, fontSize: '0.55rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{f.category}</span>
                     <span style={{ fontSize: '0.6rem', color: 'rgba(199,196,216,0.45)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{f.time}</span>
                   </div>
                 </div>
@@ -157,9 +175,6 @@ export default function TNPDashboard() {
     { id: 2, name: 'Placement Officer', permissions: ['upload', 'analytics'],                    active: true },
     { id: 3, name: 'Analytics Viewer',  permissions: ['analytics'],                               active: true },
   ]);
-  const [logRole, setLogRole]     = useState('');
-  const [logAction, setLogAction] = useState('');
-  const [logDate, setLogDate]     = useState('');
 
   if (!user) return <Navigate to="/login" replace />;
 
@@ -168,7 +183,7 @@ export default function TNPDashboard() {
     { icon: 'cloud_upload',     label: 'Bulk Upload',  tab: 'upload' },
     { icon: 'analytics',        label: 'Analytics',    tab: 'analytics' },
     { icon: 'dynamic_feed',     label: 'Activity Feed',tab: 'activity' },
-    { icon: 'policy',           label: 'Compliance',   tab: 'compliance' },
+
     { icon: 'settings_suggest', label: 'Settings',     tab: 'settings' },
   ];
 
@@ -176,7 +191,7 @@ export default function TNPDashboard() {
     if (activeTab === 'upload')     return <BulkUploadTab />;
     if (activeTab === 'analytics')  return <AnalyticsTab />;
     if (activeTab === 'activity')   return <ActivityFeedTab />;
-    if (activeTab === 'compliance') return <ComplianceTab logRole={logRole} setLogRole={setLogRole} logAction={logAction} setLogAction={setLogAction} logDate={logDate} setLogDate={setLogDate} />;
+
     if (activeTab === 'settings')   return <SystemSettingsTab commSettings={commSettings} setCommSettings={setCommSettings} roles={roles} setRoles={setRoles} />;
     return null; // home rendered inline
   };

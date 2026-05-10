@@ -1,7 +1,8 @@
-﻿import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { sendRequest, getRequestsByStudent } from '../interviewRequests';
 import { getAllAlumni } from '../lib/db';
+import { api } from '../api';
 
 const TOPICS = [
   'Mock Interview – General','Mock Interview – System Design','Mock Interview – Frontend',
@@ -9,12 +10,27 @@ const TOPICS = [
 ];
 
 // ── Map Supabase row → display shape ─────────────────────────────────────────
-function toDisplay(u) {
+function toDisplay(u, ratingsMap = {}) {
   const p = u.profile_data || {};
   const yrs = u.batch_year ? new Date().getFullYear() - u.batch_year : null;
   const expRange = !yrs ? '0-2 Years' : yrs <= 2 ? '0-2 Years' : yrs <= 5 ? '3-5 Years' : yrs <= 10 ? '6-10 Years' : '10+ Years';
   const skills = p.skills || [];
   const domain = skills.length > 0 ? skills[0] : (u.department || 'Engineering');
+  
+  // Impact score: use average student rating if available, otherwise fallback to skill-based
+  const ratingData = ratingsMap[u.id];
+  let score, scoreColor;
+  if (ratingData && ratingData.avgRating) {
+    // Map 1-5 rating to 20-100 score
+    score = Math.round(ratingData.avgRating * 20);
+    scoreColor = score >= 80 ? '#ffb95f' : score >= 60 ? '#4edea3' : '#c3c0ff';
+  } else {
+    // Fallback: no ratings yet
+    score = Math.min(99, 70 + (skills.length * 3) + (yrs || 0));
+    scoreColor = yrs >= 8 ? '#ffb95f' : '#4edea3';
+  }
+  const totalSessions = ratingData?.totalSessions || 0;
+  
   return {
     id: u.id,
     name: u.name,
@@ -30,8 +46,10 @@ function toDisplay(u) {
     tags: skills.slice(0, 5),
     linkedin: p.linkedin || '',
     github: p.github || '',
-    score: Math.min(99, 70 + (skills.length * 3) + (yrs || 0)),
-    scoreColor: yrs >= 8 ? '#ffb95f' : '#4edea3',
+    score,
+    scoreColor,
+    totalSessions,
+    avgRating: ratingData?.avgRating || null,
   };
 }
 
@@ -176,14 +194,19 @@ export default function AlumniDiscovery({ searchQuery = '' }) {
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    getAllAlumni().then(data => {
+    // Fetch alumni list and ratings in parallel
+    Promise.all([
+      getAllAlumni(),
+      api.getAlumniRatings().catch(() => ({})),
+    ]).then(([data, ratings]) => {
+      const ratingsMap = ratings || {};
       if (Array.isArray(data) && data.length > 0) {
-        setAllAlumni(data.map(toDisplay));
+        setAllAlumni(data.map(u => toDisplay(u, ratingsMap)));
       } else {
-        setAllAlumni(MOCK.map(toDisplay));
+        setAllAlumni(MOCK.map(u => toDisplay(u, ratingsMap)));
       }
       setLoading(false);
-    }).catch(() => { setAllAlumni(MOCK.map(toDisplay)); setLoading(false); });
+    }).catch(() => { setAllAlumni(MOCK.map(u => toDisplay(u, {}))); setLoading(false); });
   }, []);
 
   // Build filter options from actual data
@@ -283,6 +306,7 @@ export default function AlumniDiscovery({ searchQuery = '' }) {
               <div style={{ textAlign: 'right', flexShrink: 0 }}>
                 <div style={{ fontSize: '0.55rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: a.scoreColor, marginBottom: 2 }}>Impact</div>
                 <div style={{ fontSize: '1.5rem', fontWeight: 900, color: a.scoreColor }}>{a.score}</div>
+                {a.avgRating && <div style={{ fontSize: '0.55rem', color: '#c7c4d8', marginTop: 2 }}>{'★'.repeat(Math.round(a.avgRating))} ({a.totalSessions})</div>}
               </div>
             </div>
             <p style={{ fontSize: '0.8rem', color: '#c7c4d8', lineHeight: 1.6, marginBottom: '1rem' }}>{a.bio}</p>

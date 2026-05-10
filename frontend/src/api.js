@@ -414,7 +414,7 @@ export const api = {
       await mockDelay(300);
       return {
         success: true,
-        meetLink: `https://meet.google.com/alumnex-${roomId}`,
+        meetLink: `https://meet.jit.si/AlumNEX-${roomId}`,
         roomId,
         title: title || `AlumNEX Interview - Room ${roomId}`,
       };
@@ -427,7 +427,7 @@ export const api = {
       await mockDelay(200);
       return {
         success: true,
-        meetLink: `https://meet.google.com/alumnex-${roomId}`,
+        meetLink: `https://meet.jit.si/AlumNEX-${roomId}`,
         roomId,
       };
     }
@@ -443,7 +443,7 @@ export const api = {
       await mockDelay(200);
       return {
         success: true,
-        meetLink: `https://meet.google.com/${code}`,
+        meetLink: `https://meet.jit.si/${code}`,
         code,
       };
     }
@@ -459,7 +459,7 @@ export const api = {
       await mockDelay(100);
       return {
         success: true,
-        isValid: /^https:\/\/meet\.google\.com\/[a-z0-9-]+$/i.test(url),
+        isValid: /^https:\/\/(meet\.jit\.si|meet\.google\.com)\/[a-zA-Z0-9-]+$/i.test(url),
         url,
       };
     }
@@ -487,6 +487,46 @@ export const api = {
   getRoomFeedback: (roomId) => callOrMock(
     () => fetch(`${API_BASE}/feedback/room/${roomId}`).then(r => r.json()),
     async () => { await mockDelay(200); return null; }
+  ),
+
+  getAlumniRatings: () => callOrMock(
+    () => fetch(`${API_BASE}/feedback/alumni-ratings`).then(r => r.json()),
+    async () => { await mockDelay(200); return {}; }
+  ),
+
+  // ─── Activity Logs & Platform Config ─────────────────────────────────────
+  
+  getActivityLogs: (limit = 20) => callOrMock(
+    () => fetch(`${API_BASE}/activity-logs?limit=${limit}`).then(r => r.json()),
+    async () => { await mockDelay(300); return []; }
+  ),
+
+  createActivityLog: (data) => callOrMock(
+    () => fetch(`${API_BASE}/activity-logs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }).then(r => r.json()),
+    async () => { await mockDelay(200); return { id: `mock-${Date.now()}`, ...data }; }
+  ),
+
+  getPlatformConfig: () => callOrMock(
+    () => fetch(`${API_BASE}/platform-config`).then(r => r.json()),
+    async () => { await mockDelay(200); return {}; }
+  ),
+
+  getPlatformConfigKey: (key) => callOrMock(
+    () => fetch(`${API_BASE}/platform-config/${key}`).then(r => r.json()),
+    async () => { await mockDelay(200); return null; }
+  ),
+
+  setPlatformConfig: (key, value) => callOrMock(
+    () => fetch(`${API_BASE}/platform-config/${key}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value }),
+    }).then(r => r.json()),
+    async () => { await mockDelay(200); return { key, value }; }
   ),
 };
 

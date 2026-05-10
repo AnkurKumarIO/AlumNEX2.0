@@ -198,7 +198,7 @@ export default function GoogleMeetInterviewRoom() {
       {/* Top bar */}
       <nav style={{ height:60, background:'rgba(11,19,38,0.95)', backdropFilter:'blur(20px)', borderBottom:'1px solid rgba(195,192,255,0.06)', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 1.5rem', flexShrink:0, zIndex:10 }}>
         <div style={{ display:'flex', alignItems:'center', gap:'1.25rem' }}>
-          <span style={{ fontSize:'1rem', fontWeight:900, letterSpacing:'-0.03em', color:'#f5e9ff' }}>AlumNEX • Google Meet</span>
+          <span style={{ fontSize:'1rem', fontWeight:900, letterSpacing:'-0.03em', color:'#f5e9ff' }}>AlumNEX • Video Call</span>
           <div style={{ display:'flex', alignItems:'center', gap:7, background:'#222a3d', padding:'0.25rem 0.65rem', borderRadius:999, border:'1px solid rgba(70,69,85,0.3)' }}>
             <div style={{ width:7, height:7, borderRadius:'50%', background: isConnected ? '#4edea3' : '#ffb4ab', animation: isConnected ? 'pulse 2s infinite' : 'none' }} />
             <span style={{ fontSize:'0.6rem', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.1em', color: isConnected ? '#4edea3' : '#ffb4ab' }}>
@@ -222,7 +222,7 @@ export default function GoogleMeetInterviewRoom() {
             <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', background:'#131b2e', borderRadius:14, border:'1px solid rgba(70,69,85,0.2)' }}>
               <div style={{ textAlign:'center' }}>
                 <div style={{ fontSize:'2rem', marginBottom:'1rem' }}>🔄</div>
-                <div style={{ fontSize:'0.9rem', fontWeight:600, color:'#c7c4d8' }}>Loading Google Meet...</div>
+                <div style={{ fontSize:'0.9rem', fontWeight:600, color:'#c7c4d8' }}>Loading Video Call...</div>
               </div>
             </div>
           ) : (
@@ -230,12 +230,12 @@ export default function GoogleMeetInterviewRoom() {
               <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'2rem', textAlign:'center' }}>
                 <div style={{ fontSize:'4rem', marginBottom:'1rem' }}>{meetOpened ? '✅' : '📹'}</div>
                 <h3 style={{ fontSize:'1.5rem', fontWeight:700, marginBottom:'1rem', color:'#c3c0ff' }}>
-                  {meetOpened ? 'Meeting in Progress' : 'Join Google Meet'}
+                  {meetOpened ? 'Meeting in Progress' : 'Join Video Call'}
                 </h3>
                 <p style={{ fontSize:'0.9rem', color:'#c7c4d8', marginBottom:'1.5rem', maxWidth:500, lineHeight:1.6 }}>
                   {meetOpened
-                    ? 'Your Google Meet is open in another tab. Use the chat panel here to communicate. Click "End Session" when done to provide feedback.'
-                    : 'Click the button below to open Google Meet in a new tab. Both participants will join the same meeting room.'}
+                    ? 'Your video call is open in another tab. Use the chat panel here to communicate. Click "End Session" when done to provide feedback.'
+                    : 'Click the button below to open the video call in a new tab. Both participants will join the same meeting room.'}
                 </p>
 
                 <div style={{ background:'#222a3d', borderRadius:12, padding:'1rem', marginBottom:'1.5rem', maxWidth:600, width:'100%' }}>
@@ -252,7 +252,7 @@ export default function GoogleMeetInterviewRoom() {
                 <button onClick={openMeet}
                   style={{ display:'inline-flex', alignItems:'center', gap:'0.5rem', padding:'1rem 2rem', background: meetOpened ? 'rgba(78,222,163,0.15)' : 'linear-gradient(135deg,#4f46e5,#c3c0ff)', color: meetOpened ? '#4edea3' : '#1d00a5', border: meetOpened ? '1px solid rgba(78,222,163,0.3)' : 'none', borderRadius:12, fontWeight:700, fontSize:'0.9rem', cursor:'pointer', textTransform:'uppercase', letterSpacing:'0.1em' }}>
                   <span className="material-symbols-outlined" style={{ fontSize:20 }}>video_call</span>
-                  {meetOpened ? 'Rejoin Google Meet' : 'Open Google Meet'}
+                  {meetOpened ? 'Rejoin Video Call' : 'Join Video Call'}
                 </button>
               </div>
             </div>

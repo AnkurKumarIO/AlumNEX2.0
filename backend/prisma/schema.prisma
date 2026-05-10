@@ -122,3 +122,20 @@ model SessionFeedback {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  icon      String
+  color     String
+  title     String
+  desc      String
+  category  String   @default("general")
+  createdAt DateTime @default(now())
+}
+
+model PlatformConfig {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}

@@ -548,9 +548,8 @@ function AddSlotModal({ onClose, onAdd }) {
 }
 
 const SCHEDULE = [
-  { when: 'Today • 2:00 PM',     title: 'Mock Interview: David Chen',  sub: 'Backend Infrastructure Focus', active: true },
-  { when: 'Tomorrow • 10:30 AM', title: 'Career Path Guidance',         sub: 'Group Session • 4 Students',   active: false },
-  { when: 'Fri • 4:00 PM',       title: 'Resume Deep Dive',             sub: 'One-on-One • Marcus Aurelius', active: false },
+  // Schedule entries are now dynamically populated from database via interview requests
+  // and extraSlots state (managed through the slot booking flow)
 ];
 const NAV_ITEMS = [
   { icon: 'dashboard',     label: 'Dashboard',        tab: 'home' },
@@ -843,7 +842,7 @@ export default function AlumniDashboard() {
     type: n.type?.toLowerCase() || 'notification',
     title: n.title,
     desc: n.message,
-    time: n.created_at
+    time: n.created_at || n.createdAt
   }));
 
   const allNotifications = [

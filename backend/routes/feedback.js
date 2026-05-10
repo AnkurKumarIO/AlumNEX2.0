@@ -104,4 +104,49 @@ router.get('/room/:roomId', async (req, res) => {
   }
 });
 
+/**
+ * GET /feedback/alumni-ratings
+ * Returns average student ratings grouped by alumni_id
+ * Used by AlumniDiscovery to compute impact scores
+ */
+router.get('/alumni-ratings', async (req, res) => {
+  try {
+    const sessions = await prisma.sessionFeedback.findMany({
+      where: {
+        student_rating: { not: null },
+      },
+      select: {
+        alumni_id: true,
+        student_rating: true,
+      },
+    });
+
+    // Group by alumni_id and compute averages
+    const ratingMap = {};
+    const countMap = {};
+    for (const s of sessions) {
+      if (!s.alumni_id || s.student_rating === null) continue;
+      if (!ratingMap[s.alumni_id]) {
+        ratingMap[s.alumni_id] = 0;
+        countMap[s.alumni_id] = 0;
+      }
+      ratingMap[s.alumni_id] += s.student_rating;
+      countMap[s.alumni_id] += 1;
+    }
+
+    const result = {};
+    for (const id of Object.keys(ratingMap)) {
+      result[id] = {
+        avgRating: Math.round((ratingMap[id] / countMap[id]) * 100) / 100,
+        totalSessions: countMap[id],
+      };
+    }
+
+    res.json(result);
+  } catch (error) {
+    console.error('[Feedback] Error computing alumni ratings:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;

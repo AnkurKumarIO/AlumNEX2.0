@@ -137,7 +137,7 @@ export default function Dashboard() {
     message: n.message,
     requestId: n.request_id,
     read: n.read || false,
-    createdAt: n.created_at,
+    createdAt: n.created_at || n.createdAt,
     roomId: n.request_id ? `room-${String(n.request_id).replace(/[^a-z0-9]/gi, '').slice(-16).toLowerCase()}` : null,
   }));
   const fallbackStudentNotifs = getStudentNotifications(user?.name || '');
