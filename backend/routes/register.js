@@ -11,19 +11,23 @@ if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
   transporter = nodemailer.createTransport({
     host:   process.env.EMAIL_HOST || 'smtp.gmail.com',
     port:   port,
-    secure: port === 465, // true for 465, false for other ports
+    secure: port === 465, // true for 465, false for 587
+    pool:   true, // Use pooling for bulk emails
+    maxConnections: 5,
+    maxMessages: 100,
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
     tls: {
-      rejectUnauthorized: false // Helps prevent SSL/TLS errors in cloud environments
+      rejectUnauthorized: false, // Helps in some cloud environments
+      minVersion: 'TLSv1.2'
     },
-    connectionTimeout: 10000, // 10 seconds to connect
-    greetingTimeout: 10000,
-    socketTimeout: 15000, // 15 seconds max for entire transaction
+    connectionTimeout: 20000, // Increased to 20s
+    greetingTimeout: 20000,
+    socketTimeout: 30000,
   });
-  console.log('✅ Email transporter configured');
+  console.log(`✅ Email transporter configured (Port: ${port}, Secure: ${port === 465})`);
 } else {
   console.log('ℹ️  EMAIL_USER/EMAIL_PASS not set — emails will be skipped');
 }
