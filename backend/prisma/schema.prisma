@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -50,6 +50,10 @@ model InterviewRequest {
 
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt
+
+  @@index([student_id])
+  @@index([alumni_id])
+  @@index([status])
 }
 
 model Notification {
@@ -64,6 +68,9 @@ model Notification {
   user        User     @relation(fields: [user_id], references: [id])
 
   createdAt   DateTime @default(now())
+
+  @@index([user_id])
+  @@index([user_id, read])
 }
 
 model ScheduleSlot {
@@ -95,11 +102,14 @@ model InterviewRecord {
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  @@index([student_id])
+  @@index([alumni_id])
 }
 
 model SessionFeedback {
   id              String   @id @default(uuid())
-  room_id         String
+  room_id         String   @unique
   topic           String?
   meet_link       String?
 

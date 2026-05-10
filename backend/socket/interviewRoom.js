@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 
 module.exports = (io) => {
   const ns = io.of('/interview');
@@ -92,6 +91,12 @@ module.exports = (io) => {
     // ── Chat relay ───────────────────────────────────────────────────────
     socket.on('chat_message', (roomId, msg) => {
       socket.to(roomId).emit('chat_message', msg);
+    });
+
+    // ── Meeting link update — sync across participants ──────────────────
+    socket.on('update_meet_link', (roomId, meetLink) => {
+      socket.to(roomId).emit('update_meet_link', meetLink);
+      console.log(`[${roomId}] Meet link updated by ${socket.data?.userId}`);
     });
 
     // ── Hand raise ───────────────────────────────────────────────────────

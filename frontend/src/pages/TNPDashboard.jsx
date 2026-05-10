@@ -7,6 +7,7 @@ import AnalyticsTab from './TNPAnalytics';
 import SystemSettingsTab from './TNPSettings';
 
 import BulkUploadTab from './TNPBulkUpload';
+import DirectoryTab from './TNPDirectory';
 import { subscribeRealtimeSync } from '../lib/realtimeSync';
 import { api } from '../api';
 
@@ -130,19 +131,23 @@ export default function TNPDashboard() {
       .catch(() => {});
   }, []);
 
-  // Notifications — session-based events
+  // Notifications — live from API
   useEffect(() => {
-    const buildNotifs = () => {
-      const DEMO = [
-        { id: 'demo-1', type: 'session', title: 'Session Completed', desc: 'Rohan Verma completed a System Design session with Priya Sharma', time: new Date(Date.now() - 5 * 60000).toISOString(), icon: 'event_available', color: '#4edea3' },
-        { id: 'demo-2', type: 'match',   title: 'New Mentorship Match', desc: 'Kavya Nair matched with Amit Joshi (Microsoft)', time: new Date(Date.now() - 62 * 60000).toISOString(), icon: 'handshake', color: '#c3c0ff' },
-        { id: 'demo-3', type: 'upload',  title: 'Bulk Upload Complete', desc: '47 student accounts created from Batch 2025 CSV', time: new Date(Date.now() - 3 * 3600000).toISOString(), icon: 'cloud_upload', color: '#ffb95f' },
-      ];
-      setTnpNotifs(DEMO);
+    const fetchNotifs = () => {
+      fetch(`${API_BASE}/stats/recent-activity`)
+        .then(r => r.json())
+        .then(data => {
+          if (Array.isArray(data) && data.length > 0) {
+            setTnpNotifs(data.slice(0, 5)); // Show top 5 in bell dropdown
+          }
+        })
+        .catch(() => {});
     };
-    buildNotifs();
-    const unsubscribe = subscribeRealtimeSync(buildNotifs);
-    return () => unsubscribe();
+    fetchNotifs();
+    const unsubscribe = subscribeRealtimeSync(fetchNotifs);
+    // Also refresh every 30s
+    const interval = setInterval(fetchNotifs, 30000);
+    return () => { unsubscribe(); clearInterval(interval); };
   }, []);
 
   const unreadCount = tnpNotifs.filter(n => !seenNotifIds.includes(n.id)).length;
@@ -181,6 +186,7 @@ export default function TNPDashboard() {
   const TNP_NAV = [
     { icon: 'dashboard',        label: 'Dashboard',    tab: 'home' },
     { icon: 'cloud_upload',     label: 'Bulk Upload',  tab: 'upload' },
+    { icon: 'people',           label: 'Directory',    tab: 'directory' },
     { icon: 'analytics',        label: 'Analytics',    tab: 'analytics' },
     { icon: 'dynamic_feed',     label: 'Activity Feed',tab: 'activity' },
 
@@ -189,6 +195,7 @@ export default function TNPDashboard() {
 
   const renderContent = () => {
     if (activeTab === 'upload')     return <BulkUploadTab />;
+    if (activeTab === 'directory')  return <DirectoryTab />;
     if (activeTab === 'analytics')  return <AnalyticsTab />;
     if (activeTab === 'activity')   return <ActivityFeedTab />;
 
@@ -328,7 +335,7 @@ export default function TNPDashboard() {
 
         {/* Content */}
         <section style={{ marginTop: 64, padding: '2rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          {activeTab !== 'home' ? renderContent() : <HomeDashboard stats={stats} setActiveTab={setActiveTab} feedPreview={FEED_PREVIEW} />}
+          {activeTab !== 'home' ? renderContent() : <HomeDashboard stats={stats} setActiveTab={setActiveTab} />}
         </section>
       </main>
     </div>
@@ -336,7 +343,30 @@ export default function TNPDashboard() {
 }
 
 // ── Home Dashboard ────────────────────────────────────────────────────────────
-function HomeDashboard({ stats, setActiveTab, feedPreview }) {
+function HomeDashboard({ stats, setActiveTab }) {
+  const [feedPreview, setFeedPreview] = React.useState([]);
+
+  React.useEffect(() => {
+    fetch(`${API_BASE}/stats/recent-activity`)
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          setFeedPreview(data.slice(0, 3));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const timeAgo = (iso) => {
+    const diff = Date.now() - new Date(iso).getTime();
+    const m = Math.floor(diff / 60000);
+    if (m < 1) return 'just now';
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    return `${Math.floor(h / 24)}d ago`;
+  };
+
   return (
     <>
       {/* Page header */}
@@ -385,8 +415,8 @@ function HomeDashboard({ stats, setActiveTab, feedPreview }) {
               {[
                 { icon: 'cloud_upload',  label: 'Upload Students',  sub: 'Add student batch via CSV',    tab: 'upload',    color: '#c3c0ff' },
                 { icon: 'psychology',    label: 'Upload Alumni',    sub: 'Add mentor batch via CSV',     tab: 'upload',    color: '#4edea3' },
+                { icon: 'people',        label: 'User Directory',   sub: 'Browse all registered users',  tab: 'directory', color: '#f472b6' },
                 { icon: 'analytics',     label: 'View Analytics',   sub: 'Session & mentor insights',    tab: 'analytics', color: '#ffb95f' },
-                { icon: 'dynamic_feed',  label: 'Activity Feed',    sub: 'Recent platform events',       tab: 'activity',  color: '#60a5fa' },
               ].map(a => (
                 <button key={a.label} onClick={() => setActiveTab(a.tab)}
                   style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '1rem', background: '#131b2e', borderRadius: 14, border: `1px solid ${a.color}20`, cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s' }}
@@ -441,14 +471,16 @@ function HomeDashboard({ stats, setActiveTab, feedPreview }) {
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', position: 'relative' }}>
               <div style={{ position: 'absolute', left: 11, top: 8, bottom: 8, width: 1, background: 'rgba(70,69,85,0.3)' }} />
-              {feedPreview.map((f, i) => (
-                <div key={i} style={{ position: 'relative', paddingLeft: 36 }}>
+              {feedPreview.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '1rem', color: '#c7c4d8', fontSize: '0.78rem' }}>No recent activity. Events will appear as the platform is used.</div>
+              ) : feedPreview.map((f, i) => (
+                <div key={f.id || i} style={{ position: 'relative', paddingLeft: 36 }}>
                   <div style={{ position: 'absolute', left: 0, top: 0, width: 24, height: 24, borderRadius: '50%', background: `${f.color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}>
                     <span className="material-symbols-outlined" style={{ fontSize: 12, color: f.color, fontVariationSettings: "'FILL' 1" }}>{f.icon}</span>
                   </div>
                   <div style={{ fontWeight: 600, fontSize: '0.875rem', marginBottom: 4 }}>{f.title}</div>
                   <div style={{ fontSize: '0.75rem', color: '#c7c4d8', lineHeight: 1.5 }}>{f.desc}</div>
-                  <div style={{ fontSize: '0.6rem', color: 'rgba(199,196,216,0.5)', marginTop: 4, textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.1em' }}>{f.time}</div>
+                  <div style={{ fontSize: '0.6rem', color: 'rgba(199,196,216,0.5)', marginTop: 4, textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.1em' }}>{typeof f.time === 'string' && f.time.includes('T') ? timeAgo(f.time) : (f.time || '')}</div>
                 </div>
               ))}
             </div>

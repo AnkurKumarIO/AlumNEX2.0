@@ -55,9 +55,19 @@ export default function UnifiedLogin() {
       return;
     }
 
-    // 2. Try Supabase auth (for users who registered with own password)
+    // 2. Try backend API auth (for users created via bulk upload or Supabase)
     try {
-      const { data: userRows } = await supabase.from("users").select("id, name, email, role, department, profile_data").eq("profile_data->>username", username.trim()).maybeSingle();
+      // First try to find user by username column (bulk-uploaded users have this set)
+      let userRows = null;
+      const { data: byUsername } = await supabase.from("users").select("id, name, email, role, department, profile_data").eq("username", username.trim()).maybeSingle();
+      if (byUsername) {
+        userRows = byUsername;
+      } else {
+        // Fallback: try email-based lookup (user might have typed their email as username)
+        const { data: byEmail } = await supabase.from("users").select("id, name, email, role, department, profile_data").eq("email", username.trim()).maybeSingle();
+        if (byEmail) userRows = byEmail;
+      }
+
       if (!userRows) { setError("Invalid username or password."); setLoading(false); return; }
       if (userRows.role !== role) { setError(`This account is registered as ${userRows.role}. Select the correct tab.`); setLoading(false); return; }
       const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({ email: userRows.email, password: password.trim() });

@@ -65,6 +65,18 @@ export async function sendRequest({ studentName, studentId, alumniName, alumniRo
     }
   } catch {}
 
+  // Smart ID resolution: If we have a mock alumniId but no real UUID, 
+  // try to find the real alumni record in the DB by name.
+  let finalAlumniId = alumniId;
+  if (alumniId && (String(alumniId).startsWith('alm-') || !alumniId)) {
+    try {
+      const { getAllAlumni } = await import('./lib/db');
+      const list = await getAllAlumni();
+      const match = list.find(a => a.name === alumniName);
+      if (match) finalAlumniId = match.id;
+    } catch {}
+  }
+
   let mergedStudentProfile = studentProfile || null;
   try {
     if (realStudentId && !String(realStudentId).startsWith('stu-') && !String(realStudentId).startsWith('alm-')) {
@@ -75,14 +87,13 @@ export async function sendRequest({ studentName, studentId, alumniName, alumniRo
     }
   } catch {}
 
-  const hasRealIds = realStudentId && alumniId &&
-    !String(realStudentId).startsWith('stu-') && !String(alumniId).startsWith('alm-');
+  const hasRealIds = realStudentId && finalAlumniId;
 
   if (hasRealIds) {
     try {
       const result = await dbCreateRequest({
         studentId: realStudentId,
-        alumniId,
+        alumniId:  finalAlumniId,
         topic:    topic   || 'Mock Interview',
         message:  message || '',
         studentProfileSnapshot: mergedStudentProfile || null,
@@ -111,7 +122,7 @@ export async function sendRequest({ studentName, studentId, alumniName, alumniRo
       console.warn('sendRequest: Supabase failed, falling back to localStorage', e.message);
     }
   } else {
-    console.warn('sendRequest: missing real UUIDs — studentId:', realStudentId, 'alumniId:', alumniId);
+    console.warn('sendRequest: missing real UUIDs — studentId:', realStudentId, 'alumniId:', finalAlumniId);
   }
 
   // Fallback — localStorage only
@@ -139,7 +150,7 @@ export async function sendRequest({ studentName, studentId, alumniName, alumniRo
 // Normalize DB status (PENDING/ACCEPTED/SLOT_BOOKED/DECLINED) → local (pending/accepted/slot_booked/declined)
 function normalizeStatus(status) {
   if (!status) return 'pending';
-  return status.toLowerCase().replace('slot_booked', 'slot_booked');
+  return status.toLowerCase();
 }
 
 // ── Get all requests (for alumni dashboard) ───────────────────────────────────
@@ -216,7 +227,7 @@ export async function acceptRequestOnly(requestId) {
   try {
     const req = requests[idx];
     const authUser = JSON.parse(localStorage.getItem('alumnex_user') || '{}');
-    if (req.studentId && !String(req.studentId).startsWith('stu-')) {
+    if (req.studentId) {
       await createNotification({
         userId:    req.studentId,
         type:      'ACCEPTED',
@@ -258,7 +269,7 @@ export async function bookSlot(requestId, scheduledTime) {
 
   try {
     const req = requests[idx];
-    if (req.studentId && !String(req.studentId).startsWith('stu-')) {
+    if (req.studentId) {
       await createNotification({
         userId:    req.studentId,
         type:      'SLOT_BOOKED',
@@ -325,7 +336,7 @@ export async function declineRequest(requestId) {
 
   try {
     const req = requests[idx];
-    if (req.studentId && !String(req.studentId).startsWith('stu-')) {
+    if (req.studentId) {
       await createNotification({
         userId:    req.studentId,
         type:      'DECLINED',

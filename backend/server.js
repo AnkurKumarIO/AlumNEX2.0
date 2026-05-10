@@ -98,6 +98,9 @@ app.get('/', (req, res) => {
       'GET  /stats/platform',
       'GET  /stats/interviews?userId=',
       'GET  /stats/mentorship',
+      'GET  /stats/directory',
+      'GET  /stats/directory/user/:id',
+      'GET  /stats/recent-activity',
       'PATCH /interview-records/:id',
       'POST /chat/interview',
       'POST /chat/questions',
@@ -122,7 +125,7 @@ server.on('error', err => {
 });
 
 server.listen(PORT, () => {
-  const baseUrl = isProduction ? `https://alumnex-backend.onrender.com` : `http://localhost:${PORT}`;
+  const baseUrl = isProduction ? `https://alumnex2-0.onrender.com` : `http://localhost:${PORT}`;
   console.log(`\n🚀 AlumNEX Backend running on ${baseUrl}`);
   console.log(`📡 Socket.io ready on ${baseUrl.replace('http', 'ws')}/interview`);
   console.log(`🗄️  Database: Supabase (PostgreSQL)`);

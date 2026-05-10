@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 
 // PATCH /users/:id/profile — save full profile data
 router.patch('/:id/profile', async (req, res) => {
