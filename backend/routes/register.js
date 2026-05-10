@@ -51,7 +51,11 @@ function generatePassword(username) {
 
 // ── Email sender ──────────────────────────────────────────────────────────────
 async function sendWelcomeEmail({ to, name, username, password, role, loginUrl }) {
-  if (!transporter) return { skipped: true, reason: 'Email not configured' };
+  console.log(`[EMAIL-DEBUG] sendWelcomeEmail called for ${to}, transporter=${!!transporter}`);
+  if (!transporter) {
+    console.log('[EMAIL-DEBUG] ❌ transporter is NULL — skipping email');
+    return { skipped: true, reason: 'Email not configured' };
+  }
   try {
     const roleLabel = role === 'STUDENT' ? 'Student' : 'Alumni Mentor';
     const roleColor = role === 'STUDENT' ? '#c3c0ff' : '#4edea3';
@@ -142,9 +146,11 @@ async function sendWelcomeEmail({ to, name, username, password, role, loginUrl }
       subject,
       html,
     });
+    console.log(`[EMAIL-DEBUG] ✅ Email sent successfully to ${to}`);
     return { sent: true };
   } catch (err) {
-    console.error(`Email failed for ${to}:`, err.message);
+    console.error(`[EMAIL-DEBUG] ❌ Email FAILED for ${to}:`, err.message);
+    try { require('fs').appendFileSync('scratch/email_error.txt', new Date().toISOString() + ' - ' + to + ' - ' + err.message + '\n'); } catch (e) {}
     return { skipped: true, reason: err.message };
   }
 }
@@ -177,7 +183,13 @@ async function createUser({ email, password, username, role, name, department, p
         const existingAuthUser = (listData?.users || []).find(u => u.email === email);
         if (existingAuthUser) {
           authId = existingAuthUser.id;
-          console.log(`[Register] Supabase Auth user already exists for ${email}, syncing to Prisma`);
+          console.log(`[Register] Supabase Auth user already exists for ${email}, updating password and syncing to Prisma`);
+          
+          // Update the password to match the one we just generated/sent
+          const { error: updateErr } = await supabase.auth.admin.updateUserById(authId, {
+            password: password
+          });
+          if (updateErr) console.warn(`[Register] Failed to update password for existing user ${email}:`, updateErr.message);
         } else {
           throw new Error(`Auth error for ${email}: ${authErr.message}`);
         }
@@ -288,6 +300,7 @@ router.post('/bulk-students', async (req, res) => {
           results.created.push({ ...result, emailSent: false });
 
           // Send welcome email asynchronously
+          console.log(`[EMAIL-DEBUG] Queuing email for ${email}`);
           emailPromises.push(
             sendWelcomeEmail({
               to: email,
@@ -297,10 +310,11 @@ router.post('/bulk-students', async (req, res) => {
               role: 'STUDENT',
               loginUrl,
             }).then(emailResult => {
+              console.log(`[EMAIL-DEBUG] Email result for ${email}:`, JSON.stringify(emailResult));
               const createdRec = results.created.find(r => r.email === email);
               if (createdRec) createdRec.emailSent = emailResult.sent || false;
-              return emailResult; // Must return so Promise.allSettled captures it
-            }).catch(err => { console.error(err); return { skipped: true }; })
+              return emailResult;
+            }).catch(err => { console.error('[EMAIL-DEBUG] Promise catch:', err); return { skipped: true }; })
           );
         }
       } catch (err) {
@@ -309,8 +323,11 @@ router.post('/bulk-students', async (req, res) => {
     }
 
     // Wait for emails to settle so we can report accurate counts
+    console.log(`[EMAIL-DEBUG] Waiting for ${emailPromises.length} email promises...`);
     const emailResults = await Promise.allSettled(emailPromises);
+    console.log('[EMAIL-DEBUG] All email results:', JSON.stringify(emailResults.map(r => ({ status: r.status, value: r.value }))));
     const emailsSent = emailResults.filter(r => r.status === 'fulfilled' && r.value?.sent).length;
+    console.log(`[EMAIL-DEBUG] Final emailsSent count: ${emailsSent}`);
 
     res.json({
       message: `Bulk upload complete. Created: ${results.created.length}, Skipped: ${results.skipped.length}, Failed: ${results.failed.length}`,

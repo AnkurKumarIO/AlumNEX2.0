@@ -1394,7 +1394,7 @@ export default function AlumniDashboard() {
                   return (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
                       {isEnded ? (<div style={{ padding: '0.45rem 1rem', background: 'rgba(100,100,100,0.12)', color: '#6b7280', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 5, opacity: 0.7 }}><span className="material-symbols-outlined" style={{ fontSize: 14 }}>videocam_off</span> Ended</div>) : canJoin ? (
-                        <a href={`/interview/${r.roomId}`} style={{ padding: '0.45rem 1rem', background: 'linear-gradient(135deg,#00a572,#4edea3)', color: '#003d29', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <a href={`/interview/${r.id}`} style={{ padding: '0.45rem 1rem', background: 'linear-gradient(135deg,#00a572,#4edea3)', color: '#003d29', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 5 }}>
                           <span className="material-symbols-outlined" style={{ fontSize: 14 }}>videocam</span> Join Now
                         </a>
                       ) : (

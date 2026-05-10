@@ -287,8 +287,7 @@ export default function Dashboard() {
                         <div style={{ marginTop: 10 }}>
                           {(() => {
                             // roomId: prefer stored, then derive deterministically from requestId
-                            const joinRoomId = n.roomId || req?.roomId
-                              || (n.requestId ? `room-${String(n.requestId).replace(/[^a-z0-9]/gi, '').slice(-16).toLowerCase()}` : null);
+                            const joinRoomId = n.requestId || req?.id || n.roomId || req?.roomId;
                             const scheduledTime = req?.scheduledTime;
                             const isNowJoinable = scheduledTime
                               ? Date.now() >= new Date(scheduledTime).getTime() - 5 * 60 * 1000
@@ -588,15 +587,15 @@ export default function Dashboard() {
                               {new Date(n.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                             </div>
                             {/* Join Now — instant meet */}
-                            {n.type === 'live' && n.roomId && (
-                              <a href={`/interview/${n.roomId}`} onClick={() => setShowNotifs(false)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 8, padding: '0.35rem 0.875rem', background: 'linear-gradient(135deg,#ff4444,#ff6b6b)', color: '#fff', borderRadius: 8, fontSize: '0.7rem', fontWeight: 700, textDecoration: 'none' }}>
+                            {n.type === 'live' && (n.requestId || n.roomId) && (
+                              <a href={`/interview/${n.requestId || n.roomId}`} onClick={() => setShowNotifs(false)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 8, padding: '0.35rem 0.875rem', background: 'linear-gradient(135deg,#ff4444,#ff6b6b)', color: '#fff', borderRadius: 8, fontSize: '0.7rem', fontWeight: 700, textDecoration: 'none' }}>
                                 <span className="material-symbols-outlined" style={{ fontSize: 14 }}>videocam</span> Join Now — Live
                               </a>
                             )}
                             {/* Join Now button for slot_booked notifications */}
                             {n.type === 'slot_booked' && (() => {
                               const req = myRequests.find(r => r.id === n.requestId);
-                              const joinRoomId = n.roomId || req?.roomId;
+                              const joinRoomId = n.requestId || req?.id || n.roomId || req?.roomId;
                               const scheduledTime = req?.scheduledTime;
                               if (!joinRoomId) return null;
                               const nowMs = Date.now();

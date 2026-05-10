@@ -69,6 +69,7 @@ router.post('/student/register', async (req, res) => {
 // ── POST /auth/student/login ──────────────────────────────────────────────────
 router.post('/student/login', async (req, res) => {
   try {
+    console.log('[LOGIN DEBUG] Received login payload:', JSON.stringify(req.body));
     let { username, password, email } = req.body;
     if (username) username = username.trim();
     if (email) email = email.trim();

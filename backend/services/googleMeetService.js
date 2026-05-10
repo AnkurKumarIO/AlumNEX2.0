@@ -1,69 +1,78 @@
-/**
- * Video Call Service — Jitsi Meet
- * Generates instant, working video room links using Jitsi Meet (free, no API keys)
- * Both parties get the same deterministic URL based on roomId
- */
+const { google } = require('googleapis');
 
 /**
- * Generate a simple video call link
- * @param {string} roomId - Unique room identifier
- * @returns {string} Jitsi Meet URL
+ * Video Call Service — Google Meet & Jitsi
+ * Falls back to Jitsi if Google OAuth is not connected.
  */
+
+const oauth2Client = new google.auth.OAuth2(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET,
+  process.env.BACKEND_URL 
+    ? `${process.env.BACKEND_URL}/auth/google/callback` 
+    : 'http://localhost:5001/auth/google/callback'
+);
+
+/**
+ * Creates a real Google Meet link using the user's refresh token
+ * @param {string} refreshToken - The stored refresh token for the alumni
+ * @param {string} title - Title of the meeting
+ * @param {string} startTime - ISO string for meeting start
+ * @param {string} endTime - ISO string for meeting end
+ */
+async function createGoogleMeetLink(refreshToken, title, startTime, endTime) {
+  try {
+    oauth2Client.setCredentials({ refresh_token: refreshToken });
+    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+    const event = {
+      summary: title || 'AlumNEX Mentorship Interview',
+      description: 'Interview session via AlumNEX Platform',
+      start: { dateTime: startTime || new Date().toISOString() },
+      end: { dateTime: endTime || new Date(Date.now() + 3600000).toISOString() }, // Default 1 hour
+      conferenceData: {
+        createRequest: {
+          requestId: `alumnex-${Date.now()}`,
+          conferenceSolutionKey: { type: 'hangoutsMeet' },
+        },
+      },
+    };
+
+    const response = await calendar.events.insert({
+      calendarId: 'primary',
+      resource: event,
+      conferenceDataVersion: 1,
+    });
+
+    return response.data.hangoutLink;
+  } catch (err) {
+    console.error('[GoogleMeet] Failed to create Google Meet:', err.message);
+    throw err;
+  }
+}
+
 function generateSimpleMeetLink(roomId) {
-  const timestamp = Date.now().toString(36);
-  const randomPart = Math.random().toString(36).substring(2, 7);
-  const code = `AlumNEX-${roomId}-${timestamp}${randomPart}`;
+  const code = `AlumNEX-${roomId}-${Math.random().toString(36).substring(2, 7)}`;
   return `https://meet.jit.si/${code}`;
 }
 
-/**
- * Generate a consistent meet link for a room
- * Same roomId always generates the same link — both parties get identical URL
- * @param {string} roomId - Unique room identifier
- * @returns {string} Jitsi Meet URL
- */
 function generateConsistentMeetLink(roomId) {
   const code = `AlumNEX-${roomId}`.replace(/[^a-zA-Z0-9-]/g, '');
   return `https://meet.jit.si/${code}`;
 }
 
-/**
- * Create a video call link with custom code
- * @param {string} customCode - Custom meeting code
- * @returns {string} Jitsi Meet URL
- */
 function createMeetLinkWithCode(customCode) {
-  const sanitizedCode = customCode.replace(/[^a-zA-Z0-9-]/g, '');
-  return `https://meet.jit.si/${sanitizedCode}`;
+  return `https://meet.jit.si/${customCode.replace(/[^a-zA-Z0-9-]/g, '')}`;
 }
 
-/**
- * Extract meeting code from video call URL
- * @param {string} meetUrl - Full Jitsi Meet URL
- * @returns {string|null} Meeting code or null if invalid
- */
-function extractMeetingCode(meetUrl) {
-  const jitsiMatch = meetUrl.match(/meet\.jit\.si\/([a-zA-Z0-9-]+)/i);
-  if (jitsiMatch) return jitsiMatch[1];
-  const googleMatch = meetUrl.match(/meet\.google\.com\/([a-z0-9-]+)/i);
-  if (googleMatch) return googleMatch[1];
-  return null;
-}
-
-/**
- * Validate video call URL format
- * @param {string} url - URL to validate
- * @returns {boolean} True if valid video call URL
- */
 function isValidMeetUrl(url) {
-  return /^https:\/\/meet\.jit\.si\/[a-zA-Z0-9-]+$/i.test(url) ||
-         /^https:\/\/meet\.google\.com\/[a-z0-9-]+$/i.test(url);
+  return /^https:\/\/(meet\.jit\.si|meet\.google\.com)\/[a-zA-Z0-9-]+$/i.test(url);
 }
 
 module.exports = {
+  createGoogleMeetLink,
   generateSimpleMeetLink,
   generateConsistentMeetLink,
   createMeetLinkWithCode,
-  extractMeetingCode,
   isValidMeetUrl,
 };

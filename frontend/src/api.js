@@ -404,11 +404,11 @@ export const api = {
 
   // ─── Google Meet Integration ─────────────────────────────────────────────
 
-  createMeetLink: (roomId, title) => callOrMock(
+  createMeetLink: (roomId, title, alumniId, startTime, endTime) => callOrMock(
     () => fetch(`${API_BASE}/meet/create`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ roomId, title, consistent: true }),
+      body: JSON.stringify({ roomId, title, alumniId, startTime, endTime, consistent: true }),
     }).then(r => r.json()),
     async () => {
       await mockDelay(300);

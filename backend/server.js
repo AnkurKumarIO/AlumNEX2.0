@@ -32,6 +32,7 @@ app.use(express.json());
 
 // ── Routes (mounted at root, no /api prefix) ──────────────────────────────────
 app.use('/auth',          require('./routes/auth'));
+app.use('/auth/google',   require('./routes/google'));
 app.use('/ai',            require('./routes/aiRoutes'));
 app.use('/requests',      require('./routes/requests'));
 app.use('/notifications', require('./routes/notifications'));

@@ -306,6 +306,45 @@ export default function SettingsPage() {
         {activeSection === 'account' && (
           <div style={{ background: '#131b2e', borderRadius: 16, padding: '2rem', border: '1px solid rgba(70,69,85,0.15)' }}>
             <h3 style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: '1.75rem' }}>Account Settings</h3>
+            
+            {/* Google Meet Integration */}
+            <div style={{ marginBottom: '2rem', padding: '1.25rem', background: 'rgba(66, 133, 244, 0.05)', border: '1px solid rgba(66, 133, 244, 0.2)', borderRadius: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: '#4285f4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <img src="https://fonts.gstatic.com/s/i/productlogos/meet_2020q4/v1/web-96dp/logo_meet_2020q4_color_2x_web_96dp.png" alt="Meet" style={{ width: 24 }} />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>Google Meet Integration</div>
+                  <div style={{ fontSize: '0.8rem', color: '#c7c4d8' }}>Generate professional meeting links automatically</div>
+                </div>
+              </div>
+              
+              {new URLSearchParams(window.location.search).get('google_status') === 'success' && (
+                <div style={{ marginBottom: 15, padding: '0.5rem 1rem', background: 'rgba(78,222,163,0.1)', border: '1px solid rgba(78,222,163,0.3)', borderRadius: 8, color: '#4edea3', fontSize: '0.8rem', fontWeight: 600 }}>
+                  ✅ Google Calendar connected successfully!
+                </div>
+              )}
+
+              {new URLSearchParams(window.location.search).get('google_status') === 'error' && (
+                <div style={{ marginBottom: 15, padding: '0.5rem 1rem', background: 'rgba(255,180,171,0.1)', border: '1px solid rgba(255,180,171,0.3)', borderRadius: 8, color: '#ffb4ab', fontSize: '0.8rem', fontWeight: 600 }}>
+                  ❌ Connection failed. Please try again.
+                </div>
+              )}
+
+              <button 
+                onClick={() => {
+                  const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+                  window.location.href = `${apiBase}/auth/google/url?userId=${user?.id}`;
+                }}
+                style={{ width: '100%', padding: '0.75rem', background: 'white', color: '#3c4043', border: '1px solid #dadce0', borderRadius: 8, fontWeight: 600, fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: 'pointer', transition: 'background 0.2s' }}
+                onMouseOver={(e) => e.currentTarget.style.background = '#f8f9fa'}
+                onMouseOut={(e) => e.currentTarget.style.background = 'white'}
+              >
+                <svg width="18" height="18" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.63-.06-1.25-.16-1.84H9v3.49h4.84a4.14 4.14 0 0 1-1.79 2.72v2.26h2.91c1.68-1.55 2.68-3.83 2.68-6.63z" fill="#4285F4"/><path d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.91-2.26c-.8.54-1.83.86-3.05.86-2.34 0-4.33-1.58-5.04-3.71H.95v2.33C2.43 15.89 5.5 18 9 18z" fill="#34A853"/><path d="M3.96 10.71a5.41 5.41 0 0 1 0-3.42V4.96H.95a8.99 8.99 0 0 0 0 8.08l3.01-2.33z" fill="#FBBC05"/><path d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.47.89 11.43 0 9 0 5.5 0 2.43 2.11.95 5.14l3.01 2.33c.71-2.13 2.7-3.71 5.04-3.71z" fill="#EA4335"/></svg>
+                Connect Google Calendar
+              </button>
+            </div>
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {[
                 { icon: 'key', label: 'Change Password', desc: 'Update your login password', color: '#c3c0ff' },

@@ -17,6 +17,7 @@ model User {
   department          String?
   verification_status String   @default("PENDING")
   profile_data        String?
+  google_refresh_token String?
 
   given_slots         ScheduleSlot[]    @relation("AlumniSlots")
   booked_slots        ScheduleSlot[]    @relation("StudentBookings")

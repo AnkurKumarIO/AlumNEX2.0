@@ -251,16 +251,39 @@ export async function acceptRequestOnly(requestId) {
 // ── Book slot (alumni) ────────────────────────────────────────────────────────
 
 export async function bookSlot(requestId, scheduledTime) {
-  // roomId derived ONLY from requestId — same on every device, no Date.now()
-  const roomId = `room-${requestId.replace(/[^a-z0-9]/gi, '').slice(-16).toLowerCase()}`;
-  try {
-    await dbUpdateRequest(requestId, { status: 'SLOT_BOOKED', scheduledTime, roomId });
-  } catch (e) { console.warn('bookSlot DB error:', e.message); }
-
   const requests = loadLocal();
   const idx = requests.findIndex(r => r.id === requestId);
   if (idx === -1) return null;
-  requests[idx] = { ...requests[idx], status: 'slot_booked', scheduledTime, roomId };
+  const req = requests[idx];
+
+  const authUser = JSON.parse(localStorage.getItem('alumnex_user') || '{}');
+  const alumniId = authUser.role === 'ALUMNI' ? authUser.id : req.alumni_id;
+
+  // Use backend to generate the link (will handle Google Meet if connected)
+  let meetLink = `https://meet.jit.si/room-${requestId.replace(/[^a-z0-9]/gi, '').slice(-16).toLowerCase()}`;
+  let roomId = `room-${requestId.replace(/[^a-z0-9]/gi, '').slice(-16).toLowerCase()}`;
+
+  try {
+    const { api } = await import('./api');
+    const result = await api.createMeetLink(
+      requestId, 
+      `Interview: ${req.studentName} & ${req.alumniName}`,
+      alumniId,
+      scheduledTime
+    );
+    if (result?.success && result.meetLink) {
+      meetLink = result.meetLink;
+      roomId   = result.roomId || roomId;
+    }
+  } catch (e) {
+    console.warn('bookSlot Meet API call failed:', e.message);
+  }
+
+  try {
+    await dbUpdateRequest(requestId, { status: 'SLOT_BOOKED', scheduledTime, roomId: meetLink });
+  } catch (e) { console.warn('bookSlot DB error:', e.message); }
+
+  requests[idx] = { ...requests[idx], status: 'slot_booked', scheduledTime, roomId: meetLink };
   saveLocal(requests);
 
   const formatted = new Date(scheduledTime).toLocaleString('en-US', {
