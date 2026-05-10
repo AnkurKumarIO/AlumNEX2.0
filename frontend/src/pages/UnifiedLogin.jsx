@@ -3,6 +3,7 @@ import { useNavigate, Navigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import AlumNexLogo from "../AlumNexLogo";
 import { supabase } from "../lib/supabaseClient";
+import { api } from "../api";
 
 const CREDENTIAL_STORE = [
   { username: "admin",           password: "tnp_secure_123", role: "TNP",     name: "TNP Coordinator",  department: "Administration",         id: "tnp-admin" },
@@ -55,27 +56,38 @@ export default function UnifiedLogin() {
       return;
     }
 
-    // 2. Try backend API auth (for users created via bulk upload or Supabase)
+    // 2. Try backend API auth (Robust lookup via Prisma + Supabase Auth)
     try {
-      // First try to find user by username column (bulk-uploaded users have this set)
-      let userRows = null;
-      const { data: byUsername } = await supabase.from("users").select("id, name, email, role, department, profile_data").eq("username", username.trim()).maybeSingle();
-      if (byUsername) {
-        userRows = byUsername;
-      } else {
-        // Fallback: try email-based lookup (user might have typed their email as username)
-        const { data: byEmail } = await supabase.from("users").select("id, name, email, role, department, profile_data").eq("email", username.trim()).maybeSingle();
-        if (byEmail) userRows = byEmail;
+      let result;
+      if (role === "STUDENT") {
+        result = await api.studentLogin(username.trim(), password.trim());
+      } else if (role === "ALUMNI") {
+        result = await api.alumniLogin(username.trim(), password.trim());
+      } else if (role === "TNP") {
+        result = await api.tnpLogin(username.trim(), password.trim());
       }
 
-      if (!userRows) { setError("Invalid username or password."); setLoading(false); return; }
-      if (userRows.role !== role) { setError(`This account is registered as ${userRows.role}. Select the correct tab.`); setLoading(false); return; }
-      const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({ email: userRows.email, password: password.trim() });
-      if (authErr) { setError("Invalid username or password."); setLoading(false); return; }
-      const userData = { id: userRows.id, name: userRows.name, role: userRows.role, department: userRows.department, email: userRows.email };
-      login(userData, authData.session?.access_token || `token-${Date.now()}`);
-      if (userRows.role === "STUDENT" && !localStorage.getItem("alumnex_profile") && !localStorage.getItem("alumniconnect_profile")) { navigate("/profile-setup"); } else { navigate("/dashboard"); }
-    } catch (err) { setError("Login failed. Please try again."); }
+      if (result?.error) {
+        setError(result.error);
+        setLoading(false);
+        return;
+      }
+
+      if (result?.token && result?.user) {
+        login(result.user, result.token);
+        // Redirect logic
+        if (result.user.role === "STUDENT" && !localStorage.getItem("alumnex_profile") && !localStorage.getItem("alumniconnect_profile")) {
+          navigate("/profile-setup");
+        } else {
+          navigate("/dashboard");
+        }
+      } else {
+        setError("Invalid username or password.");
+      }
+    } catch (err) {
+      console.error("Login error:", err);
+      setError("Login failed. Please try again.");
+    }
     setLoading(false);
   };
 
