@@ -69,7 +69,9 @@ router.post('/student/register', async (req, res) => {
 // ── POST /auth/student/login ──────────────────────────────────────────────────
 router.post('/student/login', async (req, res) => {
   try {
-    const { username, password, email } = req.body;
+    let { username, password, email } = req.body;
+    if (username) username = username.trim();
+    if (email) email = email.trim();
 
     // Support both email and username login — look up in Prisma
     let userEmail = email;
@@ -148,7 +150,9 @@ router.post('/alumni/register', async (req, res) => {
 // ── POST /auth/alumni/login ───────────────────────────────────────────────────
 router.post('/alumni/login', async (req, res) => {
   try {
-    const { username, password, email } = req.body;
+    let { username, password, email } = req.body;
+    if (username) username = username.trim();
+    if (email) email = email.trim();
 
     // Support both email and username login — look up in Prisma
     let userEmail = email;
