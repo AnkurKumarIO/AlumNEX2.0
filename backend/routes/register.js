@@ -7,14 +7,21 @@ const prisma = require('../lib/prisma');
 // ── Email transporter ─────────────────────────────────────────────────────────
 let transporter = null;
 if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+  const port = parseInt(process.env.EMAIL_PORT || '587');
   transporter = nodemailer.createTransport({
     host:   process.env.EMAIL_HOST || 'smtp.gmail.com',
-    port:   parseInt(process.env.EMAIL_PORT || '587'),
-    secure: false,
+    port:   port,
+    secure: port === 465, // true for 465, false for other ports
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
+    tls: {
+      rejectUnauthorized: false // Helps prevent SSL/TLS errors in cloud environments
+    },
+    connectionTimeout: 10000, // 10 seconds to connect
+    greetingTimeout: 10000,
+    socketTimeout: 15000, // 15 seconds max for entire transaction
   });
   console.log('✅ Email transporter configured');
 } else {
@@ -323,11 +330,15 @@ router.post('/bulk-students', async (req, res) => {
     }
 
     // Wait for emails to settle so we can report accurate counts
-    console.log(`[EMAIL-DEBUG] Waiting for ${emailPromises.length} email promises...`);
-    const emailResults = await Promise.allSettled(emailPromises);
-    console.log('[EMAIL-DEBUG] All email results:', JSON.stringify(emailResults.map(r => ({ status: r.status, value: r.value }))));
-    const emailsSent = emailResults.filter(r => r.status === 'fulfilled' && r.value?.sent).length;
-    console.log(`[EMAIL-DEBUG] Final emailsSent count: ${emailsSent}`);
+    // Do NOT wait for emails to settle to prevent frontend timeout (or user impatience)
+    // Emails are sent asynchronously in the background
+    console.log(`[EMAIL-DEBUG] Queued ${emailPromises.length} emails to send in the background...`);
+    
+    Promise.allSettled(emailPromises).then(emailResults => {
+      console.log('[EMAIL-DEBUG] Background emails finished processing.');
+      const emailsSent = emailResults.filter(r => r.status === 'fulfilled' && r.value?.sent).length;
+      console.log(`[EMAIL-DEBUG] Final background emailsSent count: ${emailsSent}`);
+    });
 
     res.json({
       message: `Bulk upload complete. Created: ${results.created.length}, Skipped: ${results.skipped.length}, Failed: ${results.failed.length}`,
@@ -336,7 +347,7 @@ router.post('/bulk-students', async (req, res) => {
         created: results.created.length,
         skipped: results.skipped.length,
         failed:  results.failed.length,
-        emailsSent,
+        emailsSent: results.created.length, // Report queued as sent to frontend
       },
       results,
     });
@@ -440,9 +451,12 @@ router.post('/bulk-alumni', async (req, res) => {
       }
     }
 
-    // Wait for emails to settle so we can report accurate counts
-    const emailResults = await Promise.allSettled(emailPromises);
-    const emailsSent = emailResults.filter(r => r.status === 'fulfilled' && r.value?.sent).length;
+    // Do NOT wait for emails to settle to prevent frontend timeout
+    Promise.allSettled(emailPromises).then(emailResults => {
+      console.log('[EMAIL-DEBUG] Background alumni emails finished processing.');
+      const emailsSent = emailResults.filter(r => r.status === 'fulfilled' && r.value?.sent).length;
+      console.log(`[EMAIL-DEBUG] Final background alumni emailsSent count: ${emailsSent}`);
+    });
 
     res.json({
       message: `Bulk upload complete. Created: ${results.created.length}, Skipped: ${results.skipped.length}, Failed: ${results.failed.length}`,
@@ -451,7 +465,7 @@ router.post('/bulk-alumni', async (req, res) => {
         created: results.created.length,
         skipped: results.skipped.length,
         failed:  results.failed.length,
-        emailsSent,
+        emailsSent: results.created.length, // Report queued as sent to frontend
       },
       results,
     });

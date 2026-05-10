@@ -46,7 +46,7 @@ function UploadResult({ result, onReset }) {
           { label: 'Created',     val: summary.created,    color: '#4edea3' },
           { label: 'Skipped',     val: summary.skipped,    color: '#ffb95f' },
           { label: 'Failed',      val: summary.failed,     color: '#ffb4ab' },
-          { label: 'Emails Sent', val: summary.emailsSent || 0, color: '#60a5fa' },
+          { label: 'Emails Queued', val: summary.emailsSent || 0, color: '#60a5fa' },
         ].map(s => (
           <div key={s.label} style={{ background: '#131b2e', borderRadius: 14, padding: '1.25rem', border: `1px solid ${s.color}20`, textAlign: 'center' }}>
             <div style={{ fontSize: '2rem', fontWeight: 900, color: s.color }}>{s.val}</div>
