@@ -3,23 +3,36 @@ const router   = express.Router();
 const supabase = require('../supabase');
 const nodemailer = require('nodemailer');
 const prisma = require('../lib/prisma');
+const { google } = require('googleapis');
 
-// ── Email transporter ─────────────────────────────────────────────────────────
+// ── Gmail API Setup ─────────────────────────────────────────────────────────
+let gmail = null;
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_REFRESH_TOKEN) {
+  const oauth2Client = new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
+    'http://localhost:3000/oauth2callback'
+  );
+  oauth2Client.setCredentials({ refresh_token: process.env.GOOGLE_REFRESH_TOKEN });
+  gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+  console.log('✅ Gmail API configured and ready.');
+}
+
+// ── Email transporter (Legacy Fallback) ───────────────────────────────────────
 let transporter = null;
-if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-  // Using service: 'gmail' shorthand which handles port/host/secure/TLS defaults
+if (!gmail && process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+  // Keeping SMTP as a secondary fallback if Gmail API isn't set up
   transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
-    // Still forcing IPv4 as it is required for Render/Google handshake reliability
     family: 4,
     connectionTimeout: 30000,
     socketTimeout: 30000,
   });
-  console.log('✅ Email transporter configured (using Gmail Service)');
+  console.log('✅ Email transporter configured (Fallback SMTP)');
 } else {
   console.log('ℹ️  EMAIL_USER/EMAIL_PASS not set — emails will be skipped');
 }
@@ -63,7 +76,7 @@ const emailQueue = {
 
 // ── Email sender ──────────────────────────────────────────────────────────────
 async function sendWelcomeEmail({ to, name, username, password, role, loginUrl }) {
-  console.log(`[EMAIL-DEBUG] sendWelcomeEmail called for ${to}, transporter=${!!transporter}`);
+  console.log(`[EMAIL-DEBUG] sendWelcomeEmail called for ${to}`);
   
   // Track in queue
   emailQueue.pending.push(to);
@@ -76,10 +89,67 @@ async function sendWelcomeEmail({ to, name, username, password, role, loginUrl }
     if (status === 'failed') emailQueue.failedCount++;
   };
 
-  // 1. Try Resend first (Bypasses firewalls)
+  const subject = `Welcome to AlumNEX, ${name}!`;
+  const html = `
+    <div style="font-family: 'Inter', sans-serif; color: #1a1a1a; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+      <div style="background: #4f46e5; padding: 32px; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">Welcome to AlumNEX</h1>
+      </div>
+      <div style="padding: 40px 32px; background: white;">
+        <p style="font-size: 16px; margin-bottom: 24px;">Hello <strong>${name}</strong>,</p>
+        <p style="font-size: 16px; line-height: 1.6; color: #4b5563;">Your account has been created successfully. You can now log in using the credentials below:</p>
+        <div style="background: #f9fafb; border-radius: 8px; padding: 24px; margin: 32px 0;">
+          <p style="margin: 0 0 12px 0;"><strong>Username:</strong> <code style="background: #e5e7eb; padding: 2px 6px; border-radius: 4px;">${username}</code></p>
+          <p style="margin: 0;"><strong>Password:</strong> <code style="background: #e5e7eb; padding: 2px 6px; border-radius: 4px;">${password}</code></p>
+        </div>
+        <div style="text-align: center; margin-top: 32px;">
+          <a href="${loginUrl}" style="background: #4f46e5; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">Log In to Your Account</a>
+        </div>
+      </div>
+      <div style="background: #f9fafb; padding: 24px; text-align: center; border-top: 1px solid #e2e8f0;">
+        <p style="font-size: 14px; color: #9ca3af; margin: 0;">Developed by <strong>The Tesseract</strong></p>
+      </div>
+    </div>
+  `;
+
+  // 1. Try Gmail API first (Highest reliability, bypasses SMTP firewalls)
+  if (gmail) {
+    try {
+      console.log(`[EMAIL-DEBUG] Attempting send via Gmail API for ${to}`);
+      const utf8Subject = `=?utf-8?B?${Buffer.from(subject).toString('base64')}?=`;
+      const messageParts = [
+        `From: AlumNEX <${process.env.EMAIL_USER}>`,
+        `To: ${to}`,
+        `Content-Type: text/html; charset=utf-8`,
+        `MIME-Version: 1.0`,
+        `Subject: ${utf8Subject}`,
+        '',
+        html,
+      ];
+      const rawMessage = Buffer.from(messageParts.join('\n'))
+        .toString('base64')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+
+      const res = await gmail.users.messages.send({
+        userId: 'me',
+        requestBody: { raw: rawMessage },
+      });
+      
+      console.log(`[EMAIL-DEBUG] ✅ Sent via Gmail API: ${res.data.id}`);
+      updateQueueStatus('sent', null);
+      return { sent: true };
+    } catch (err) {
+      console.error('[EMAIL-DEBUG] ❌ Gmail API error:', err.message);
+      // Fallback to SMTP if API fails
+    }
+  }
+
+  // 2. Try Resend (Secondary fallback)
   if (process.env.RESEND_API_KEY) {
     try {
-      console.log(`[EMAIL-DEBUG] Attempting send via Resend API for ${to}`);
+      console.log(`[EMAIL-DEBUG] Attempting fallback via Resend API for ${to}`);
       const res = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
@@ -87,45 +157,16 @@ async function sendWelcomeEmail({ to, name, username, password, role, loginUrl }
           'Authorization': `Bearer ${process.env.RESEND_API_KEY}`
         },
         body: JSON.stringify({
-          from: 'AlumNEX <onboarding@resend.dev>', // Defaults to onboarding for free tier
+          from: 'AlumNEX <onboarding@resend.dev>',
           to: to,
-          subject: `Welcome to AlumNEX, ${name}!`,
-          html: `
-            <div style="font-family: 'Inter', sans-serif; color: #1a1a1a; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
-              <div style="background: #4f46e5; padding: 32px; text-align: center;">
-                <h1 style="color: white; margin: 0; font-size: 24px;">Welcome to AlumNEX</h1>
-              </div>
-              <div style="padding: 40px 32px; background: white;">
-                <p style="font-size: 16px; margin-bottom: 24px;">Hello <strong>${name}</strong>,</p>
-                <p style="font-size: 16px; line-height: 1.6; color: #4b5563;">Your account has been created successfully. You can now log in using the credentials below:</p>
-                <div style="background: #f9fafb; border-radius: 8px; padding: 24px; margin: 32px 0;">
-                  <p style="margin: 0 0 12px 0;"><strong>Username:</strong> <code style="background: #e5e7eb; padding: 2px 6px; borderRadius: 4px;">${username}</code></p>
-                  <p style="margin: 0;"><strong>Password:</strong> <code style="background: #e5e7eb; padding: 2px 6px; borderRadius: 4px;">${password}</code></p>
-                </div>
-                <div style="text-align: center; margin-top: 32px;">
-                  <a href="${loginUrl}" style="background: #4f46e5; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">Log In to Your Account</a>
-                </div>
-              </div>
-              <div style="background: #f9fafb; padding: 24px; text-align: center; border-top: 1px solid #e2e8f0;">
-                <p style="font-size: 14px; color: #9ca3af; margin: 0;">Developed by <strong>The Tesseract</strong></p>
-              </div>
-            </div>
-          `
+          subject: subject,
+          html: html
         })
       });
-      
-      const data = await res.json();
       if (res.ok) {
-        console.log(`[EMAIL-DEBUG] ✅ Sent via Resend: ${data.id}`);
+        console.log(`[EMAIL-DEBUG] ✅ Sent via Resend fallback`);
         updateQueueStatus('sent', null);
         return { sent: true };
-      } else {
-        console.warn(`[EMAIL-DEBUG] ⚠️ Resend API error: ${data.message || JSON.stringify(data)}`);
-        // Fallback to SMTP if Resend fails (e.g. unverified domain for others)
-      }
-    } catch (err) {
-      console.error('[EMAIL-DEBUG] ❌ Resend fetch error:', err.message);
-    }
   }
 
   // 2. Fallback to SMTP (Nodemailer)
