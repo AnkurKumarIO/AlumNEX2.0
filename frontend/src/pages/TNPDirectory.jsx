@@ -321,6 +321,7 @@ export default function DirectoryTab() {
           />
         </div>
       </div>
+    </div>
 
       {/* Error */}
       {error && (
