@@ -1,83 +1,93 @@
 const { google } = require('googleapis');
-const path = require('path');
-const fs = require('fs');
 
-// The path to the downloaded JSON key
-const KEY_PATH = path.join(__dirname, '../../alumnex-495906-c89292eb6921.json');
+/**
+ * Google Meet Service — OAuth-based (Option A)
+ * 
+ * Creates real Google Meet links using the ALUMNI's OAuth refresh token.
+ * The alumni is the meeting host, so they can admit students directly.
+ * Falls back to Jitsi Meet if the alumni hasn't connected Google Calendar.
+ */
 
-// Store the meet links so they are consistent for the same room
+// In-memory cache: roomId -> meetLink (so all users get the same link)
 const meetLinksCache = {};
 
 /**
- * Initializes the Google Calendar API client using the service account.
+ * Build an OAuth2 client with the app's credentials.
  */
-function getCalendarClient() {
-  if (!fs.existsSync(KEY_PATH)) {
-    throw new Error(`Google Service Account JSON key not found at ${KEY_PATH}`);
-  }
-
-  const auth = new google.auth.GoogleAuth({
-    keyFile: KEY_PATH,
-    scopes: ['https://www.googleapis.com/auth/calendar.events'],
-  });
-
-  return google.calendar({ version: 'v3', auth });
+function getOAuth2Client() {
+  return new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
+    process.env.BACKEND_URL
+      ? `${process.env.BACKEND_URL}/auth/google/callback`
+      : 'http://localhost:5001/auth/google/callback'
+  );
 }
 
 /**
- * Generates a real Google Meet link by creating an event on the service account's calendar.
- * @param {string} roomId - Unique room identifier
- * @param {string} title - Optional title for the event
- * @returns {Promise<string>} The Google Meet URL
+ * Creates a REAL Google Meet link using the alumni's stored refresh token.
+ * The alumni becomes the Host of the meeting → can admit students.
+ * 
+ * @param {string} refreshToken - Alumni's Google OAuth refresh token
+ * @param {string} roomId       - Unique room/request ID (for caching)
+ * @param {string} title        - Meeting title
+ * @param {string} startTime    - ISO string for meeting start (optional)
+ * @param {string} endTime      - ISO string for meeting end (optional)
+ * @returns {Promise<string>}   The Google Meet URL (e.g. https://meet.google.com/abc-defg-hij)
  */
-async function generateMeetLink(roomId, title = 'AlumNEX Mock Interview') {
-  // If we already generated a link for this room, return it so both users get the same link
-  if (meetLinksCache[roomId]) {
+async function createGoogleMeetLink(refreshToken, roomId, title, startTime, endTime) {
+  // Return cached link if we already generated one for this room
+  if (roomId && meetLinksCache[roomId]) {
+    console.log(`[GoogleMeet] Cache hit for room ${roomId}`);
     return meetLinksCache[roomId];
   }
 
-  try {
-    const calendar = getCalendarClient();
-    
-    // Create an event starting now and ending in 2 hours
-    const now = new Date();
-    const end = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+  const oauth2Client = getOAuth2Client();
+  oauth2Client.setCredentials({ refresh_token: refreshToken });
 
-    const event = {
-      summary: title,
-      description: `Automated mock interview session for AlumNEX room: ${roomId}`,
-      start: { dateTime: now.toISOString() },
-      end: { dateTime: end.toISOString() },
-      conferenceData: {
-        createRequest: {
-          requestId: `alumnex-${roomId}-${Date.now()}`,
-          conferenceSolutionKey: { type: 'hangoutsMeet' }
-        }
-      }
-    };
+  const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
-    const calendarId = process.env.GOOGLE_CALENDAR_ID || 'primary';
+  const now = new Date();
+  const event = {
+    summary: title || 'AlumNEX Mock Interview',
+    description: `Interview session via AlumNEX Platform.\nRoom: ${roomId || 'N/A'}`,
+    start: { dateTime: startTime || now.toISOString() },
+    end:   { dateTime: endTime   || new Date(now.getTime() + 60 * 60 * 1000).toISOString() },
+    conferenceData: {
+      createRequest: {
+        requestId: `alumnex-${roomId || Date.now()}-${Date.now()}`,
+        conferenceSolutionKey: { type: 'hangoutsMeet' },
+      },
+    },
+  };
 
-    const response = await calendar.events.insert({
-      calendarId: calendarId, // Use the configured calendar or fallback to primary
-      resource: event,
-      conferenceDataVersion: 1, // Required to generate the meet link
-    });
+  const response = await calendar.events.insert({
+    calendarId: 'primary',
+    resource: event,
+    conferenceDataVersion: 1,
+  });
 
-    // Extract the Meet link
-    const meetLink = response.data.hangoutLink;
-    if (!meetLink) {
-      throw new Error('Google API did not return a hangoutLink');
-    }
-
-    // Cache the link for this room
-    meetLinksCache[roomId] = meetLink;
-    return meetLink;
-
-  } catch (error) {
-    console.error('Error creating Google Meet link:', error.message);
-    throw error;
+  const meetLink = response.data.hangoutLink;
+  if (!meetLink) {
+    throw new Error('Google Calendar API did not return a hangoutLink');
   }
+
+  // Cache the link so all participants get the same URL
+  if (roomId) {
+    meetLinksCache[roomId] = meetLink;
+    console.log(`[GoogleMeet] Created real Meet link for room ${roomId}: ${meetLink}`);
+  }
+
+  return meetLink;
+}
+
+/**
+ * Generate a consistent Jitsi Meet link as fallback when alumni hasn't connected Google.
+ * All users joining with the same roomId will get the same Jitsi room.
+ */
+function generateJitsiFallback(roomId) {
+  const code = `AlumNEX-${roomId}`.replace(/[^a-zA-Z0-9-]/g, '');
+  return `https://meet.jit.si/${code}`;
 }
 
 /**
@@ -86,12 +96,13 @@ async function generateMeetLink(roomId, title = 'AlumNEX Mock Interview') {
  * @returns {boolean} True if valid video call URL
  */
 function isValidMeetUrl(url) {
-  return /^https:\/\/meet\.google\.com\/[a-z0-9-]+$/i.test(url) ||
-         /^https:\/\/meet\.jit\.si\/[a-zA-Z0-9-]+$/i.test(url);
+  return /^https:\/\/(meet\.jit\.si|meet\.google\.com)\/[a-zA-Z0-9-]+$/i.test(url);
 }
 
 module.exports = {
-  generateMeetLink,
+  createGoogleMeetLink,
+  generateJitsiFallback,
   isValidMeetUrl,
-  meetLinksCache
+  meetLinksCache,
+  getOAuth2Client,
 };

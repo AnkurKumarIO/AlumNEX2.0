@@ -1,6 +1,7 @@
-import React, { useState, useContext, useRef } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { updateUserProfile } from '../lib/db';
+import { api } from '../api';
 
 const NOTIF_ITEMS = [
   { key: 'interview_requests', label: 'Interview Requests', desc: 'When a student sends you a booking request' },
@@ -23,6 +24,61 @@ export default function SettingsPage({ role }) {
   const [saved, setSaved] = useState(false);
   const [showPwModal, setShowPwModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  // Google Calendar OAuth state
+  const [googleConnected, setGoogleConnected] = useState(false);
+  const [googleEmail, setGoogleEmail] = useState('');
+  const [googleLoading, setGoogleLoading] = useState(true);
+  const [googleDisconnecting, setGoogleDisconnecting] = useState(false);
+  const [googleStatusMsg, setGoogleStatusMsg] = useState(null); // { type: 'success' | 'error', text: '' }
+
+  // Check Google Calendar connection status on mount (alumni only)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const googleStatus = params.get('google_status');
+    if (googleStatus === 'success') {
+      setGoogleStatusMsg({ type: 'success', text: 'Google Calendar connected successfully!' });
+      // Clean up URL params
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (googleStatus === 'error') {
+      const msg = params.get('message') || 'Connection failed. Please try again.';
+      setGoogleStatusMsg({ type: 'error', text: msg });
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+
+    // Auto-dismiss status message after 5 seconds
+    if (googleStatus) {
+      setTimeout(() => setGoogleStatusMsg(null), 5000);
+    }
+
+    if (isAlumni && user?.id) {
+      api.googleCalendarStatus(user.id)
+        .then(data => {
+          setGoogleConnected(data.connected === true);
+          if (data.googleEmail) setGoogleEmail(data.googleEmail);
+        })
+        .catch(() => setGoogleConnected(false))
+        .finally(() => setGoogleLoading(false));
+    } else {
+      setGoogleLoading(false);
+    }
+  }, [isAlumni, user?.id]);
+
+  const handleGoogleDisconnect = async () => {
+    if (!user?.id) return;
+    setGoogleDisconnecting(true);
+    try {
+      await api.googleCalendarDisconnect(user.id);
+      setGoogleConnected(false);
+      setGoogleEmail('');
+      setGoogleStatusMsg({ type: 'success', text: 'Google Calendar disconnected.' });
+      setTimeout(() => setGoogleStatusMsg(null), 3000);
+    } catch (err) {
+      setGoogleStatusMsg({ type: 'error', text: 'Failed to disconnect. Try again.' });
+      setTimeout(() => setGoogleStatusMsg(null), 4000);
+    }
+    setGoogleDisconnecting(false);
+  };
 
   const [profile, setProfile] = useState({
     name:       user?.name       || savedProfile.name       || '',
@@ -317,42 +373,88 @@ export default function SettingsPage({ role }) {
           <div style={{ background: '#131b2e', borderRadius: 16, padding: '2rem', border: '1px solid rgba(70,69,85,0.15)' }}>
             <h3 style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: '1.75rem' }}>Account Settings</h3>
             
-            {/* Google Meet Integration */}
-            <div style={{ marginBottom: '2rem', padding: '1.25rem', background: 'rgba(66, 133, 244, 0.05)', border: '1px solid rgba(66, 133, 244, 0.2)', borderRadius: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                <div style={{ width: 40, height: 40, borderRadius: 10, background: '#4285f4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <img src="https://fonts.gstatic.com/s/i/productlogos/meet_2020q4/v1/web-96dp/logo_meet_2020q4_color_2x_web_96dp.png" alt="Meet" style={{ width: 24 }} />
+            {/* Google Meet Integration — Dynamic Status */}
+            <div style={{ marginBottom: '2rem', padding: '1.25rem', background: googleConnected ? 'rgba(78,222,163,0.04)' : 'rgba(66, 133, 244, 0.05)', border: `1px solid ${googleConnected ? 'rgba(78,222,163,0.25)' : 'rgba(66, 133, 244, 0.2)'}`, borderRadius: 12, transition: 'all 0.3s' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 10, background: googleConnected ? '#00a572' : '#4285f4', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.3s', position: 'relative' }}>
+                    <img src="https://fonts.gstatic.com/s/i/productlogos/meet_2020q4/v1/web-96dp/logo_meet_2020q4_color_2x_web_96dp.png" alt="Meet" style={{ width: 24 }} />
+                    {googleConnected && (
+                      <div style={{ position: 'absolute', bottom: -2, right: -2, width: 14, height: 14, borderRadius: '50%', background: '#4edea3', border: '2px solid #131b2e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ fontSize: 8, fontWeight: 900, color: '#003d29' }}>✓</span>
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>Google Meet Integration</div>
+                    <div style={{ fontSize: '0.8rem', color: '#c7c4d8' }}>
+                      {googleLoading ? 'Checking connection...' : googleConnected ? 'Connected — meetings created as you (Host)' : 'Connect to generate professional meeting links'}
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>Google Meet Integration</div>
-                  <div style={{ fontSize: '0.8rem', color: '#c7c4d8' }}>Generate professional meeting links automatically</div>
-                </div>
+                {googleConnected && (
+                  <div style={{ padding: '0.2rem 0.6rem', background: 'rgba(78,222,163,0.15)', border: '1px solid rgba(78,222,163,0.3)', borderRadius: 999, fontSize: '0.6rem', fontWeight: 700, color: '#4edea3', textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>Connected</div>
+                )}
               </div>
               
-              {new URLSearchParams(window.location.search).get('google_status') === 'success' && (
-                <div style={{ marginBottom: 15, padding: '0.5rem 1rem', background: 'rgba(78,222,163,0.1)', border: '1px solid rgba(78,222,163,0.3)', borderRadius: 8, color: '#4edea3', fontSize: '0.8rem', fontWeight: 600 }}>
-                  ✅ Google Calendar connected successfully!
+              {/* Status message (from OAuth callback or disconnect action) */}
+              {googleStatusMsg && (
+                <div style={{ marginBottom: 12, padding: '0.5rem 1rem', background: googleStatusMsg.type === 'success' ? 'rgba(78,222,163,0.1)' : 'rgba(255,180,171,0.1)', border: `1px solid ${googleStatusMsg.type === 'success' ? 'rgba(78,222,163,0.3)' : 'rgba(255,180,171,0.3)'}`, borderRadius: 8, color: googleStatusMsg.type === 'success' ? '#4edea3' : '#ffb4ab', fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8, animation: 'slideIn 0.3s ease' }}>
+                  {googleStatusMsg.type === 'success' ? '✅' : '❌'} {googleStatusMsg.text}
                 </div>
               )}
 
-              {new URLSearchParams(window.location.search).get('google_status') === 'error' && (
-                <div style={{ marginBottom: 15, padding: '0.5rem 1rem', background: 'rgba(255,180,171,0.1)', border: '1px solid rgba(255,180,171,0.3)', borderRadius: 8, color: '#ffb4ab', fontSize: '0.8rem', fontWeight: 600 }}>
-                  ❌ Connection failed. Please try again.
+              {googleLoading ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.75rem', gap: 8 }}>
+                  <div style={{ width: 16, height: 16, border: '2px solid rgba(195,192,255,0.2)', borderTop: '2px solid #c3c0ff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                  <span style={{ fontSize: '0.8rem', color: '#c7c4d8' }}>Checking Google status...</span>
+                </div>
+              ) : googleConnected ? (
+                <div>
+                  {/* Connected state — show email and disconnect */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', background: '#171f33', borderRadius: 8, marginBottom: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <svg width="18" height="18" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.63-.06-1.25-.16-1.84H9v3.49h4.84a4.14 4.14 0 0 1-1.79 2.72v2.26h2.91c1.68-1.55 2.68-3.83 2.68-6.63z" fill="#4285F4"/><path d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.91-2.26c-.8.54-1.83.86-3.05.86-2.34 0-4.33-1.58-5.04-3.71H.95v2.33C2.43 15.89 5.5 18 9 18z" fill="#34A853"/><path d="M3.96 10.71a5.41 5.41 0 0 1 0-3.42V4.96H.95a8.99 8.99 0 0 0 0 8.08l3.01-2.33z" fill="#FBBC05"/><path d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.47.89 11.43 0 9 0 5.5 0 2.43 2.11.95 5.14l3.01 2.33c.71-2.13 2.7-3.71 5.04-3.71z" fill="#EA4335"/></svg>
+                      <div>
+                        <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#dae2fd' }}>{googleEmail || 'Google Account'}</div>
+                        <div style={{ fontSize: '0.65rem', color: '#c7c4d8' }}>Calendar connected • You are the Host for meetings</div>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={handleGoogleDisconnect} 
+                      disabled={googleDisconnecting}
+                      style={{ padding: '0.35rem 0.75rem', background: 'rgba(255,180,171,0.1)', border: '1px solid rgba(255,180,171,0.25)', borderRadius: 8, color: '#ffb4ab', fontSize: '0.7rem', fontWeight: 700, cursor: googleDisconnecting ? 'not-allowed' : 'pointer', opacity: googleDisconnecting ? 0.6 : 1, whiteSpace: 'nowrap' }}
+                    >
+                      {googleDisconnecting ? 'Disconnecting...' : 'Disconnect'}
+                    </button>
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: 'rgba(199,196,216,0.5)', lineHeight: 1.5 }}>
+                    When students join your interview sessions, real Google Meet links are auto-generated with you as the Host. You can admit students directly.
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  {/* Disconnected state — show connect button */}
+                  <div style={{ fontSize: '0.75rem', color: '#c7c4d8', marginBottom: 12, lineHeight: 1.6 }}>
+                    Connect your Google Calendar to create real Google Meet links for interview sessions. You'll be the meeting Host, so you can admit students directly — no waiting room issues.
+                  </div>
+                  <button 
+                    onClick={() => {
+                      const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+                      window.location.href = `${apiBase}/auth/google/url?userId=${user?.id}`;
+                    }}
+                    style={{ width: '100%', padding: '0.75rem', background: 'white', color: '#3c4043', border: '1px solid #dadce0', borderRadius: 8, fontWeight: 600, fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: 'pointer', transition: 'background 0.2s' }}
+                    onMouseOver={(e) => e.currentTarget.style.background = '#f8f9fa'}
+                    onMouseOut={(e) => e.currentTarget.style.background = 'white'}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.63-.06-1.25-.16-1.84H9v3.49h4.84a4.14 4.14 0 0 1-1.79 2.72v2.26h2.91c1.68-1.55 2.68-3.83 2.68-6.63z" fill="#4285F4"/><path d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.91-2.26c-.8.54-1.83.86-3.05.86-2.34 0-4.33-1.58-5.04-3.71H.95v2.33C2.43 15.89 5.5 18 9 18z" fill="#34A853"/><path d="M3.96 10.71a5.41 5.41 0 0 1 0-3.42V4.96H.95a8.99 8.99 0 0 0 0 8.08l3.01-2.33z" fill="#FBBC05"/><path d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.47.89 11.43 0 9 0 5.5 0 2.43 2.11.95 5.14l3.01 2.33c.71-2.13 2.7-3.71 5.04-3.71z" fill="#EA4335"/></svg>
+                    Connect Google Calendar
+                  </button>
+                  <div style={{ fontSize: '0.65rem', color: 'rgba(199,196,216,0.4)', marginTop: 8, textAlign: 'center' }}>
+                    Without Google Calendar, interview sessions will use Jitsi Meet as a fallback.
+                  </div>
                 </div>
               )}
-
-              <button 
-                onClick={() => {
-                  const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5001';
-                  window.location.href = `${apiBase}/auth/google/url?userId=${user?.id}`;
-                }}
-                style={{ width: '100%', padding: '0.75rem', background: 'white', color: '#3c4043', border: '1px solid #dadce0', borderRadius: 8, fontWeight: 600, fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: 'pointer', transition: 'background 0.2s' }}
-                onMouseOver={(e) => e.currentTarget.style.background = '#f8f9fa'}
-                onMouseOut={(e) => e.currentTarget.style.background = 'white'}
-              >
-                <svg width="18" height="18" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.63-.06-1.25-.16-1.84H9v3.49h4.84a4.14 4.14 0 0 1-1.79 2.72v2.26h2.91c1.68-1.55 2.68-3.83 2.68-6.63z" fill="#4285F4"/><path d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.91-2.26c-.8.54-1.83.86-3.05.86-2.34 0-4.33-1.58-5.04-3.71H.95v2.33C2.43 15.89 5.5 18 9 18z" fill="#34A853"/><path d="M3.96 10.71a5.41 5.41 0 0 1 0-3.42V4.96H.95a8.99 8.99 0 0 0 0 8.08l3.01-2.33z" fill="#FBBC05"/><path d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.47.89 11.43 0 9 0 5.5 0 2.43 2.11.95 5.14l3.01 2.33c.71-2.13 2.7-3.71 5.04-3.71z" fill="#EA4335"/></svg>
-                Connect Google Calendar
-              </button>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -407,7 +509,7 @@ export default function SettingsPage({ role }) {
         )}
 
       </div>
-      <style>{`@keyframes slideIn { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }`}</style>
+      <style>{`@keyframes slideIn { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} } @keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

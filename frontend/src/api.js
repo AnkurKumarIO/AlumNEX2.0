@@ -468,6 +468,22 @@ export const api = {
     }
   ),
 
+  // ─── Google Calendar OAuth (Alumni) ──────────────────────────────────────
+
+  googleCalendarStatus: (userId) => callOrMock(
+    () => fetch(`${API_BASE}/auth/google/status?userId=${userId}`).then(r => r.json()),
+    async () => { await mockDelay(200); return { connected: false }; }
+  ),
+
+  googleCalendarDisconnect: (userId) => callOrMock(
+    () => fetch(`${API_BASE}/auth/google/disconnect`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId }),
+    }).then(r => r.json()),
+    async () => { await mockDelay(300); return { success: true, message: 'Disconnected (mock)' }; }
+  ),
+
   // ─── Session Feedback ────────────────────────────────────────────────────
   
   submitFeedback: (data) => callOrMock(
