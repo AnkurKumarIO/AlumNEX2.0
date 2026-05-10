@@ -1,6 +1,37 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../lib/prisma');
+const supabase = require('../supabase');
+
+// DELETE /users/bulk — delete multiple users
+router.delete('/bulk', async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids array is required' });
+    }
+
+    // 1. Delete from Supabase Auth
+    if (supabase) {
+      for (const id of ids) {
+        // Basic UUID check
+        if (id && id.length >= 32) {
+          await supabase.auth.admin.deleteUser(id).catch(e => console.warn(`Supabase delete error for ${id}:`, e.message));
+        }
+      }
+    }
+
+    // 2. Delete from Prisma
+    const deleted = await prisma.user.deleteMany({
+      where: { id: { in: ids } }
+    });
+
+    res.json({ message: 'Users deleted successfully', count: deleted.count });
+  } catch (err) {
+    console.error('Bulk delete error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // PATCH /users/:id/profile — save full profile data
 router.patch('/:id/profile', async (req, res) => {

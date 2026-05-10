@@ -117,6 +117,8 @@ export default function DirectoryTab() {
   const [sortField, setSortField] = useState('name');
   const [sortDir, setSortDir]     = useState('asc');
   const [selectedUser, setSelectedUser] = useState(null);
+  const [selectedIds, setSelectedIds]   = useState(new Set());
+  const [isDeleting, setIsDeleting]     = useState(false);
   const [error, setError]       = useState('');
 
   // Fetch directory data
@@ -204,7 +206,50 @@ export default function DirectoryTab() {
   ];
 
   const cols = activeTab === 'students' ? studentCols : alumniCols;
-  const gridTemplate = cols.map(c => c.width).join(' ') + ' 60px';
+  const gridTemplate = '40px ' + cols.map(c => c.width).join(' ') + ' 60px';
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filtered.length && filtered.length > 0) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map(u => u.id)));
+    }
+  };
+
+  const toggleSelect = (id, e) => {
+    e.stopPropagation();
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setSelectedIds(newSet);
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedIds.size === 0) return;
+    if (!window.confirm(`Are you sure you want to permanently delete ${selectedIds.size} selected ${activeTab}? This cannot be undone.`)) return;
+
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`${API_BASE}/users/bulk`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(selectedIds) })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      
+      // Update local state instantly
+      const idsToDelete = Array.from(selectedIds);
+      if (activeTab === 'students') setStudents(s => s.filter(u => !idsToDelete.includes(u.id)));
+      else setAlumni(a => a.filter(u => !idsToDelete.includes(u.id)));
+      
+      setSelectedIds(new Set());
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', fontFamily: 'Inter, sans-serif', color: '#dae2fd' }}>
@@ -250,7 +295,7 @@ export default function DirectoryTab() {
             { id: 'students', label: 'Students', icon: 'school', count: students.length },
             { id: 'alumni',   label: 'Alumni',   icon: 'psychology', count: alumni.length },
           ].map(t => (
-            <button key={t.id} onClick={() => { setActiveTab(t.id); setSearch(''); setSortField('name'); }}
+            <button key={t.id} onClick={() => { setActiveTab(t.id); setSearch(''); setSortField('name'); setSelectedIds(new Set()); }}
               style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.6rem 1.25rem', borderRadius: 12, border: activeTab === t.id ? '2px solid #c3c0ff' : '2px solid rgba(70,69,85,0.3)', background: activeTab === t.id ? 'rgba(195,192,255,0.1)' : '#131b2e', color: activeTab === t.id ? '#c3c0ff' : '#c7c4d8', fontWeight: activeTab === t.id ? 700 : 400, fontSize: '0.8rem', cursor: 'pointer', transition: 'all 0.2s' }}>
               <span className="material-symbols-outlined" style={{ fontSize: 16, fontVariationSettings: activeTab === t.id ? "'FILL' 1" : "'FILL' 0" }}>{t.icon}</span>
               {t.label}
@@ -258,9 +303,16 @@ export default function DirectoryTab() {
             </button>
           ))}
         </div>
-        <div style={{ position: 'relative' }}>
-          <span className="material-symbols-outlined" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 18, color: '#464555' }}>search</span>
-          <input
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          {selectedIds.size > 0 && (
+            <button onClick={handleDeleteSelected} disabled={isDeleting} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.6rem 1rem', borderRadius: 10, border: 'none', background: 'rgba(255,180,171,0.15)', color: '#ffb4ab', fontSize: '0.8rem', fontWeight: 700, cursor: isDeleting ? 'not-allowed' : 'pointer' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{isDeleting ? 'hourglass_empty' : 'delete'}</span>
+              Delete Selected ({selectedIds.size})
+            </button>
+          )}
+          <div style={{ position: 'relative' }}>
+            <span className="material-symbols-outlined" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 18, color: '#464555' }}>search</span>
+            <input
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -298,7 +350,12 @@ export default function DirectoryTab() {
         /* Table */
         <div style={{ background: '#131b2e', borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(70,69,85,0.15)' }}>
           {/* Header */}
-          <div style={{ background: '#171f33', padding: '0.875rem 1.5rem', display: 'grid', gridTemplateColumns: gridTemplate, gap: 8, position: 'sticky', top: 0, zIndex: 1 }}>
+          <div style={{ background: '#171f33', padding: '0.875rem 1.5rem', display: 'grid', gridTemplateColumns: gridTemplate, gap: 8, position: 'sticky', top: 0, zIndex: 1, alignItems: 'center' }}>
+            <div onClick={toggleSelectAll} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+              <div style={{ width: 16, height: 16, border: '2px solid #60a5fa', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', background: selectedIds.size > 0 && selectedIds.size === filtered.length ? '#60a5fa' : 'transparent' }}>
+                {selectedIds.size > 0 && selectedIds.size === filtered.length && <span className="material-symbols-outlined" style={{ fontSize: 14, color: '#131b2e', fontWeight: 900 }}>check</span>}
+              </div>
+            </div>
             {cols.map(c => (
               <SortHeader key={c.field} label={c.label} field={c.field} sortField={sortField} sortDir={sortDir} onSort={handleSort} />
             ))}
@@ -307,11 +364,16 @@ export default function DirectoryTab() {
           {/* Rows */}
           <div style={{ maxHeight: 500, overflowY: 'auto' }}>
             {filtered.map((user, i) => (
-              <div key={user.id} style={{ padding: '0.75rem 1.5rem', display: 'grid', gridTemplateColumns: gridTemplate, gap: 8, borderTop: '1px solid rgba(70,69,85,0.08)', background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)', alignItems: 'center', cursor: 'pointer', transition: 'background 0.15s' }}
-                onMouseEnter={e => e.currentTarget.style.background = 'rgba(195,192,255,0.04)'}
-                onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)'}
+              <div key={user.id} style={{ padding: '0.75rem 1.5rem', display: 'grid', gridTemplateColumns: gridTemplate, gap: 8, borderTop: '1px solid rgba(70,69,85,0.08)', background: selectedIds.has(user.id) ? 'rgba(96,165,250,0.08)' : (i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)'), alignItems: 'center', cursor: 'pointer', transition: 'background 0.15s' }}
+                onMouseEnter={e => !selectedIds.has(user.id) && (e.currentTarget.style.background = 'rgba(195,192,255,0.04)')}
+                onMouseLeave={e => !selectedIds.has(user.id) && (e.currentTarget.style.background = i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)')}
                 onClick={() => setSelectedUser(user)}
               >
+                <div onClick={e => toggleSelect(user.id, e)} style={{ display: 'flex', alignItems: 'center' }}>
+                  <div style={{ width: 16, height: 16, border: '2px solid #60a5fa', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', background: selectedIds.has(user.id) ? '#60a5fa' : 'transparent' }}>
+                    {selectedIds.has(user.id) && <span className="material-symbols-outlined" style={{ fontSize: 14, color: '#131b2e', fontWeight: 900 }}>check</span>}
+                  </div>
+                </div>
                 {cols.map(c => (
                   <div key={c.field} style={{ fontSize: '0.8rem', color: c.field === 'name' ? '#dae2fd' : '#c7c4d8', fontWeight: c.field === 'name' ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {c.field === 'name' ? (
