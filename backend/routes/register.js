@@ -12,9 +12,7 @@ if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
     host:   process.env.EMAIL_HOST || 'smtp.gmail.com',
     port:   port,
     secure: port === 465, // true for 465, false for 587
-    pool:   true, // Use pooling for bulk emails
-    maxConnections: 5,
-    maxMessages: 100,
+    // Removed pooling to prevent Gmail from dropping concurrent connection bursts
     family: 4, // Force IPv4 to prevent IPv6 routing timeouts on Render
     logger: true,
     debug:  true,
@@ -23,10 +21,10 @@ if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
       pass: process.env.EMAIL_PASS,
     },
     tls: {
-      rejectUnauthorized: false, // Helps in some cloud environments
+      rejectUnauthorized: false,
       minVersion: 'TLSv1.2'
     },
-    connectionTimeout: 20000, // Increased to 20s
+    connectionTimeout: 20000,
     greetingTimeout: 20000,
     socketTimeout: 30000,
   });
