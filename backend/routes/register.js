@@ -106,13 +106,13 @@ async function sendWelcomeEmail({ to, name, username, password, role, loginUrl }
         </div>
         <div class="logo-text">Alum<span>NEX</span></div>
       </div>
-      <div class="header-sub">VNIT Training & Placement Cell — Mentorship Platform</div>
+      <div class="header-sub">Alumni Mentorship & Career Platform</div>
     </div>
     <div class="body">
       <div class="greeting">Hi ${name} 👋</div>
       <div class="role-badge">${roleLabel} Account</div>
       <p class="intro">
-        Your <strong>${roleLabel}</strong> account on AlumNEX has been created by the VNIT T&P Cell.
+        Your <strong>${roleLabel}</strong> account on AlumNEX has been created.
         Use the credentials below to sign in and ${role === 'STUDENT' ? 'connect with alumni mentors for mock interviews' : 'start mentoring students through mock interviews'}.
       </p>
       <div class="cred-box">
@@ -138,8 +138,7 @@ async function sendWelcomeEmail({ to, name, username, password, role, loginUrl }
     <div class="footer">
       <div class="footer-brand">AlumNEX — Bridging Campus & Career</div>
       <div class="footer-inst">
-        VNIT Training & Placement Cell<br>
-        Visvesvaraya National Institute of Technology, Nagpur<br>
+        College Training & Placement Office<br>
         This is an automated message. Do not reply.
       </div>
     </div>
