@@ -167,11 +167,15 @@ async function sendWelcomeEmail({ to, name, username, password, role, loginUrl }
         console.log(`[EMAIL-DEBUG] ✅ Sent via Resend fallback`);
         updateQueueStatus('sent', null);
         return { sent: true };
+      }
+    } catch (err) {
+      console.error('[EMAIL-DEBUG] ❌ Resend fallback error:', err.message);
+    }
   }
 
-  // 2. Fallback to SMTP (Nodemailer)
+  // 3. Last Fallback: SMTP (Nodemailer)
   if (!transporter) {
-    console.log('[EMAIL-DEBUG] ❌ transporter is NULL — skipping email');
+    console.log('[EMAIL-DEBUG] ❌ No email delivery methods available.');
     updateQueueStatus('failed', 'Email not configured');
     return { skipped: true, reason: 'Email not configured' };
   }
