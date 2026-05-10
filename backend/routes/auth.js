@@ -72,6 +72,7 @@ router.post('/student/login', async (req, res) => {
     let { username, password, email } = req.body;
     if (username) username = username.trim();
     if (email) email = email.trim();
+    if (password) password = password.trim();
 
     // Support both email and username login — look up in Prisma
     let userEmail = email;
@@ -153,6 +154,7 @@ router.post('/alumni/login', async (req, res) => {
     let { username, password, email } = req.body;
     if (username) username = username.trim();
     if (email) email = email.trim();
+    if (password) password = password.trim();
 
     // Support both email and username login — look up in Prisma
     let userEmail = email;
