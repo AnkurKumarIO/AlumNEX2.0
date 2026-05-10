@@ -10,21 +10,24 @@ const NOTIF_ITEMS = [
   { key: 'weekly_digest',     label: 'Weekly Digest',      desc: 'Summary of your activity every Monday' },
 ];
 
-export default function SettingsPage() {
+export default function SettingsPage({ role }) {
   const { user, login } = useContext(AuthContext);
   const resumeInputRef = useRef(null);
+  const userRole = role || user?.role || 'STUDENT';
+  const isAlumni = userRole === 'ALUMNI';
 
-  // Load saved profile or fall back to user data
   const savedProfile = JSON.parse(localStorage.getItem('alumnex_profile') || '{}');
   const savedNotifs  = JSON.parse(localStorage.getItem('alumnex_notifs')  || '{}');
 
   const [activeSection, setActiveSection] = useState('profile');
   const [saved, setSaved] = useState(false);
+  const [showPwModal, setShowPwModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  // Profile state
   const [profile, setProfile] = useState({
     name:       user?.name       || savedProfile.name       || '',
     email:      user?.email      || savedProfile.email      || '',
+    phone:      savedProfile.phone      || '',
     department: user?.department || savedProfile.department || '',
     bio:        savedProfile.bio        || '',
     linkedin:   savedProfile.linkedin   || '',
@@ -36,9 +39,14 @@ export default function SettingsPage() {
     year:       savedProfile.year       || '',
     resumeName: savedProfile.resumeName || '',
     resumeUrl:  savedProfile.resumeUrl  || '',
+    // Alumni-specific fields
+    company:      savedProfile.company      || '',
+    currentTitle: savedProfile.currentTitle || savedProfile.title || '',
+    passOutYear:  savedProfile.passOutYear  || '',
+    experience:   savedProfile.experience   || '',
+    domain:       savedProfile.domain       || '',
   });
 
-  // Notifications state — default all ON
   const [notifs, setNotifs] = useState({
     interview_requests: savedNotifs.interview_requests ?? true,
     session_reminders:  savedNotifs.session_reminders  ?? true,
@@ -47,7 +55,6 @@ export default function SettingsPage() {
     weekly_digest:      savedNotifs.weekly_digest      ?? true,
   });
 
-  // Skill tag input
   const [skillInput, setSkillInput] = useState('');
 
   const addSkill = () => {
@@ -70,44 +77,27 @@ export default function SettingsPage() {
   const handleResumeUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.type !== 'application/pdf') {
-      alert('Please upload a PDF resume.');
-      return;
-    }
+    if (file.type !== 'application/pdf') { alert('Please upload a PDF resume.'); return; }
     try {
       const dataUrl = await toDataUrl(file);
       setProfile(p => ({ ...p, resumeName: file.name, resumeUrl: dataUrl }));
-    } catch {
-      alert('Could not read resume file. Please try again.');
-    } finally {
-      if (e.target) e.target.value = '';
-    }
+    } catch { alert('Could not read resume file.'); }
+    finally { if (e.target) e.target.value = ''; }
   };
 
   const saveProfile = async () => {
     const updated = { ...savedProfile, ...profile };
     localStorage.setItem('alumnex_profile', JSON.stringify(updated));
-    // Update auth context name/department
     const updatedUser = { ...user, name: profile.name, department: profile.department };
     login(updatedUser, localStorage.getItem('alumnex_token'));
-
-    // Save to Supabase directly
     if (user?.id && !user.id.startsWith('stu-') && !user.id.startsWith('alm-')) {
       await updateUserProfile(user.id, profile).catch(err => console.warn('Profile save:', err.message));
     }
-
     flashSaved();
   };
 
-  const saveNotifs = () => {
-    localStorage.setItem('alumnex_notifs', JSON.stringify(notifs));
-    flashSaved();
-  };
-
-  const flashSaved = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
-  };
+  const saveNotifs = () => { localStorage.setItem('alumnex_notifs', JSON.stringify(notifs)); flashSaved(); };
+  const flashSaved = () => { setSaved(true); setTimeout(() => setSaved(false), 2500); };
 
   const inp = {
     width: '100%', background: '#222a3d', border: '1px solid rgba(70,69,85,0.4)',
@@ -120,6 +110,12 @@ export default function SettingsPage() {
     { id: 'profile',       icon: 'person',         label: 'Edit Profile'  },
     { id: 'notifications', icon: 'notifications',  label: 'Notifications' },
     { id: 'account',       icon: 'manage_accounts', label: 'Account'      },
+  ];
+
+  // Account items — no export for alumni
+  const accountItems = [
+    { icon: 'key', label: 'Change Password', desc: 'Update your login password', color: '#c3c0ff', action: () => setShowPwModal(true) },
+    { icon: 'delete_forever', label: 'Delete Account', desc: 'Permanently remove your account and data', color: '#ffb4ab', action: () => setShowDeleteModal(true) },
   ];
 
   return (
@@ -154,6 +150,7 @@ export default function SettingsPage() {
           <div style={{ background: '#131b2e', borderRadius: 16, padding: '2rem', border: '1px solid rgba(70,69,85,0.15)' }}>
             <h3 style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: '1.75rem' }}>Edit Profile</h3>
 
+            {/* Common fields: Name, Email, Phone */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
               <div>
                 <label style={lbl}>Full Name</label>
@@ -164,38 +161,89 @@ export default function SettingsPage() {
                 <input value={profile.email} onChange={e => setProfile(p => ({ ...p, email: e.target.value }))} placeholder="your@email.com" type="email" style={inp} />
               </div>
               <div>
+                <label style={lbl}>Phone Number</label>
+                <input value={profile.phone} onChange={e => setProfile(p => ({ ...p, phone: e.target.value }))} placeholder="+91 XXXXX XXXXX" style={inp} />
+              </div>
+              <div>
                 <label style={lbl}>Department / Branch</label>
                 <input value={profile.department} onChange={e => setProfile(p => ({ ...p, department: e.target.value }))} placeholder="e.g. Computer Science" style={inp} />
               </div>
-              <div>
-                <label style={lbl}>College / University</label>
-                <input value={profile.college} onChange={e => setProfile(p => ({ ...p, college: e.target.value }))} placeholder="e.g. IIT Bombay" style={inp} />
-              </div>
-              <div>
-                <label style={lbl}>Year of Study</label>
-                <select value={profile.year} onChange={e => setProfile(p => ({ ...p, year: e.target.value }))} style={inp}>
-                  <option value="">Select year</option>
-                  {['1st Year','2nd Year','3rd Year','4th Year','Postgraduate'].map(y => <option key={y} value={y}>{y}</option>)}
-                </select>
-              </div>
-              <div>
-                <label style={lbl}>CGPA</label>
-                <input type="number" min="0" max="10" step="0.1" value={profile.cgpa} onChange={e => setProfile(p => ({ ...p, cgpa: e.target.value }))} placeholder="e.g. 8.5" style={inp} />
-              </div>
             </div>
+
+            {/* Alumni-specific fields */}
+            {isAlumni && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                <div>
+                  <label style={lbl}>Current Position / Title</label>
+                  <input value={profile.currentTitle} onChange={e => setProfile(p => ({ ...p, currentTitle: e.target.value }))} placeholder="e.g. Senior Software Engineer" style={inp} />
+                </div>
+                <div>
+                  <label style={lbl}>Company / Organization</label>
+                  <input value={profile.company} onChange={e => setProfile(p => ({ ...p, company: e.target.value }))} placeholder="e.g. Google" style={inp} />
+                </div>
+                <div>
+                  <label style={lbl}>Domain / Expertise</label>
+                  <input value={profile.domain} onChange={e => setProfile(p => ({ ...p, domain: e.target.value }))} placeholder="e.g. Backend Engineering" style={inp} />
+                </div>
+                <div>
+                  <label style={lbl}>Years of Experience</label>
+                  <input value={profile.experience} onChange={e => setProfile(p => ({ ...p, experience: e.target.value }))} placeholder="e.g. 8 years" style={inp} />
+                </div>
+                <div>
+                  <label style={lbl}>Pass-out Year (Batch)</label>
+                  <input type="number" min="1990" max="2030" value={profile.passOutYear} onChange={e => setProfile(p => ({ ...p, passOutYear: e.target.value }))} placeholder="e.g. 2018" style={inp} />
+                </div>
+                <div>
+                  <label style={lbl}>College / University</label>
+                  <input value={profile.college} onChange={e => setProfile(p => ({ ...p, college: e.target.value }))} placeholder="e.g. IIT Bombay" style={inp} />
+                </div>
+              </div>
+            )}
+
+            {/* Student-specific fields */}
+            {!isAlumni && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                <div>
+                  <label style={lbl}>College / University</label>
+                  <input value={profile.college} onChange={e => setProfile(p => ({ ...p, college: e.target.value }))} placeholder="e.g. IIT Bombay" style={inp} />
+                </div>
+                <div>
+                  <label style={lbl}>Year of Study</label>
+                  <select value={profile.year} onChange={e => setProfile(p => ({ ...p, year: e.target.value }))} style={inp}>
+                    <option value="">Select year</option>
+                    {['1st Year','2nd Year','3rd Year','4th Year','Postgraduate'].map(y => <option key={y} value={y}>{y}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={lbl}>CGPA</label>
+                  <input type="number" min="0" max="10" step="0.1" value={profile.cgpa} onChange={e => setProfile(p => ({ ...p, cgpa: e.target.value }))} placeholder="e.g. 8.5" style={inp} />
+                </div>
+              </div>
+            )}
 
             <div style={{ marginBottom: '1rem' }}>
               <label style={lbl}>Bio</label>
-              <textarea value={profile.bio} onChange={e => setProfile(p => ({ ...p, bio: e.target.value }))} placeholder="Tell mentors about yourself..." rows={3} style={{ ...inp, resize: 'none' }} />
+              <textarea value={profile.bio} onChange={e => setProfile(p => ({ ...p, bio: e.target.value }))} placeholder={isAlumni ? "Tell students about your expertise and mentoring style..." : "Tell mentors about yourself..."} rows={3} style={{ ...inp, resize: 'none' }} />
             </div>
 
+            {/* Links — LinkedIn for everyone, GitHub/Portfolio only for students */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-              {[['linkedin','LinkedIn URL','https://linkedin.com/in/...'],['github','GitHub URL','https://github.com/...'],['portfolio','Portfolio','https://yoursite.com']].map(([key, label, ph]) => (
-                <div key={key}>
-                  <label style={lbl}>{label}</label>
-                  <input value={profile[key]} onChange={e => setProfile(p => ({ ...p, [key]: e.target.value }))} placeholder={ph} style={inp} />
-                </div>
-              ))}
+              <div>
+                <label style={lbl}>LinkedIn URL</label>
+                <input value={profile.linkedin} onChange={e => setProfile(p => ({ ...p, linkedin: e.target.value }))} placeholder="https://linkedin.com/in/..." style={inp} />
+              </div>
+              {!isAlumni && (
+                <>
+                  <div>
+                    <label style={lbl}>GitHub URL</label>
+                    <input value={profile.github} onChange={e => setProfile(p => ({ ...p, github: e.target.value }))} placeholder="https://github.com/..." style={inp} />
+                  </div>
+                  <div>
+                    <label style={lbl}>Portfolio</label>
+                    <input value={profile.portfolio} onChange={e => setProfile(p => ({ ...p, portfolio: e.target.value }))} placeholder="https://yoursite.com" style={inp} />
+                  </div>
+                </>
+              )}
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
@@ -214,47 +262,19 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <div style={{ marginBottom: '1.5rem' }}>
-              <label style={lbl}>Resume (PDF)</label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <button
-                  onClick={() => resumeInputRef.current?.click()}
-                  style={{ padding: '0.65rem 1rem', background: 'rgba(195,192,255,0.1)', border: '1px solid rgba(195,192,255,0.2)', borderRadius: 10, color: '#c3c0ff', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}
-                >
-                  Upload Resume
-                </button>
-                {profile.resumeUrl && (
-                  <a
-                    href={profile.resumeUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{ padding: '0.65rem 1rem', background: 'rgba(78,222,163,0.12)', border: '1px solid rgba(78,222,163,0.25)', borderRadius: 10, color: '#4edea3', fontSize: '0.8rem', fontWeight: 700, textDecoration: 'none' }}
-                  >
-                    View Resume
-                  </a>
-                )}
-                {profile.resumeUrl && (
-                  <button
-                    onClick={() => setProfile(p => ({ ...p, resumeName: '', resumeUrl: '' }))}
-                    style={{ padding: '0.65rem 1rem', background: 'rgba(255,180,171,0.1)', border: '1px solid rgba(255,180,171,0.25)', borderRadius: 10, color: '#ffb4ab', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}
-                  >
-                    Remove
-                  </button>
-                )}
-              </div>
-              {profile.resumeName && (
-                <div style={{ marginTop: 8, fontSize: '0.78rem', color: '#c7c4d8' }}>
-                  Current: {profile.resumeName}
+            {/* Resume — students only */}
+            {!isAlumni && (
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={lbl}>Resume (PDF)</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <button onClick={() => resumeInputRef.current?.click()} style={{ padding: '0.65rem 1rem', background: 'rgba(195,192,255,0.1)', border: '1px solid rgba(195,192,255,0.2)', borderRadius: 10, color: '#c3c0ff', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>Upload Resume</button>
+                  {profile.resumeUrl && <a href={profile.resumeUrl} target="_blank" rel="noreferrer" style={{ padding: '0.65rem 1rem', background: 'rgba(78,222,163,0.12)', border: '1px solid rgba(78,222,163,0.25)', borderRadius: 10, color: '#4edea3', fontSize: '0.8rem', fontWeight: 700, textDecoration: 'none' }}>View Resume</a>}
+                  {profile.resumeUrl && <button onClick={() => setProfile(p => ({ ...p, resumeName: '', resumeUrl: '' }))} style={{ padding: '0.65rem 1rem', background: 'rgba(255,180,171,0.1)', border: '1px solid rgba(255,180,171,0.25)', borderRadius: 10, color: '#ffb4ab', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>Remove</button>}
                 </div>
-              )}
-              <input
-                ref={resumeInputRef}
-                type="file"
-                accept="application/pdf,.pdf"
-                onChange={handleResumeUpload}
-                style={{ display: 'none' }}
-              />
-            </div>
+                {profile.resumeName && <div style={{ marginTop: 8, fontSize: '0.78rem', color: '#c7c4d8' }}>Current: {profile.resumeName}</div>}
+                <input ref={resumeInputRef} type="file" accept="application/pdf,.pdf" onChange={handleResumeUpload} style={{ display: 'none' }} />
+              </div>
+            )}
 
             <button onClick={saveProfile} style={{ padding: '0.75rem 2rem', background: 'linear-gradient(135deg,#4f46e5,#c3c0ff)', color: '#1d00a5', border: 'none', borderRadius: 12, fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer' }}>
               Save Changes
@@ -267,7 +287,6 @@ export default function SettingsPage() {
           <div style={{ background: '#131b2e', borderRadius: 16, padding: '2rem', border: '1px solid rgba(70,69,85,0.15)' }}>
             <h3 style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: '0.5rem' }}>Notifications</h3>
             <p style={{ fontSize: '0.875rem', color: '#c7c4d8', marginBottom: '1.75rem' }}>Choose what you want to be notified about.</p>
-
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.75rem' }}>
               {NOTIF_ITEMS.map(item => (
                 <div key={item.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.25rem', background: '#171f33', borderRadius: 12, border: `1px solid ${notifs[item.key] ? 'rgba(195,192,255,0.15)' : 'rgba(70,69,85,0.15)'}`, transition: 'border-color 0.2s' }}>
@@ -275,7 +294,6 @@ export default function SettingsPage() {
                     <div style={{ fontWeight: 600, fontSize: '0.875rem', marginBottom: 3 }}>{item.label}</div>
                     <div style={{ fontSize: '0.75rem', color: '#c7c4d8' }}>{item.desc}</div>
                   </div>
-                  {/* Toggle switch */}
                   <div onClick={() => setNotifs(n => ({ ...n, [item.key]: !n[item.key] }))}
                     style={{ width: 44, height: 24, borderRadius: 999, background: notifs[item.key] ? 'linear-gradient(135deg,#4f46e5,#c3c0ff)' : '#2d3449', cursor: 'pointer', position: 'relative', transition: 'background 0.3s', flexShrink: 0 }}>
                     <div style={{ position: 'absolute', top: 3, left: notifs[item.key] ? 23 : 3, width: 18, height: 18, borderRadius: '50%', background: 'white', transition: 'left 0.3s', boxShadow: '0 1px 4px rgba(0,0,0,0.3)' }} />
@@ -283,22 +301,14 @@ export default function SettingsPage() {
                 </div>
               ))}
             </div>
-
-            {/* Master toggle */}
             <div style={{ padding: '1rem 1.25rem', background: '#222a3d', borderRadius: 12, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
                 <div style={{ fontWeight: 600, fontSize: '0.875rem', marginBottom: 3 }}>Turn Off All Notifications</div>
                 <div style={{ fontSize: '0.75rem', color: '#c7c4d8' }}>Disable all notifications at once</div>
               </div>
-              <button onClick={() => setNotifs(Object.fromEntries(NOTIF_ITEMS.map(i => [i.key, false])))}
-                style={{ padding: '0.4rem 1rem', background: 'rgba(255,180,171,0.1)', border: '1px solid rgba(255,180,171,0.3)', borderRadius: 8, color: '#ffb4ab', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>
-                Turn Off All
-              </button>
+              <button onClick={() => setNotifs(Object.fromEntries(NOTIF_ITEMS.map(i => [i.key, false])))} style={{ padding: '0.4rem 1rem', background: 'rgba(255,180,171,0.1)', border: '1px solid rgba(255,180,171,0.3)', borderRadius: 8, color: '#ffb4ab', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>Turn Off All</button>
             </div>
-
-            <button onClick={saveNotifs} style={{ padding: '0.75rem 2rem', background: 'linear-gradient(135deg,#4f46e5,#c3c0ff)', color: '#1d00a5', border: 'none', borderRadius: 12, fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer' }}>
-              Save Preferences
-            </button>
+            <button onClick={saveNotifs} style={{ padding: '0.75rem 2rem', background: 'linear-gradient(135deg,#4f46e5,#c3c0ff)', color: '#1d00a5', border: 'none', borderRadius: 12, fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer' }}>Save Preferences</button>
           </div>
         )}
 
@@ -346,11 +356,7 @@ export default function SettingsPage() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {[
-                { icon: 'key', label: 'Change Password', desc: 'Update your login password', color: '#c3c0ff' },
-                { icon: 'download', label: 'Export My Data', desc: 'Download all your profile and session data', color: '#4edea3' },
-                { icon: 'delete_forever', label: 'Delete Account', desc: 'Permanently remove your account and data', color: '#ffb4ab' },
-              ].map(item => (
+              {accountItems.map(item => (
                 <div key={item.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.25rem', background: '#171f33', borderRadius: 12, border: '1px solid rgba(70,69,85,0.15)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div style={{ width: 40, height: 40, borderRadius: 10, background: `${item.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -361,11 +367,41 @@ export default function SettingsPage() {
                       <div style={{ fontSize: '0.75rem', color: '#c7c4d8' }}>{item.desc}</div>
                     </div>
                   </div>
-                  <button style={{ padding: '0.4rem 0.875rem', background: 'transparent', border: `1px solid ${item.color}40`, borderRadius: 8, color: item.color, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>
+                  <button onClick={item.action} style={{ padding: '0.4rem 0.875rem', background: 'transparent', border: `1px solid ${item.color}40`, borderRadius: 8, color: item.color, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>
                     {item.label === 'Delete Account' ? 'Delete' : 'Manage'}
                   </button>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Change Password Modal */}
+        {showPwModal && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ background: '#171f33', borderRadius: 16, padding: '2rem', width: 400, border: '1px solid rgba(195,192,255,0.15)' }}>
+              <h3 style={{ fontWeight: 700, marginBottom: '1.5rem' }}>Change Password</h3>
+              <div style={{ marginBottom: '1rem' }}><label style={lbl}>Current Password</label><input type="password" placeholder="••••••••" style={inp} /></div>
+              <div style={{ marginBottom: '1rem' }}><label style={lbl}>New Password</label><input type="password" placeholder="••••••••" style={inp} /></div>
+              <div style={{ marginBottom: '1.5rem' }}><label style={lbl}>Confirm New Password</label><input type="password" placeholder="••••••••" style={inp} /></div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => { setShowPwModal(false); flashSaved(); }} style={{ flex: 1, padding: '0.65rem', background: 'linear-gradient(135deg,#4f46e5,#c3c0ff)', color: '#1d00a5', border: 'none', borderRadius: 10, fontWeight: 700, cursor: 'pointer' }}>Update Password</button>
+                <button onClick={() => setShowPwModal(false)} style={{ flex: 1, padding: '0.65rem', background: 'transparent', border: '1px solid rgba(70,69,85,0.3)', borderRadius: 10, color: '#c7c4d8', fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Account Modal */}
+        {showDeleteModal && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ background: '#171f33', borderRadius: 16, padding: '2rem', width: 400, border: '1px solid rgba(255,180,171,0.25)' }}>
+              <h3 style={{ fontWeight: 700, color: '#ffb4ab', marginBottom: '0.5rem' }}>Delete Account?</h3>
+              <p style={{ fontSize: '0.875rem', color: '#c7c4d8', marginBottom: '1.5rem', lineHeight: 1.6 }}>This action is permanent and cannot be undone. All your data, sessions, and profile information will be deleted.</p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => setShowDeleteModal(false)} style={{ flex: 1, padding: '0.65rem', background: 'transparent', border: '1px solid rgba(70,69,85,0.3)', borderRadius: 10, color: '#c7c4d8', fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
+                <button onClick={() => { setShowDeleteModal(false); alert('Account deletion request submitted. Contact support for confirmation.'); }} style={{ flex: 1, padding: '0.65rem', background: 'rgba(255,180,171,0.15)', border: '1px solid rgba(255,180,171,0.3)', borderRadius: 10, color: '#ffb4ab', fontWeight: 700, cursor: 'pointer' }}>Delete Account</button>
+              </div>
             </div>
           </div>
         )}

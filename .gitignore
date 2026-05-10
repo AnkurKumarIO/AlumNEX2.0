@@ -21,3 +21,6 @@ out/
 # OS
 .DS_Store
 Thumbs.db
+
+# Google Cloud Credentials
+alumnex-*.json

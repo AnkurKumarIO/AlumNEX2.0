@@ -716,6 +716,7 @@ export default function AlumniDashboard() {
   const [acceptedToast, setAcceptedToast] = useState(null); // { name }
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [globalSearch, setGlobalSearch] = useState('');
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // ── Real-time notifications for alumni ────────────────────────────────────
   const { notifications, unreadCount, markAsRead } = useNotifications(user?.id);
@@ -1430,7 +1431,7 @@ export default function AlumniDashboard() {
       return <AlumniSessionHistory userId={user?.id} userName={user?.name} />;
     }
 
-    if (activeTab === 'settings') return <SettingsPage />;
+    if (activeTab === 'settings') return <SettingsPage role="ALUMNI" />;
 
     // home
     return (
@@ -1644,13 +1645,19 @@ export default function AlumniDashboard() {
       )}
 
       {/* â”€â”€ SIDEBAR â”€â”€ */}
-      <aside style={{ width: 256, minHeight: '100vh', position: 'fixed', left: 0, top: 0, background: '#131b2e', display: 'flex', flexDirection: 'column', padding: '1.5rem', zIndex: 50 }}>
+      {/* Sidebar overlay */}
+      {sidebarOpen && <div onClick={() => setSidebarOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 45 }} />}
+
+      <aside style={{ width: 256, minHeight: '100vh', position: 'fixed', left: sidebarOpen ? 0 : -256, top: 0, background: '#131b2e', display: 'flex', flexDirection: 'column', padding: '1.5rem', zIndex: 50, transition: 'left 0.3s ease' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '2rem' }}>
           <AlumNexLogo size={32} />
-          <div>
+          <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 900, fontSize: '1rem', color: '#f5e9ff', letterSpacing: '-0.02em' }}>Alum<span style={{ color: '#a855f7' }}>NEX</span></div>
             <div style={{ fontSize: '0.55rem', color: '#c7c4d8', letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: 2 }}>Alumni Portal</div>
           </div>
+          <button onClick={() => setSidebarOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c7c4d8', padding: 4, display: 'flex' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
+          </button>
         </div>
         <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
           {NAV_ITEMS.map(({ icon, label, tab }) => {
@@ -1671,8 +1678,14 @@ export default function AlumniDashboard() {
       </aside>
 
       {/* â”€â”€ MAIN â”€â”€ */}
-      <main style={{ marginLeft: 256, flex: 1 }}>
-        <header style={{ position: 'fixed', top: 0, left: 256, right: 0, height: 64, zIndex: 40, background: 'rgba(11,19,38,0.85)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(195,192,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2.5rem' }}>
+      <main style={{ marginLeft: sidebarOpen ? 256 : 0, flex: 1, transition: 'margin-left 0.3s ease' }}>
+        <header style={{ position: 'fixed', top: 0, left: sidebarOpen ? 256 : 0, right: 0, height: 64, zIndex: 40, background: 'rgba(11,19,38,0.85)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(195,192,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2.5rem', transition: 'left 0.3s ease' }}>
+          {/* Menu toggle */}
+          {!sidebarOpen && (
+            <button onClick={() => setSidebarOpen(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c7c4d8', padding: 4, display: 'flex', alignItems: 'center', marginRight: 12 }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 24 }}>menu</span>
+            </button>
+          )}
           {/* Search bar */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#131b2e', padding: '0.4rem 1rem', borderRadius: 999, width: 300 }}>
             <span className="material-symbols-outlined" style={{ fontSize: 16, color: '#c7c4d8' }}>search</span>
@@ -1756,58 +1769,78 @@ export default function AlumniDashboard() {
               {showProfile && (
                 <>
                   <div onClick={() => setShowProfile(false)} style={{ position: 'fixed', inset: 0, zIndex: 199 }} />
-                  <div style={{ position: 'absolute', top: 48, right: 0, width: 300, background: '#171f33', borderRadius: 16, border: '1px solid rgba(195,192,255,0.15)', boxShadow: '0 20px 60px rgba(0,0,0,0.5)', zIndex: 200, overflow: 'hidden' }}>
+                  <div style={{ position: 'absolute', top: 48, right: 0, width: 320, background: '#171f33', borderRadius: 16, border: '1px solid rgba(195,192,255,0.15)', boxShadow: '0 20px 60px rgba(0,0,0,0.5)', zIndex: 200, overflow: 'hidden' }}>
 
-                    {!editProfile ? (
-                      <>
-                        {/* Profile view */}
-                        <div style={{ padding: '1.25rem', background: 'linear-gradient(135deg,rgba(79,70,229,0.2),rgba(11,19,38,0.8))', borderBottom: '1px solid rgba(70,69,85,0.2)' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'linear-gradient(135deg,#4f46e5,#c3c0ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '1.1rem', color: '#1d00a5', flexShrink: 0 }}>{firstName[0]}</div>
-                            <div>
-                              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#dae2fd' }}>{user.name || 'Alumni'}</div>
-                              <div style={{ fontSize: '0.7rem', color: '#c7c4d8', marginTop: 2 }}>{savedProfile.domain || savedProfile.department || 'Senior Mentor'}</div>
+                    {!editProfile ? (() => {
+                      // Read fresh profile data on every render
+                      const liveProfile = JSON.parse(localStorage.getItem('alumnex_profile') || '{}');
+                      return (
+                        <>
+                          {/* Profile view */}
+                          <div style={{ padding: '1.25rem', background: 'linear-gradient(135deg,rgba(79,70,229,0.2),rgba(11,19,38,0.8))', borderBottom: '1px solid rgba(70,69,85,0.2)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'linear-gradient(135deg,#4f46e5,#c3c0ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '1.1rem', color: '#1d00a5', flexShrink: 0 }}>{firstName[0]}</div>
+                              <div>
+                                <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#dae2fd' }}>{liveProfile.name || user.name || 'Alumni'}</div>
+                                <div style={{ fontSize: '0.7rem', color: '#c3c0ff', marginTop: 2 }}>{liveProfile.currentTitle || liveProfile.domain || liveProfile.department || 'Senior Mentor'}</div>
+                                {liveProfile.company && <div style={{ fontSize: '0.65rem', color: '#c7c4d8', marginTop: 1 }}>{liveProfile.company}</div>}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        <div style={{ padding: '0.75rem 1rem' }}>
-                          {[
-                            { icon: 'alternate_email', label: 'Username', val: savedProfile.username || user.name || '—' },
-                            { icon: 'mail',            label: 'Email',    val: savedProfile.email    || '—' },
-                            { icon: 'work',            label: 'Domain',   val: savedProfile.domain   || savedProfile.department || '—' },
-                            { icon: 'history_edu',     label: 'Experience', val: savedProfile.experience || '—' },
-                          ].map(item => (
-                            <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0.45rem 0', borderBottom: '1px solid rgba(70,69,85,0.1)' }}>
-                              <span className="material-symbols-outlined" style={{ fontSize: 15, color: '#c3c0ff' }}>{item.icon}</span>
-                              <span style={{ fontSize: '0.7rem', color: '#c7c4d8', flex: 1 }}>{item.label}</span>
-                              <span style={{ fontSize: '0.7rem', color: '#dae2fd', fontWeight: 600, maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.val}</span>
-                            </div>
-                          ))}
-                        </div>
-                        <div style={{ padding: '0.75rem 1rem', borderTop: '1px solid rgba(70,69,85,0.15)', display: 'flex', gap: 8 }}>
-                          <button onClick={() => setEditProfile(true)} style={{ flex: 1, padding: '0.5rem', background: 'rgba(195,192,255,0.1)', border: '1px solid rgba(195,192,255,0.2)', borderRadius: 8, color: '#c3c0ff', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>
-                            Edit Profile
-                          </button>
-                          <button onClick={() => setShowLogoutConfirm(true)} style={{ flex: 1, padding: '0.5rem', background: 'rgba(255,180,171,0.08)', border: '1px solid rgba(255,180,171,0.2)', borderRadius: 8, color: '#ffb4ab', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>
-                            Sign Out
-                          </button>
-                        </div>
-                      </>
-                    ) : (
+                          <div style={{ padding: '0.75rem 1rem' }}>
+                            {[
+                              { icon: 'mail',        label: 'Email',       val: liveProfile.email || '—' },
+                              { icon: 'phone',       label: 'Phone',       val: liveProfile.phone || '—' },
+                              { icon: 'work',        label: 'Domain',      val: liveProfile.domain || liveProfile.department || '—' },
+                              { icon: 'business',    label: 'Company',     val: liveProfile.company || '—' },
+                              { icon: 'badge',       label: 'Position',    val: liveProfile.currentTitle || '—' },
+                              { icon: 'history_edu', label: 'Experience',  val: liveProfile.experience || '—' },
+                              { icon: 'school',      label: 'Batch',       val: liveProfile.passOutYear || '—' },
+                              { icon: 'link',        label: 'LinkedIn',    val: liveProfile.linkedin ? 'View Profile' : '—', href: liveProfile.linkedin },
+                            ].filter(item => item.val !== '—').map(item => (
+                              <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0.45rem 0', borderBottom: '1px solid rgba(70,69,85,0.1)' }}>
+                                <span className="material-symbols-outlined" style={{ fontSize: 15, color: '#c3c0ff' }}>{item.icon}</span>
+                                <span style={{ fontSize: '0.7rem', color: '#c7c4d8', flex: 1 }}>{item.label}</span>
+                                {item.href ? (
+                                  <a href={item.href} target="_blank" rel="noreferrer" style={{ fontSize: '0.7rem', color: '#c3c0ff', fontWeight: 600, textDecoration: 'none' }}>{item.val}</a>
+                                ) : (
+                                  <span style={{ fontSize: '0.7rem', color: '#dae2fd', fontWeight: 600, maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.val}</span>
+                                )}
+                              </div>
+                            ))}
+                            {liveProfile.skills?.length > 0 && (
+                              <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                                {liveProfile.skills.slice(0, 5).map(s => (
+                                  <span key={s} style={{ padding: '0.15rem 0.5rem', background: 'rgba(195,192,255,0.1)', borderRadius: 999, fontSize: '0.6rem', color: '#c3c0ff', fontWeight: 600 }}>{s}</span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <div style={{ padding: '0.75rem 1rem', borderTop: '1px solid rgba(70,69,85,0.15)', display: 'flex', gap: 8 }}>
+                            <button onClick={() => { setShowProfile(false); setActiveTab('settings'); }} style={{ flex: 1, padding: '0.5rem', background: 'rgba(195,192,255,0.1)', border: '1px solid rgba(195,192,255,0.2)', borderRadius: 8, color: '#c3c0ff', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>
+                              Edit Profile
+                            </button>
+                            <button onClick={() => setShowLogoutConfirm(true)} style={{ flex: 1, padding: '0.5rem', background: 'rgba(255,180,171,0.08)', border: '1px solid rgba(255,180,171,0.2)', borderRadius: 8, color: '#ffb4ab', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>
+                              Sign Out
+                            </button>
+                          </div>
+                        </>
+                      );
+                    })() : (
                       <>
                         {/* Edit profile form */}
                         <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid rgba(70,69,85,0.2)', display: 'flex', alignItems: 'center', gap: 8 }}>
                           <button onClick={() => setEditProfile(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c7c4d8', padding: 0, display: 'flex' }}>
                             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>arrow_back</span>
                           </button>
-                          <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>Edit Profile</span>
+                          <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>Quick Edit</span>
                         </div>
                         <div style={{ padding: '1rem' }}>
                           {[
-                            { key: 'username',   label: 'Username',   icon: 'alternate_email', placeholder: 'your.username' },
-                            { key: 'email',      label: 'Email',      icon: 'mail',            placeholder: 'you@company.com' },
-                            { key: 'domain',     label: 'Domain',     icon: 'work',            placeholder: 'e.g. Software Engineering' },
-                            { key: 'experience', label: 'Experience', icon: 'history_edu',     placeholder: 'e.g. 8 years at Google' },
+                            { key: 'username',     label: 'Name',        icon: 'alternate_email', placeholder: 'your name' },
+                            { key: 'email',        label: 'Email',       icon: 'mail',            placeholder: 'you@company.com' },
+                            { key: 'domain',       label: 'Domain',      icon: 'work',            placeholder: 'e.g. Software Engineering' },
+                            { key: 'experience',   label: 'Experience',  icon: 'history_edu',     placeholder: 'e.g. 8 years at Google' },
                           ].map(field => (
                             <div key={field.key} style={{ marginBottom: '0.875rem' }}>
                               <label style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c7c4d8', display: 'flex', alignItems: 'center', gap: 5, marginBottom: 5 }}>

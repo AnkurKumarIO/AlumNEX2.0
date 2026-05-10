@@ -117,6 +117,7 @@ export default function Dashboard() {
   const [showMentorBook, setShowMentorBook] = useState(false);
   const [mentorBookSent, setMentorBookSent] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [recommendedMentor, setRecommendedMentor] = useState(null);
   const [profileData, setProfileData] = useState({});
   const [aiProfileStrength, setAiProfileStrength] = useState(null);
@@ -338,7 +339,7 @@ export default function Dashboard() {
         </div>
       );
     }
-    if (activeTab === 'settings') return <SettingsPage />;
+    if (activeTab === 'settings') return <SettingsPage role="STUDENT" />;
     // home
     return (
       <>
@@ -486,14 +487,18 @@ export default function Dashboard() {
           onCancel={() => setShowLogoutConfirm(false)}
         />
       )}
-      <aside style={{ width: 256, minHeight: '100vh', position: 'fixed', left: 0, top: 0, background: '#131b2e', display: 'flex', flexDirection: 'column', padding: '1rem', zIndex: 50 }}>
+      {sidebarOpen && <div onClick={() => setSidebarOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 45 }} />}
+      <aside style={{ width: 256, minHeight: '100vh', position: 'fixed', left: sidebarOpen ? 0 : -256, top: 0, background: '#131b2e', display: 'flex', flexDirection: 'column', padding: '1rem', zIndex: 50, transition: 'left 0.3s ease' }}>
         <div style={{ padding: '1.5rem 1rem 1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <AlumNexLogo size={28} />
-            <div>
+            <div style={{ flex: 1 }}>
           <div style={{ fontSize: '1rem', fontWeight: 900, letterSpacing: '-0.02em', color: '#f5e9ff' }}>Alum<span style={{ color: '#a855f7' }}>NEX</span></div>
               <div style={{ fontSize: '0.55rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c7c4d8', marginTop: 1 }}>Intelligence Suite</div>
             </div>
+            <button onClick={() => setSidebarOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c7c4d8', padding: 4, display: 'flex' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
+            </button>
           </div>
         </div>
         <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -523,8 +528,13 @@ export default function Dashboard() {
         </div>
       </aside>
 
-      <main style={{ marginLeft: 256, flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-        <header style={{ position: 'fixed', top: 0, left: 256, right: 0, height: 64, zIndex: 40, background: 'rgba(11,19,38,0.85)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(195,192,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2rem' }}>
+      <main style={{ marginLeft: sidebarOpen ? 256 : 0, flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh', transition: 'margin-left 0.3s ease' }}>
+        <header style={{ position: 'fixed', top: 0, left: sidebarOpen ? 256 : 0, right: 0, height: 64, zIndex: 40, background: 'rgba(11,19,38,0.85)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(195,192,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2rem', transition: 'left 0.3s ease' }}>
+          {!sidebarOpen && (
+            <button onClick={() => setSidebarOpen(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c7c4d8', padding: 4, display: 'flex', alignItems: 'center', marginRight: 12 }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 24 }}>menu</span>
+            </button>
+          )}
           <nav style={{ display: 'flex', gap: '1.5rem' }}>
             {[
               { label: 'Network',     tab: 'directory' },
