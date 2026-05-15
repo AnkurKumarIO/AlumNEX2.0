@@ -94,30 +94,100 @@ async function sendWelcomeEmail({ to, name, username, password, role, loginUrl }
     if (status === 'failed') emailQueue.failedCount++;
   };
 
-  const subject = `Welcome to AlumNEX, ${name}!`;
+  const roleLabel = role === 'STUDENT' ? 'Student' : 'Alumni Mentor';
+  const subject   = `Welcome to AlumNEX — Your ${roleLabel} Account is Ready`;
+  const actionText = role === 'STUDENT' ? 'connect with mentors for mock interviews' : 'start mentoring students through mock interviews';
+  
   const html = `
-    <div style="font-family: 'Inter', sans-serif; color: #1a1a1a; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
-      <div style="background: #4f46e5; padding: 32px; text-align: center;">
-        <h1 style="color: white; margin: 0; font-size: 24px;">Welcome to AlumNEX</h1>
-      </div>
-      <div style="padding: 40px 32px; background: white;">
-        <p style="font-size: 16px; margin-bottom: 24px;">Hello <strong>${name}</strong>,</p>
-        <p style="font-size: 16px; line-height: 1.6; color: #4b5563;">Your account has been created successfully. You can now log in using the credentials below:</p>
-        <div style="background: #f9fafb; border-radius: 8px; padding: 24px; margin: 32px 0;">
-          <p style="margin: 0 0 12px 0;"><strong>Username:</strong> <code style="background: #e5e7eb; padding: 2px 6px; border-radius: 4px;">${username}</code></p>
-          <p style="margin: 0;"><strong>Password:</strong> <code style="background: #e5e7eb; padding: 2px 6px; border-radius: 4px;">${password}</code></p>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 0; line-height: 1.6; }
+    .wrap { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); border: 1px solid #e2e8f0; }
+    .header { background: linear-gradient(135deg, #1e293b 0%, #334155 100%); padding: 48px 40px; text-align: center; }
+    .logo { font-size: 2rem; font-weight: 800; color: #ffffff; letter-spacing: -0.025em; margin-bottom: 8px; }
+    .logo span { color: #818cf8; }
+    .tagline { color: #94a3b8; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+    .body { padding: 48px 40px; }
+    .greeting { font-size: 1.5rem; font-weight: 700; color: #0f172a; margin-bottom: 16px; }
+    .hero { font-size: 1.125rem; color: #475569; margin-bottom: 32px; font-weight: 500; }
+    .intro { color: #64748b; margin-bottom: 32px; }
+    .cred-card { background: #f1f5f9; border-radius: 16px; padding: 32px; border: 1px solid #e2e8f0; margin-bottom: 32px; }
+    .cred-title { font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 20px; }
+    .cred-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #e2e8f0; }
+    .cred-row:last-child { border-bottom: none; }
+    .cred-label { font-size: 0.875rem; font-weight: 600; color: #64748b; }
+    .cred-value { font-family: monospace; font-size: 1rem; font-weight: 700; color: #0f172a; background: #ffffff; padding: 4px 12px; border-radius: 6px; border: 1px solid #e2e8f0; }
+    .btn-wrap { text-align: center; margin-top: 40px; }
+    .btn { display: inline-block; padding: 16px 48px; background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%); color: #ffffff !important; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 1rem; box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.4); }
+    .next-steps { background: #fffbeb; border-radius: 16px; padding: 24px; border-left: 4px solid #f59e0b; margin-top: 40px; }
+    .next-title { font-size: 0.875rem; font-weight: 700; color: #92400e; margin-bottom: 12px; }
+    .next-list { margin: 0; padding-left: 20px; color: #92400e; font-size: 0.875rem; }
+    .next-list li { margin-bottom: 8px; }
+    .footer { padding: 40px; background: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center; }
+    .footer-text { font-weight: 700; color: #1e293b; margin-bottom: 4px; }
+    .footer-sub { font-size: 0.875rem; color: #64748b; margin-bottom: 16px; }
+    .footer-brand { font-size: 0.75rem; color: #94a3b8; }
+    .notice { font-size: 0.75rem; color: #cbd5e1; margin-top: 24px; font-style: italic; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header">
+      <div class="logo">Alum<span>NEX</span></div>
+      <div class="tagline">Bridging Campus & Career</div>
+    </div>
+    <div class="body">
+      <div class="greeting">Welcome Aboard, ${name}! 👋</div>
+      <p class="hero">Your journey on AlumNEX starts here. Connect, mentor, and bridge the gap between campus life and your professional career.</p>
+      
+      <p class="intro">
+        Your <strong>${roleLabel}</strong> account has been successfully created. 
+        You can now use the credentials below to sign in and ${actionText}.
+      </p>
+
+      <div class="cred-card">
+        <div class="cred-title">🔐 Your Account Credentials</div>
+        <div class="cred-row">
+          <span class="cred-label">Username</span>
+          <span class="cred-value">${username}</span>
         </div>
-        <div style="text-align: center; margin-top: 32px;">
-          <a href="${loginUrl}" style="background: #4f46e5; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">Log In to Your Account</a>
+        <div class="cred-row">
+          <span class="cred-label">Password</span>
+          <span class="cred-value">${password}</span>
+        </div>
+        <div class="cred-row">
+          <span class="cred-label">Role</span>
+          <span class="cred-value">${roleLabel}</span>
         </div>
       </div>
-      <div style="background: #f9fafb; padding: 24px; text-align: center; border-top: 1px solid #e2e8f0;">
-        <p style="font-size: 14px; color: #9ca3af; margin: 0;">Developed by <strong>The Tesseract</strong></p>
+
+      <div class="btn-wrap">
+        <a href="${loginUrl}" class="btn">Sign In to AlumNEX →</a>
+      </div>
+
+      <div class="next-steps">
+        <div class="next-title">📌 Next Steps & Security</div>
+        <ul class="next-list">
+          <li><strong>Complete Your Profile:</strong> Ensure your bio and skills are up to date to get the best matches.</li>
+          <li><strong>Important Security Note:</strong> Please change your password immediately after your first login. To protect your data, keep these credentials safe and do not share them with anyone.</li>
+        </ul>
       </div>
     </div>
-  `;
+    <div class="footer">
+      <div class="footer-text">College Training & Placement Office</div>
+      <div class="footer-sub">AlumNEX — Bridging Campus & Career</div>
+      <div class="footer-brand">Developed by The Tesseract</div>
+      <div class="notice">^(*This is an automated message. Please do not reply directly to this email.*)</div>
+    </div>
+  </div>
+</body>
+</html>`;
 
-  // 1. Try Gmail API first (Highest reliability, bypasses SMTP firewalls)
+  // 1. Try Gmail API first
   if (gmail) {
     try {
       console.log(`[EMAIL-DEBUG] Attempting send via Gmail API for ${to}`);
@@ -147,11 +217,10 @@ async function sendWelcomeEmail({ to, name, username, password, role, loginUrl }
       return { sent: true };
     } catch (err) {
       console.error('[EMAIL-DEBUG] ❌ Gmail API error:', err.message);
-      // Fallback to SMTP if API fails
     }
   }
 
-  // 2. Try Resend (Secondary fallback)
+  // 2. Try Resend
   if (process.env.RESEND_API_KEY) {
     try {
       console.log(`[EMAIL-DEBUG] Attempting fallback via Resend API for ${to}`);
@@ -169,118 +238,34 @@ async function sendWelcomeEmail({ to, name, username, password, role, loginUrl }
         })
       });
       if (res.ok) {
-        console.log(`[EMAIL-DEBUG] ✅ Sent via Resend fallback`);
+        console.log(`[EMAIL-DEBUG] ✅ Sent via Resend`);
         updateQueueStatus('sent', null);
         return { sent: true };
       }
     } catch (err) {
-      console.error('[EMAIL-DEBUG] ❌ Resend fallback error:', err.message);
+      console.error('[EMAIL-DEBUG] ❌ Resend error:', err.message);
     }
   }
 
-  // 3. Last Fallback: SMTP (Nodemailer)
+  // 3. Fallback: SMTP (Nodemailer)
   if (!transporter) {
     console.log('[EMAIL-DEBUG] ❌ No email delivery methods available.');
     updateQueueStatus('failed', 'Email not configured');
     return { skipped: true, reason: 'Email not configured' };
   }
   try {
-    const roleLabel = role === 'STUDENT' ? 'Student' : 'Alumni Mentor';
-    const roleColor = role === 'STUDENT' ? '#c3c0ff' : '#4edea3';
-    const subject   = `Welcome to AlumNEX — Your ${roleLabel} Account is Ready`;
-    const html = `
-<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
-  body{font-family:'Segoe UI',Inter,Arial,sans-serif;background:#f5f5f5;color:#1a1a2e;margin:0;padding:0;}
-  .wrap{max-width:600px;margin:32px auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);}
-  .header{background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);padding:36px 32px;text-align:center;}
-  .logo-row{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:8px;}
-  .logo-icon{width:44px;height:44px;background:linear-gradient(135deg,#4f46e5,#818cf8);border-radius:12px;display:flex;align-items:center;justify-content:center;}
-  .logo-text{font-size:1.6rem;font-weight:900;color:#ffffff;letter-spacing:-0.03em;}
-  .logo-text span{color:#818cf8;}
-  .header-sub{font-size:0.72rem;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:0.15em;margin-top:6px;}
-  .body{padding:32px;}
-  .greeting{font-size:1.15rem;font-weight:700;color:#1a1a2e;margin-bottom:16px;}
-  .role-badge{display:inline-block;background:${roleColor}20;color:${role === 'STUDENT' ? '#4f46e5' : '#059669'};padding:4px 12px;border-radius:20px;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:16px;}
-  .intro{color:#4a5568;line-height:1.7;font-size:0.875rem;margin-bottom:24px;}
-  .cred-box{background:#f8fafc;border-radius:12px;padding:0;margin:24px 0;border:1px solid #e2e8f0;overflow:hidden;}
-  .cred-header{background:#1a1a2e;padding:12px 20px;}
-  .cred-header span{color:#ffffff;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;}
-  .cred-row{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid #e2e8f0;}
-  .cred-row:last-child{border-bottom:none;}
-  .cred-label{font-size:0.75rem;font-weight:600;color:#718096;text-transform:uppercase;letter-spacing:0.08em;}
-  .cred-value{font-family:'Courier New',monospace;font-size:0.95rem;font-weight:700;color:#1a1a2e;}
-  .btn{display:block;width:fit-content;margin:28px auto 0;padding:14px 40px;background:linear-gradient(135deg,#4f46e5,#818cf8);color:#ffffff;text-decoration:none;border-radius:12px;font-weight:700;font-size:0.9rem;text-align:center;box-shadow:0 4px 14px rgba(79,70,229,0.3);}
-  .note{font-size:0.78rem;color:#718096;line-height:1.6;margin-top:24px;padding:16px;background:#fffbeb;border-radius:10px;border-left:3px solid #f59e0b;}
-  .note strong{color:#92400e;}
-  .footer{padding:24px 32px;border-top:1px solid #e2e8f0;text-align:center;background:#f8fafc;}
-  .footer-brand{font-size:0.7rem;font-weight:700;color:#4f46e5;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;}
-  .footer-inst{font-size:0.72rem;color:#a0aec0;line-height:1.6;}
-</style></head>
-<body>
-  <div class="wrap">
-    <div class="header">
-      <div class="logo-row">
-        <div class="logo-icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5z" fill="#ffffff" opacity="0.9"/><path d="M2 17l10 5 10-5" stroke="#ffffff" stroke-width="2" fill="none" opacity="0.6"/><path d="M2 12l10 5 10-5" stroke="#ffffff" stroke-width="2" fill="none" opacity="0.8"/></svg>
-        </div>
-        <div class="logo-text">Alum<span>NEX</span></div>
-      </div>
-      <div class="header-sub">Alumni Mentorship & Career Platform</div>
-    </div>
-    <div class="body">
-      <div class="greeting">Hi ${name} 👋</div>
-      <div class="role-badge">${roleLabel} Account</div>
-      <p class="intro">
-        Your <strong>${roleLabel}</strong> account on AlumNEX has been created.
-        Use the credentials below to sign in and ${role === 'STUDENT' ? 'connect with alumni mentors for mock interviews' : 'start mentoring students through mock interviews'}.
-      </p>
-      <div class="cred-box">
-        <div class="cred-header"><span>🔑 Your Login Credentials</span></div>
-        <div class="cred-row">
-          <span class="cred-label">Username</span>
-          <span class="cred-value">${username}</span>
-        </div>
-        <div class="cred-row">
-          <span class="cred-label">Password</span>
-          <span class="cred-value">${password}</span>
-        </div>
-        <div class="cred-row">
-          <span class="cred-label">Role</span>
-          <span class="cred-value">${roleLabel}</span>
-        </div>
-      </div>
-      <a href="${loginUrl}" class="btn">Sign In to AlumNEX →</a>
-      <div class="note">
-        ⚠️ <strong>Change your password</strong> after your first login. Keep these credentials safe and do not share them with anyone.
-      </div>
-    </div>
-    <div class="footer">
-      <div class="footer-brand">AlumNEX — Bridging Campus & Career</div>
-      <div class="footer-inst">
-        College Training & Placement Office<br>
-        Developed by <strong>The Tesseract</strong><br>
-        This is an automated message. Do not reply.
-      </div>
-    </div>
-  </div>
-</body>
-</html>`;
-
     await transporter.sendMail({
       from:    process.env.EMAIL_FROM || `AlumNEX <${process.env.EMAIL_USER}>`,
       to,
       subject,
       html,
     });
-    console.log(`[EMAIL-DEBUG] ✅ Email sent successfully to ${to}`);
+    console.log(`[EMAIL-DEBUG] ✅ Email sent via SMTP to ${to}`);
     updateQueueStatus('sent', null);
     return { sent: true };
   } catch (err) {
     console.error(`[EMAIL-DEBUG] ❌ Email FAILED for ${to}:`, err.message);
     updateQueueStatus('failed', err.message);
-    try { require('fs').appendFileSync('scratch/email_error.txt', new Date().toISOString() + ' - ' + to + ' - ' + err.message + '\n'); } catch (e) {}
     return { skipped: true, reason: err.message };
   }
 }
