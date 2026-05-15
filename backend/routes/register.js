@@ -99,91 +99,150 @@ async function sendWelcomeEmail({ to, name, username, password, role, loginUrl }
   const actionText = role === 'STUDENT' ? 'connect with mentors for mock interviews' : 'start mentoring students through mock interviews';
   
   const html = `
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <style>
-    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 0; line-height: 1.6; }
-    .wrap { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); border: 1px solid #e2e8f0; }
-    .header { background: linear-gradient(135deg, #1e293b 0%, #334155 100%); padding: 48px 40px; text-align: center; }
-    .logo { font-size: 2rem; font-weight: 800; color: #ffffff; letter-spacing: -0.025em; margin-bottom: 8px; }
-    .logo span { color: #818cf8; }
-    .tagline { color: #94a3b8; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
-    .body { padding: 48px 40px; }
-    .greeting { font-size: 1.5rem; font-weight: 700; color: #0f172a; margin-bottom: 16px; }
-    .hero { font-size: 1.125rem; color: #475569; margin-bottom: 32px; font-weight: 500; }
-    .intro { color: #64748b; margin-bottom: 32px; }
-    .cred-card { background: #f1f5f9; border-radius: 16px; padding: 32px; border: 1px solid #e2e8f0; margin-bottom: 32px; }
-    .cred-title { font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 20px; }
-    .cred-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #e2e8f0; }
-    .cred-row:last-child { border-bottom: none; }
-    .cred-label { font-size: 0.875rem; font-weight: 600; color: #64748b; }
-    .cred-value { font-family: monospace; font-size: 1rem; font-weight: 700; color: #0f172a; background: #ffffff; padding: 4px 12px; border-radius: 6px; border: 1px solid #e2e8f0; }
-    .btn-wrap { text-align: center; margin-top: 40px; }
-    .btn { display: inline-block; padding: 16px 48px; background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%); color: #ffffff !important; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 1rem; box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.4); }
-    .next-steps { background: #fffbeb; border-radius: 16px; padding: 24px; border-left: 4px solid #f59e0b; margin-top: 40px; }
-    .next-title { font-size: 0.875rem; font-weight: 700; color: #92400e; margin-bottom: 12px; }
-    .next-list { margin: 0; padding-left: 20px; color: #92400e; font-size: 0.875rem; }
-    .next-list li { margin-bottom: 8px; }
-    .footer { padding: 40px; background: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center; }
-    .footer-text { font-weight: 700; color: #1e293b; margin-bottom: 4px; }
-    .footer-sub { font-size: 0.875rem; color: #64748b; margin-bottom: 16px; }
-    .footer-brand { font-size: 0.75rem; color: #94a3b8; }
-    .notice { font-size: 0.75rem; color: #cbd5e1; margin-top: 24px; font-style: italic; }
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Welcome to AlumNEX</title>
+  <style type="text/css">
+    @media only screen and (max-width: 600px) {
+      .main-wrap { width: 100% !important; border-radius: 0 !important; border: none !important; }
+      .sec-header { padding: 32px 20px !important; }
+      .sec-body { padding: 32px 20px !important; }
+      .cred-inner { padding: 20px !important; }
+      .cred-row { display: block !important; width: 100% !important; }
+      .cred-label { display: block !important; width: 100% !important; margin-bottom: 6px !important; }
+      .cred-value { display: block !important; width: 100% !important; }
+      .btn-link { width: 100% !important; box-sizing: border-box !important; }
+      .sec-footer { padding: 32px 20px !important; }
+    }
   </style>
 </head>
-<body>
-  <div class="wrap">
-    <div class="header">
-      <div class="logo">Alum<span>NEX</span></div>
-      <div class="tagline">Bridging Campus & Career</div>
-    </div>
-    <div class="body">
-      <div class="greeting">Welcome Aboard, ${name}! 👋</div>
-      <p class="hero">Your journey on AlumNEX starts here. Connect, mentor, and bridge the gap between campus life and your professional career.</p>
-      
-      <p class="intro">
-        Your <strong>${roleLabel}</strong> account has been successfully created. 
-        You can now use the credentials below to sign in and ${actionText}.
-      </p>
+<body style="margin:0;padding:0;background-color:#F4F7FA;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+  <table border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout:fixed;">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
+        <!--[if (gte mso 9)|(IE)]><table align="center" border="0" cellspacing="0" cellpadding="0" width="600"><tr><td align="center" valign="top" width="600"><![endif]-->
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width:600px;background-color:#FFFFFF;border-radius:16px;overflow:hidden;border:1px solid #E5E9F0;box-shadow:0 4px 20px rgba(0,0,0,0.05);" class="main-wrap">
 
-      <div class="cred-card">
-        <div class="cred-title">🔐 Your Account Credentials</div>
-        <div class="cred-row">
-          <span class="cred-label">Username</span>
-          <span class="cred-value">${username}</span>
-        </div>
-        <div class="cred-row">
-          <span class="cred-label">Password</span>
-          <span class="cred-value">${password}</span>
-        </div>
-        <div class="cred-row">
-          <span class="cred-label">Role</span>
-          <span class="cred-value">${roleLabel}</span>
-        </div>
-      </div>
+          <!-- HEADER -->
+          <tr>
+            <td align="center" style="padding:48px 40px;background-color:#2C3647;" class="sec-header">
+              <div style="font-size:32px;font-weight:800;color:#FFFFFF;letter-spacing:-0.5px;margin-bottom:8px;">Alum<span style="color:#818CF8;">NEX</span></div>
+              <div style="color:#94A3B8;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:2px;">Intelligence Platform</div>
+            </td>
+          </tr>
 
-      <div class="btn-wrap">
-        <a href="${loginUrl}" class="btn">Sign In to AlumNEX →</a>
-      </div>
+          <!-- BODY -->
+          <tr>
+            <td style="padding:48px 40px 40px 40px;" class="sec-body">
 
-      <div class="next-steps">
-        <div class="next-title">📌 Next Steps & Security</div>
-        <ul class="next-list">
-          <li><strong>Complete Your Profile:</strong> Ensure your bio and skills are up to date to get the best matches.</li>
-          <li><strong>Important Security Note:</strong> Please change your password immediately after your first login. To protect your data, keep these credentials safe and do not share them with anyone.</li>
-        </ul>
-      </div>
-    </div>
-    <div class="footer">
-      <div class="footer-text">College Training & Placement Office</div>
-      <div class="footer-sub">AlumNEX — Bridging Campus & Career</div>
-      <div class="footer-brand">Developed by The Tesseract</div>
-      <div class="notice">^(*This is an automated message. Please do not reply directly to this email.*)</div>
-    </div>
-  </div>
+              <!-- Greeting -->
+              <p style="margin:0 0 24px 0;font-size:22px;font-weight:700;color:#0F172A;">Welcome Aboard, ${name}! 👋</p>
+
+              <!-- Intro -->
+              <p style="margin:0 0 16px 0;font-size:14px;line-height:22px;color:#64748B;">Your journey on AlumNEX starts here.</p>
+              <p style="margin:0 0 32px 0;font-size:14px;line-height:22px;color:#64748B;">Your <strong>${roleLabel}</strong> account has been successfully created. You can now use the credentials below to sign in and ${actionText}.</p>
+
+              <!-- Credentials Card -->
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;margin-bottom:36px;">
+                <tr>
+                  <td style="padding:32px;" class="cred-inner">
+                    <p style="margin:0 0 24px 0;font-size:12px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:1px;">🔐 YOUR ACCOUNT CREDENTIALS</p>
+
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                      <!-- Username -->
+                      <tr>
+                        <td style="padding:0 0 16px 0;border-bottom:1px solid #E2E8F0;" class="cred-row">
+                          <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                            <tr>
+                              <td width="100" style="font-size:14px;font-weight:600;color:#64748B;" class="cred-label">Username</td>
+                              <td align="left">
+                                <div style="background-color:#FFFFFF;border:1px solid #E2E8F0;border-radius:6px;padding:10px 14px;font-family:'Courier New',Courier,monospace;font-size:15px;font-weight:700;color:#0F172A;display:block;width:100%;box-sizing:border-box;">${username}</div>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                      
+                      <!-- Password -->
+                      <tr>
+                        <td style="padding:16px 0;border-bottom:1px solid #E2E8F0;" class="cred-row">
+                          <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                            <tr>
+                              <td width="100" style="font-size:14px;font-weight:600;color:#64748B;" class="cred-label">Password</td>
+                              <td align="left">
+                                <div style="background-color:#FFFFFF;border:1px solid #E2E8F0;border-radius:6px;padding:10px 14px;font-family:'Courier New',Courier,monospace;font-size:15px;font-weight:700;color:#0F172A;display:block;width:100%;box-sizing:border-box;">${password}</div>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+
+                      <!-- Role -->
+                      <tr>
+                        <td style="padding:16px 0 0 0;" class="cred-row">
+                          <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                            <tr>
+                              <td width="100" style="font-size:14px;font-weight:600;color:#64748B;" class="cred-label">Role</td>
+                              <td align="left">
+                                <div style="background-color:#FFFFFF;border:1px solid #E2E8F0;border-radius:6px;padding:10px 14px;font-size:15px;font-weight:700;color:#0F172A;display:block;width:100%;box-sizing:border-box;">${roleLabel}</div>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA -->
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:36px;">
+                <tr>
+                  <td align="center">
+                    <a href="${loginUrl}" style="display:inline-block;padding:16px 40px;background-color:#6366F1;color:#FFFFFF;text-decoration:none;border-radius:10px;font-weight:700;font-size:15px;" class="btn-link">Sign In to AlumNEX &rarr;</a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Next Steps -->
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#FFFBEB;border-radius:12px;border-left:4px solid #F59E0B;">
+                <tr>
+                  <td style="padding:24px;">
+                    <p style="margin:0 0 12px 0;font-size:14px;font-weight:700;color:#92400E;">📌 Next Steps &amp; Security</p>
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td valign="top" style="padding:0 8px 8px 0;font-size:14px;color:#92400E;">&bull;</td>
+                        <td style="padding:0 0 8px 0;font-size:13px;line-height:20px;color:#92400E;"><strong>Complete Your Profile:</strong> Ensure your bio and skills are up to date to get the best matches.</td>
+                      </tr>
+                      <tr>
+                        <td valign="top" style="padding:0 8px 0 0;font-size:14px;color:#92400E;">&bull;</td>
+                        <td style="padding:0;font-size:13px;line-height:20px;color:#92400E;"><strong>Important Security Note:</strong> Please change your password immediately after your first login. To protect your data, keep these credentials safe and do not share them with anyone.</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- FOOTER -->
+          <tr>
+            <td align="center" style="padding:40px;background-color:#F8FAFC;border-top:1px solid #E2E8F0;" class="sec-footer">
+              <p style="margin:0 0 4px 0;font-size:14px;font-weight:700;color:#0F172A;">College Training &amp; Placement Office</p>
+              <p style="margin:0 0 16px 0;font-size:13px;color:#64748B;">AlumNEX &mdash; Intelligence Platform</p>
+              <p style="margin:0 0 24px 0;font-size:12px;color:#94A3B8;">Developed by The Tesseract</p>
+              <p style="margin:0;font-size:11px;color:#CBD5E1;font-style:italic;">This is an automated message. Please do not reply directly to this email.</p>
+            </td>
+          </tr>
+
+        </table>
+        <!--[if (gte mso 9)|(IE)]></td></tr></table><![endif]-->
+      </td>
+    </tr>
+  </table>
 </body>
 </html>`;
 
@@ -356,17 +415,22 @@ router.post('/bulk-students', async (req, res) => {
     const loginUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/login`;
     const results  = { created: [], skipped: [], failed: [] };
 
-    // Pre-fetch existing users to avoid O(N) DB queries per user
+    // Pre-fetch existing users to build dedup sets
     const existingUsers = await prisma.user.findMany({
       select: { email: true, username: true, profile_data: true }
     });
     const existingEmails = new Set(existingUsers.map(u => u.email.toLowerCase()));
-    const existingUsernames = new Set(existingUsers.map(u => u.username).filter(Boolean));
+
+    // Build a set of existing roll numbers — the PRIMARY dedup criteria
+    const existingRollNos = new Set();
     existingUsers.forEach(u => {
+      // Roll number stored in profile_data.rollNo
       try {
         const pd = JSON.parse(u.profile_data || '{}');
-        if (pd.username) existingUsernames.add(pd.username);
+        if (pd.rollNo) existingRollNos.add(pd.rollNo.trim().toUpperCase());
       } catch {}
+      // Username is also the roll number for students
+      if (u.username) existingRollNos.add(u.username.trim().toUpperCase());
     });
 
     const emailPromises = [];
@@ -379,14 +443,17 @@ router.post('/bulk-students', async (req, res) => {
       try {
         const email = s.email.trim().toLowerCase();
         const username = generateStudentUsername(s.rollNo, s.name, s.year);
+        const rollNo = (s.rollNo || username).trim().toUpperCase();
 
-        // In-memory duplicate check
-        if (existingEmails.has(email)) {
-          results.skipped.push({ skipped: true, email, username, reason: 'Email already exists' });
+        // PRIMARY check: Roll number dedup
+        if (existingRollNos.has(rollNo)) {
+          results.skipped.push({ skipped: true, email, username, rollNo, reason: 'Roll number already exists' });
           continue;
         }
-        if (existingUsernames.has(username)) {
-          results.skipped.push({ skipped: true, email, username, reason: 'Username already exists' });
+
+        // SECONDARY check: Email dedup
+        if (existingEmails.has(email)) {
+          results.skipped.push({ skipped: true, email, username, rollNo, reason: 'Email already exists' });
           continue;
         }
 
@@ -410,9 +477,9 @@ router.post('/bulk-students', async (req, res) => {
         if (result.skipped) {
           results.skipped.push(result);
         } else {
-          // Track to avoid duplicates in the same batch
+          // Track to avoid duplicates within the same batch
           existingEmails.add(email);
-          existingUsernames.add(username);
+          existingRollNos.add(rollNo);
 
           results.created.push({ ...result, emailSent: false });
 
@@ -439,9 +506,7 @@ router.post('/bulk-students', async (req, res) => {
       }
     }
 
-    // Wait for emails to settle so we can report accurate counts
-    // Do NOT wait for emails to settle to prevent frontend timeout (or user impatience)
-    // Emails are sent asynchronously in the background
+    // Do NOT wait for emails to settle to prevent frontend timeout
     console.log(`[EMAIL-DEBUG] Queued ${emailPromises.length} emails to send in the background...`);
     
     Promise.allSettled(emailPromises).then(emailResults => {
@@ -457,7 +522,7 @@ router.post('/bulk-students', async (req, res) => {
         created: results.created.length,
         skipped: results.skipped.length,
         failed:  results.failed.length,
-        emailsSent: results.created.length, // Report queued as sent to frontend
+        emailsSent: results.created.length,
       },
       results,
     });
@@ -480,18 +545,11 @@ router.post('/bulk-alumni', async (req, res) => {
     const loginUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/login`;
     const results  = { created: [], skipped: [], failed: [] };
 
-    // Pre-fetch existing users to avoid O(N) DB queries per user
+    // Pre-fetch existing emails for dedup
     const existingUsers = await prisma.user.findMany({
-      select: { email: true, username: true, profile_data: true }
+      select: { email: true }
     });
     const existingEmails = new Set(existingUsers.map(u => u.email.toLowerCase()));
-    const existingUsernames = new Set(existingUsers.map(u => u.username).filter(Boolean));
-    existingUsers.forEach(u => {
-      try {
-        const pd = JSON.parse(u.profile_data || '{}');
-        if (pd.username) existingUsernames.add(pd.username);
-      } catch {}
-    });
 
     const emailPromises = [];
 
@@ -504,13 +562,9 @@ router.post('/bulk-alumni', async (req, res) => {
         const email = a.email.trim().toLowerCase();
         const username = generateAlumniUsername(a.name, a.batchYear);
 
-        // In-memory duplicate check
+        // Dedup by email only for alumni
         if (existingEmails.has(email)) {
           results.skipped.push({ skipped: true, email, username, reason: 'Email already exists' });
-          continue;
-        }
-        if (existingUsernames.has(username)) {
-          results.skipped.push({ skipped: true, email, username, reason: 'Username already exists' });
           continue;
         }
 
@@ -536,7 +590,6 @@ router.post('/bulk-alumni', async (req, res) => {
         } else {
           // Track to avoid duplicates in the same batch
           existingEmails.add(email);
-          existingUsernames.add(username);
 
           results.created.push({ ...result, emailSent: false });
 
