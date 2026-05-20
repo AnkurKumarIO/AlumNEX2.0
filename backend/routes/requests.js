@@ -58,7 +58,7 @@ router.post('/', async (req, res) => {
     });
 
     // Notify alumni of new request
-    await prisma.notification.create({
+    const notification = await prisma.notification.create({
       data: {
         user_id: alumniId,
         type: 'NEW_REQUEST',
@@ -67,6 +67,12 @@ router.post('/', async (req, res) => {
         request_id: request.request_id,
       }
     });
+
+    // Emit real-time notification
+    const io = req.app.get('io');
+    if (io) {
+      io.of('/notifications').to(alumniId).emit('notification', notification);
+    }
 
     res.json({ ...request, id: request.request_id });
   } catch (err) {
@@ -139,10 +145,15 @@ router.patch('/:id', async (req, res) => {
     }
 
     // Create all notifications
+    const io = req.app.get('io');
     for (const notifPayload of notificationsToCreate) {
-      await prisma.notification.create({
+      const createdNotif = await prisma.notification.create({
         data: notifPayload
       });
+      // Emit real-time notification
+      if (io) {
+        io.of('/notifications').to(notifPayload.user_id).emit('notification', createdNotif);
+      }
     }
 
     res.json({ ...request, id: request.request_id });
