@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect } from 'react';
+import { subscribeRealtimeSync } from '../lib/realtimeSync';
 
 export const AuthContext = createContext(null);
 
@@ -29,6 +30,15 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('alumnex_token');
     localStorage.removeItem('alumnex_profile');
   };
+
+  useEffect(() => {
+    return subscribeRealtimeSync(() => {
+      const savedUser = localStorage.getItem('alumnex_user');
+      const savedToken = localStorage.getItem('alumnex_token');
+      if (savedUser) setUser(JSON.parse(savedUser));
+      if (savedToken) setToken(savedToken);
+    });
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, token, login, logout }}>
