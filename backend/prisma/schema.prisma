@@ -52,8 +52,8 @@ model InterviewRequest {
   room_id                  String?
   student_profile_snapshot String?
 
-  student                  User     @relation("StudentRequests", fields: [student_id], references: [id])
-  alumni                   User     @relation("AlumniRequests", fields: [alumni_id], references: [id])
+  student                  User     @relation("StudentRequests", fields: [student_id], references: [id], onDelete: Cascade)
+  alumni                   User     @relation("AlumniRequests", fields: [alumni_id], references: [id], onDelete: Cascade)
 
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt
@@ -73,7 +73,7 @@ model Notification {
   read        Boolean  @default(false)
   request_id  String?
 
-  user        User     @relation(fields: [user_id], references: [id])
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   createdAt   DateTime @default(now()) @map("created_at")
 
@@ -90,8 +90,8 @@ model ScheduleSlot {
   end_time   DateTime
   status     String   @default("OPEN")
 
-  alumni     User     @relation("AlumniSlots", fields: [alumni_id], references: [id])
-  student    User?    @relation("StudentBookings", fields: [student_id], references: [id])
+  alumni     User     @relation("AlumniSlots", fields: [alumni_id], references: [id], onDelete: Cascade)
+  student    User?    @relation("StudentBookings", fields: [student_id], references: [id], onDelete: Cascade)
 
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -111,8 +111,8 @@ model InterviewRecord {
   request_id      String?  @unique
   status          String   @default("COMPLETED")
 
-  student         User     @relation("StudentInterviews", fields: [student_id], references: [id])
-  alumni          User     @relation("AlumniInterviews", fields: [alumni_id], references: [id])
+  student         User     @relation("StudentInterviews", fields: [student_id], references: [id], onDelete: Cascade)
+  alumni          User     @relation("AlumniInterviews", fields: [alumni_id], references: [id], onDelete: Cascade)
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -141,8 +141,8 @@ model SessionFeedback {
   duration_minutes Int?
   status           String   @default("COMPLETED")
 
-  student         User     @relation("StudentSessions", fields: [student_id], references: [id])
-  alumni          User     @relation("AlumniSessions", fields: [alumni_id], references: [id])
+  student         User     @relation("StudentSessions", fields: [student_id], references: [id], onDelete: Cascade)
+  alumni          User     @relation("AlumniSessions", fields: [alumni_id], references: [id], onDelete: Cascade)
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
