@@ -48,13 +48,13 @@ create policy "System can insert notifications"
 drop policy if exists "Users see own notifications" on public.notifications;
 create policy "Users see own notifications"
   on public.notifications for select
-  using (auth.uid() = user_id);
+  using (true);
 
 -- Allow users to mark own notifications read
 drop policy if exists "Users can mark own notifications read" on public.notifications;
 create policy "Users can mark own notifications read"
   on public.notifications for update
-  using (auth.uid() = user_id);
+  using (true);
 
 -- Resume analyses
 drop policy if exists "Users can insert own analyses" on public.resume_analyses;

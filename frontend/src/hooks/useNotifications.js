@@ -10,7 +10,7 @@ import { supabase } from '../lib/supabaseClient';
 function normalizeNotification(n) {
   return {
     ...n,
-    id: n.id,
+    id: n.notification_id || n.id,
     user_id: n.user_id,
     type: n.type,
     title: n.title,
@@ -93,8 +93,9 @@ export function useNotifications(userId) {
             filter: `user_id=eq.${userId}`,
           },
           (payload) => {
+            const incomingId = payload.new.notification_id || payload.new.id;
             setNotifications(prev =>
-              prev.map(n => n.id === payload.new.id ? normalizeNotification(payload.new) : n)
+              prev.map(n => n.id === incomingId ? normalizeNotification(payload.new) : n)
             );
           }
         )
@@ -122,7 +123,7 @@ export function useNotifications(userId) {
       const { error } = await supabase
         .from('notifications')
         .update({ read: true })
-        .eq('id', notificationId)
+        .eq('notification_id', notificationId)
         .eq('user_id', userId);
       
       if (error) throw error;
@@ -157,7 +158,7 @@ export function useNotifications(userId) {
       const { error } = await supabase
         .from('notifications')
         .delete()
-        .eq('id', notificationId)
+        .eq('notification_id', notificationId)
         .eq('user_id', userId);
       
       if (error) throw error;
