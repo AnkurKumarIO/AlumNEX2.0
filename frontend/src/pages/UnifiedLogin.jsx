@@ -49,7 +49,22 @@ export default function UnifiedLogin() {
     const localCred = findLocalCredential(username, password);
     if (localCred) {
       if (localCred.role !== role) { setError(`These credentials belong to a ${localCred.role.toLowerCase()} account.`); setLoading(false); return; }
-      const userData = { id: localCred.id || `${localCred.role.toLowerCase()}-${Date.now()}`, name: localCred.name, role: localCred.role, department: localCred.department };
+      
+      let finalId = localCred.id || `${localCred.role.toLowerCase()}-${Date.now()}`;
+      try {
+        const { data, error } = await supabase
+          .from("users")
+          .select("id")
+          .eq("name", localCred.name)
+          .single();
+        if (!error && data && data.id) {
+          finalId = data.id;
+        }
+      } catch (dbErr) {
+        console.warn("Failed to lookup real user ID from Supabase:", dbErr.message);
+      }
+
+      const userData = { id: finalId, name: localCred.name, role: localCred.role, department: localCred.department };
       login(userData, `token-${Date.now()}`);
       if (localCred.role === "STUDENT" && !localStorage.getItem("alumnex_profile") && !localStorage.getItem("alumniconnect_profile")) { navigate("/profile-setup"); } else { navigate("/dashboard"); }
       setLoading(false);

@@ -87,7 +87,7 @@ create table if not exists public.interview_records (
 create table if not exists public.notifications (
   notification_id uuid primary key default uuid_generate_v4(),
   user_id         uuid not null references public.users(id) on delete cascade,
-  type            text not null check (type in ('ACCEPTED','SLOT_BOOKED','DECLINED','SYSTEM')),
+  type            text not null check (type in ('ACCEPTED','SLOT_BOOKED','SLOT_BOOKED_ALUMNI','DECLINED','SYSTEM','NEW_REQUEST')),
   title           text not null,
   message         text not null,
   request_id      uuid references public.interview_requests(request_id) on delete set null,

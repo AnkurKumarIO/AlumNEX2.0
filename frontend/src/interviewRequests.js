@@ -100,12 +100,27 @@ export async function sendRequest({ studentName, studentId, alumniName, alumniRo
       });
 
       if (result?.request_id) {
+        // Notify alumni in database
+        try {
+          await createNotification({
+            userId:    finalAlumniId,
+            type:      'NEW_REQUEST',
+            title:     'New Interview Request! 📬',
+            message:   `${studentName || 'A student'} requested an interview for ${topic || 'Mock Interview'}.`,
+            requestId: result.request_id,
+          });
+        } catch (err) {
+          console.warn('sendRequest notification creation failed:', err.message);
+        }
+
         const local = loadLocal();
         local.push({
           id:            result.request_id,
           studentName,
           studentId:     realStudentId,
           alumniName,
+          alumniId:      finalAlumniId,
+          alumni_id:     finalAlumniId,
           alumniRole,
           topic:         result.topic,
           message:       result.message || '',
@@ -133,6 +148,7 @@ export async function sendRequest({ studentName, studentId, alumniName, alumniRo
     studentId:     realStudentId || studentId,
     alumniName,
     alumniId:      alumniId || '',
+    alumni_id:     alumniId || '',
     alumniRole,
     topic:         topic   || 'Mock Interview',
     message:       message || '',
@@ -180,6 +196,8 @@ export async function syncStudentRequests(studentId) {
             studentName:   dbReq.student_name || '',
             studentId:     dbReq.student_id,
             alumniName:    dbReq.alumni_name  || '',
+            alumniId:      dbReq.alumni_id,
+            alumni_id:     dbReq.alumni_id,
             alumniRole:    '',
             topic:         dbReq.topic,
             message:       dbReq.message,
@@ -297,7 +315,17 @@ export async function bookSlot(requestId, scheduledTime) {
         userId:    req.studentId,
         type:      'SLOT_BOOKED',
         title:     'Interview Slot Confirmed! 📅',
-        message:   `Your interview is scheduled for ${formatted}.`,
+        message:   `Your interview with ${req.alumniName || 'the alumni'} is scheduled for ${formatted}.`,
+        requestId,
+      });
+    }
+    const finalAlumniId = alumniId || req.alumniId || req.alumni_id;
+    if (finalAlumniId) {
+      await createNotification({
+        userId:    finalAlumniId,
+        type:      'SLOT_BOOKED_ALUMNI',
+        title:     'Interview Slot Confirmed! 📅',
+        message:   `Your interview with ${req.studentName || 'the student'} is scheduled for ${formatted}.`,
         requestId,
       });
     }
@@ -333,6 +361,30 @@ export async function rescheduleSlot(requestId, newScheduledTime) {
   const formatted = new Date(newScheduledTime).toLocaleString('en-US', {
     weekday: 'long', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
   });
+
+  try {
+    const req = requests[idx];
+    if (req.studentId) {
+      await createNotification({
+        userId:    req.studentId,
+        type:      'SLOT_BOOKED',
+        title:     'Interview Rescheduled 🔄',
+        message:   `Your interview with ${req.alumniName || 'the alumni'} has been rescheduled to ${formatted}.`,
+        requestId,
+      });
+    }
+    const finalAlumniId = req.alumniId || req.alumni_id;
+    if (finalAlumniId) {
+      await createNotification({
+        userId:    finalAlumniId,
+        type:      'SLOT_BOOKED_ALUMNI',
+        title:     'Interview Rescheduled 🔄',
+        message:   `Your interview with ${req.studentName || 'the student'} has been rescheduled to ${formatted}.`,
+        requestId,
+      });
+    }
+  } catch {}
+
   pushLocalNotif({
     studentName: requests[idx].studentName,
     type:        'slot_booked',

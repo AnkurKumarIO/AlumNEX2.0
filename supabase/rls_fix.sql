@@ -66,3 +66,8 @@ drop policy if exists "Users see own analyses" on public.resume_analyses;
 create policy "Users see own analyses"
   on public.resume_analyses for select
   using (auth.uid() = user_id);
+
+-- Fix check constraint on notifications table if it exists
+alter table public.notifications drop constraint if exists notifications_type_check;
+alter table public.notifications add constraint notifications_type_check check (type in ('ACCEPTED','SLOT_BOOKED','SLOT_BOOKED_ALUMNI','DECLINED','SYSTEM','NEW_REQUEST'));
+
