@@ -64,6 +64,9 @@ const io = new Server(server, {
   allowEIO3: true,
 });
 require('./socket/interviewRoom')(io);
+require('./socket/notificationHandler')(io);
+
+app.set('io', io);
 
 // ── Health & info ─────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {

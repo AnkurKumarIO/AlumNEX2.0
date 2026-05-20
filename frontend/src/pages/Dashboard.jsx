@@ -288,14 +288,17 @@ export default function Dashboard() {
                         <div style={{ marginTop: 10 }}>
                           {(() => {
                             // roomId: prefer stored, then derive deterministically from requestId
-                            const joinRoomId = n.requestId || req?.id || n.roomId || req?.roomId;
+                            const joinRoomId = n.roomId || req?.roomId || n.requestId || req?.id;
                             const scheduledTime = req?.scheduledTime;
                             const isNowJoinable = scheduledTime
                               ? Date.now() >= new Date(scheduledTime).getTime() - 5 * 60 * 1000
                               : !!joinRoomId; // instant meet = always joinable
+
+                            const joinUrl = joinRoomId && joinRoomId.startsWith('http') ? joinRoomId : `/interview/${joinRoomId}?name=${encodeURIComponent(user?.name || 'Student')}`;
+
                             if (n.type === 'live' && joinRoomId) {
                               return (
-                                <a href={`/interview/${joinRoomId}?name=${encodeURIComponent(user?.name || 'Student')}`}
+                                <a href={joinUrl} target={joinUrl.startsWith('http') ? "_blank" : undefined} rel="noopener noreferrer"
                                   style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.5rem 1.25rem', background: 'linear-gradient(135deg,#ff4444,#ff6b6b)', color: '#fff', borderRadius: 10, fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none', animation: 'pulse 1.5s ease-in-out infinite' }}>
                                   <span className="material-symbols-outlined" style={{ fontSize: 16 }}>videocam</span> Join Now — Live
                                 </a>
@@ -303,7 +306,7 @@ export default function Dashboard() {
                             }
                             if (joinRoomId && isNowJoinable) {
                               return (
-                                <a href={`/interview/${joinRoomId}?name=${encodeURIComponent(user?.name || 'Student')}`}
+                                <a href={joinUrl} target={joinUrl.startsWith('http') ? "_blank" : undefined} rel="noopener noreferrer"
                                   style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.5rem 1.25rem', background: 'linear-gradient(135deg,#00a572,#4edea3)', color: '#003d29', borderRadius: 10, fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none' }}>
                                   <span className="material-symbols-outlined" style={{ fontSize: 16 }}>videocam</span> Join Now
                                 </a>
@@ -594,27 +597,32 @@ export default function Dashboard() {
                               {new Date(n.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                             </div>
                             {/* Join Now — instant meet */}
-                            {n.type === 'live' && (n.requestId || n.roomId) && (
-                              <a href={`/interview/${n.requestId || n.roomId}`} onClick={() => setShowNotifs(false)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 8, padding: '0.35rem 0.875rem', background: 'linear-gradient(135deg,#ff4444,#ff6b6b)', color: '#fff', borderRadius: 8, fontSize: '0.7rem', fontWeight: 700, textDecoration: 'none' }}>
-                                <span className="material-symbols-outlined" style={{ fontSize: 14 }}>videocam</span> Join Now — Live
-                              </a>
-                            )}
+                            {n.type === 'live' && (n.roomId || req?.roomId || n.requestId || req?.id) && (() => {
+                              const joinRoomId = n.roomId || req?.roomId || n.requestId || req?.id;
+                              const joinUrl = joinRoomId.startsWith('http') ? joinRoomId : `/interview/${joinRoomId}?name=${encodeURIComponent(user?.name || 'Student')}`;
+                              return (
+                                <a href={joinUrl} target={joinUrl.startsWith('http') ? "_blank" : undefined} rel="noopener noreferrer" onClick={() => setShowNotifs(false)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 8, padding: '0.35rem 0.875rem', background: 'linear-gradient(135deg,#ff4444,#ff6b6b)', color: '#fff', borderRadius: 8, fontSize: '0.7rem', fontWeight: 700, textDecoration: 'none' }}>
+                                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>videocam</span> Join Now — Live
+                                </a>
+                              );
+                            })()}
                             {/* Join Now button for slot_booked notifications */}
                             {n.type === 'slot_booked' && (() => {
                               const req = myRequests.find(r => r.id === n.requestId);
-                              const joinRoomId = n.requestId || req?.id || n.roomId || req?.roomId;
+                              const joinRoomId = n.roomId || req?.roomId || n.requestId || req?.id;
                               const scheduledTime = req?.scheduledTime;
                               if (!joinRoomId) return null;
                               const nowMs = Date.now();
                               const endMs = scheduledTime ? new Date(scheduledTime).getTime() + 2 * 60 * 60 * 1000 : null;
                               const isEnded = endMs && nowMs > endMs;
                               const canJoin = !isEnded && (scheduledTime ? nowMs >= new Date(scheduledTime).getTime() - 5 * 60 * 1000 : true);
+                              const joinUrl = joinRoomId.startsWith('http') ? joinRoomId : `/interview/${joinRoomId}?name=${encodeURIComponent(user?.name || 'Student')}`;
                               return isEnded ? (
                                 <div style={{ marginTop: 6, fontSize: '0.68rem', color: '#6b7280', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
                                   <span className="material-symbols-outlined" style={{ fontSize: 13 }}>videocam_off</span> Session ended
                                 </div>
                               ) : canJoin ? (
-                                <a href={`/interview/${joinRoomId}?name=${encodeURIComponent(user?.name || 'Student')}`} onClick={() => setShowNotifs(false)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 8, padding: '0.35rem 0.875rem', background: 'linear-gradient(135deg,#00a572,#4edea3)', color: '#003d29', borderRadius: 8, fontSize: '0.7rem', fontWeight: 700, textDecoration: 'none' }}>
+                                <a href={joinUrl} target={joinUrl.startsWith('http') ? "_blank" : undefined} rel="noopener noreferrer" onClick={() => setShowNotifs(false)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 8, padding: '0.35rem 0.875rem', background: 'linear-gradient(135deg,#00a572,#4edea3)', color: '#003d29', borderRadius: 8, fontSize: '0.7rem', fontWeight: 700, textDecoration: 'none' }}>
                                   <span className="material-symbols-outlined" style={{ fontSize: 14 }}>videocam</span> Join Now
                                 </a>
                               ) : (

@@ -5,6 +5,8 @@
  */
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { io } from 'socket.io-client';
+import { SOCKET_URL } from '../api';
 
 // Normalize field names — Supabase returns snake_case, Prisma returns camelCase
 function normalizeNotification(n) {
@@ -47,7 +49,7 @@ export function useNotifications(userId) {
     }
   }, [userId]);
 
-  // Subscribe to real-time notification updates + polling fallback
+  // Subscribe to real-time notification updates via Socket.io + fallback
   useEffect(() => {
     if (!userId) return;
 
@@ -55,13 +57,32 @@ export function useNotifications(userId) {
     setLoading(true);
     loadNotifications().finally(() => setLoading(false));
 
-    // Polling fallback — refresh every 10 seconds
-    // This ensures notifications appear even without Supabase Realtime configured
+    // ── Socket.io ────────────────────────────────────────────────────────────
+    const socket = io(`${SOCKET_URL}/notifications`, {
+      transports: ['websocket', 'polling'],
+      withCredentials: true,
+    });
+
+    socket.on('connect', () => {
+      console.log('[Socket] Connected to /notifications');
+      socket.emit('join', userId);
+    });
+
+    socket.on('notification', (newNotif) => {
+      console.log('[Socket] New notification received:', newNotif);
+      const normalized = normalizeNotification(newNotif);
+      setNotifications(prev => {
+        if (prev.some(n => n.id === normalized.id)) return prev;
+        return [normalized, ...prev];
+      });
+    });
+
+    // ── Polling fallback ─────────────────────────────────────────────────────
     pollRef.current = setInterval(() => {
       loadNotifications();
     }, 10000);
 
-    // Subscribe to INSERT events (new notifications)
+    // ── Supabase Realtime fallback ───────────────────────────────────────────
     let insertSub, updateSub;
     try {
       insertSub = supabase
@@ -75,13 +96,16 @@ export function useNotifications(userId) {
             filter: `user_id=eq.${userId}`,
           },
           (payload) => {
-            console.log('[Realtime] New notification:', payload.new);
-            setNotifications(prev => [normalizeNotification(payload.new), ...prev]);
+            console.log('[Supabase Realtime] New notification:', payload.new);
+            setNotifications(prev => {
+              const incomingId = payload.new.notification_id || payload.new.id;
+              if (prev.some(n => n.id === incomingId)) return prev;
+              return [normalizeNotification(payload.new), ...prev];
+            });
           }
         )
         .subscribe();
 
-      // Subscribe to UPDATE events (read status changes)
       updateSub = supabase
         .channel(`notifications:update:${userId}`)
         .on(
@@ -101,11 +125,12 @@ export function useNotifications(userId) {
         )
         .subscribe();
     } catch (e) {
-      console.warn('[Realtime] Subscription failed, using polling only:', e.message);
+      console.warn('[Realtime] Subscription failed:', e.message);
     }
 
     // Cleanup
     return () => {
+      socket.disconnect();
       clearInterval(pollRef.current);
       try { if (insertSub) insertSub.unsubscribe(); } catch {}
       try { if (updateSub) updateSub.unsubscribe(); } catch {}

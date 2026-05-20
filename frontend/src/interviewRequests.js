@@ -3,6 +3,7 @@
 
 import { createRequest as dbCreateRequest, getRequestsForAlumni as dbGetRequestsForAlumni, getRequestsForStudent, updateRequest as dbUpdateRequest, createNotification } from './lib/db';
 import { emitRealtimeSync } from './lib/realtimeSync';
+import { api } from './api';
 
 const STORAGE_KEY = 'alumnex_interview_requests';
 const NOTIF_KEY   = 'alumniconnect_student_notifications';
@@ -92,7 +93,8 @@ export async function sendRequest({ studentName, studentId, alumniName, alumniRo
 
   if (hasRealIds) {
     try {
-      const result = await dbCreateRequest({
+      // Use Backend API for centralized handling (notifications, etc)
+      const result = await api.createRequest({
         studentId: realStudentId,
         alumniId:  finalAlumniId,
         topic:    topic   || 'Mock Interview',
@@ -100,31 +102,19 @@ export async function sendRequest({ studentName, studentId, alumniName, alumniRo
         studentProfileSnapshot: mergedStudentProfile || null,
       });
 
-      if (result?.request_id) {
-        // Notify alumni in database
-        try {
-          await createNotification({
-            userId:    finalAlumniId,
-            type:      'NEW_REQUEST',
-            title:     'New Interview Request! 📬',
-            message:   `${studentName || 'A student'} requested an interview for ${topic || 'Mock Interview'}.`,
-            requestId: result.request_id,
-          });
-        } catch (err) {
-          console.warn('sendRequest notification creation failed:', err.message);
-        }
-
+      if (result?.request_id || result?.id) {
+        const reqId = result.request_id || result.id;
         const local = loadLocal();
         local.push({
-          id:            result.request_id,
+          id:            reqId,
           studentName,
           studentId:     realStudentId,
           alumniName,
           alumniId:      finalAlumniId,
           alumni_id:     finalAlumniId,
           alumniRole,
-          topic:         result.topic,
-          message:       result.message || '',
+          topic:         result.topic || topic,
+          message:       result.message || message,
           status:        'pending',
           scheduledTime: null,
           roomId:        null,
@@ -132,10 +122,43 @@ export async function sendRequest({ studentName, studentId, alumniName, alumniRo
           studentProfile: mergedStudentProfile,
         });
         saveLocal(local);
-        return result;
+        return { ...result, id: reqId };
       }
     } catch (e) {
-      console.warn('sendRequest: Supabase failed, falling back to localStorage', e.message);
+      console.warn('sendRequest: Backend failed, falling back to direct Supabase', e.message);
+
+      try {
+        const result = await dbCreateRequest({
+          studentId: realStudentId,
+          alumniId:  finalAlumniId,
+          topic:    topic   || 'Mock Interview',
+          message:  message || '',
+          studentProfileSnapshot: mergedStudentProfile || null,
+        });
+        if (result?.request_id) {
+          const local = loadLocal();
+          local.push({
+            id:            result.request_id,
+            studentName,
+            studentId:     realStudentId,
+            alumniName,
+            alumniId:      finalAlumniId,
+            alumni_id:     finalAlumniId,
+            alumniRole,
+            topic:         result.topic,
+            message:       result.message || '',
+            status:        'pending',
+            scheduledTime: null,
+            roomId:        null,
+            createdAt:     result.created_at || new Date().toISOString(),
+            studentProfile: mergedStudentProfile,
+          });
+          saveLocal(local);
+          return result;
+        }
+      } catch (dbErr) {
+        console.warn('sendRequest: Supabase also failed', dbErr.message);
+      }
     }
   } else {
     console.warn('sendRequest: missing real UUIDs — studentId:', realStudentId, 'alumniId:', finalAlumniId);
@@ -233,29 +256,21 @@ export function getRequestsByStudent(studentName) {
 
 export async function acceptRequestOnly(requestId) {
   try {
-    await dbUpdateRequest(requestId, { status: 'ACCEPTED' });
-  } catch (e) { console.warn('acceptRequestOnly DB error:', e.message); }
+    await api.updateRequest(requestId, { status: 'ACCEPTED' });
+  } catch (e) {
+    console.warn('acceptRequestOnly Backend error, trying Supabase:', e.message);
+    try {
+      await dbUpdateRequest(requestId, { status: 'ACCEPTED' });
+    } catch (dbErr) {
+      console.warn('acceptRequestOnly Supabase error:', dbErr.message);
+    }
+  }
 
   const requests = loadLocal();
   const idx = requests.findIndex(r => r.id === requestId);
   if (idx === -1) return null;
   requests[idx] = { ...requests[idx], status: 'accepted' };
   saveLocal(requests);
-
-  // Push notification to student in Supabase
-  try {
-    const req = requests[idx];
-    const authUser = JSON.parse(localStorage.getItem('alumnex_user') || '{}');
-    if (req.studentId) {
-      await createNotification({
-        userId:    req.studentId,
-        type:      'ACCEPTED',
-        title:     'Interview Request Accepted! 🎉',
-        message:   'Your interview request has been accepted. The alumni will book a slot shortly.',
-        requestId,
-      });
-    }
-  } catch {}
 
   pushLocalNotif({
     studentName: requests[idx].studentName,
@@ -283,7 +298,6 @@ export async function bookSlot(requestId, scheduledTime) {
   let roomId = `room-${requestId.replace(/[^a-z0-9]/gi, '').slice(-16).toLowerCase()}`;
 
   try {
-    const { api } = await import('./api');
     const result = await api.createMeetLink(
       requestId, 
       `Interview: ${req.studentName} & ${req.alumniName}`,
@@ -299,8 +313,15 @@ export async function bookSlot(requestId, scheduledTime) {
   }
 
   try {
-    await dbUpdateRequest(requestId, { status: 'SLOT_BOOKED', scheduledTime, roomId: meetLink });
-  } catch (e) { console.warn('bookSlot DB error:', e.message); }
+    await api.updateRequest(requestId, { status: 'SLOT_BOOKED', scheduledTime, roomId: meetLink });
+  } catch (e) {
+    console.warn('bookSlot Backend error, trying Supabase:', e.message);
+    try {
+      await dbUpdateRequest(requestId, { status: 'SLOT_BOOKED', scheduledTime, roomId: meetLink });
+    } catch (dbErr) {
+      console.warn('bookSlot Supabase error:', dbErr.message);
+    }
+  }
 
   requests[idx] = { ...requests[idx], status: 'slot_booked', scheduledTime, roomId: meetLink };
   saveLocal(requests);
@@ -308,29 +329,6 @@ export async function bookSlot(requestId, scheduledTime) {
   const formatted = new Date(scheduledTime).toLocaleString('en-US', {
     weekday: 'long', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
   });
-
-  try {
-    const req = requests[idx];
-    if (req.studentId) {
-      await createNotification({
-        userId:    req.studentId,
-        type:      'SLOT_BOOKED',
-        title:     'Interview Slot Confirmed! 📅',
-        message:   `Your interview with ${req.alumniName || 'the alumni'} is scheduled for ${formatted}.`,
-        requestId,
-      });
-    }
-    const finalAlumniId = alumniId || req.alumniId || req.alumni_id;
-    if (finalAlumniId) {
-      await createNotification({
-        userId:    finalAlumniId,
-        type:      'SLOT_BOOKED_ALUMNI',
-        title:     'Interview Slot Confirmed! 📅',
-        message:   `Your interview with ${req.studentName || 'the student'} is scheduled for ${formatted}.`,
-        requestId,
-      });
-    }
-  } catch {}
 
   const isInstant = Math.abs(new Date(scheduledTime).getTime() - Date.now()) < 60000;
   pushLocalNotif({
@@ -350,8 +348,15 @@ export async function bookSlot(requestId, scheduledTime) {
 
 export async function rescheduleSlot(requestId, newScheduledTime) {
   try {
-    await dbUpdateRequest(requestId, { status: 'SLOT_BOOKED', scheduledTime: newScheduledTime });
-  } catch (e) { console.warn('rescheduleSlot DB error:', e.message); }
+    await api.updateRequest(requestId, { status: 'SLOT_BOOKED', scheduledTime: newScheduledTime });
+  } catch (e) {
+    console.warn('rescheduleSlot Backend error, trying Supabase:', e.message);
+    try {
+      await dbUpdateRequest(requestId, { status: 'SLOT_BOOKED', scheduledTime: newScheduledTime });
+    } catch (dbErr) {
+      console.warn('rescheduleSlot Supabase error:', dbErr.message);
+    }
+  }
 
   const requests = loadLocal();
   const idx = requests.findIndex(r => r.id === requestId);
@@ -362,29 +367,6 @@ export async function rescheduleSlot(requestId, newScheduledTime) {
   const formatted = new Date(newScheduledTime).toLocaleString('en-US', {
     weekday: 'long', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
   });
-
-  try {
-    const req = requests[idx];
-    if (req.studentId) {
-      await createNotification({
-        userId:    req.studentId,
-        type:      'SLOT_BOOKED',
-        title:     'Interview Rescheduled 🔄',
-        message:   `Your interview with ${req.alumniName || 'the alumni'} has been rescheduled to ${formatted}.`,
-        requestId,
-      });
-    }
-    const finalAlumniId = req.alumniId || req.alumni_id;
-    if (finalAlumniId) {
-      await createNotification({
-        userId:    finalAlumniId,
-        type:      'SLOT_BOOKED_ALUMNI',
-        title:     'Interview Rescheduled 🔄',
-        message:   `Your interview with ${req.studentName || 'the student'} has been rescheduled to ${formatted}.`,
-        requestId,
-      });
-    }
-  } catch {}
 
   pushLocalNotif({
     studentName: requests[idx].studentName,
@@ -400,8 +382,15 @@ export async function rescheduleSlot(requestId, newScheduledTime) {
 
 export async function declineRequest(requestId) {
   try {
-    await dbUpdateRequest(requestId, { status: 'DECLINED' });
-  } catch (e) { console.warn('declineRequest DB error:', e.message); }
+    await api.updateRequest(requestId, { status: 'DECLINED' });
+  } catch (e) {
+    console.warn('declineRequest Backend error, trying Supabase:', e.message);
+    try {
+      await dbUpdateRequest(requestId, { status: 'DECLINED' });
+    } catch (dbErr) {
+      console.warn('declineRequest Supabase error:', dbErr.message);
+    }
+  }
 
   const requests = loadLocal();
   const idx = requests.findIndex(r => r.id === requestId);
@@ -409,19 +398,6 @@ export async function declineRequest(requestId) {
   const studentName = requests[idx].studentName;
   requests[idx] = { ...requests[idx], status: 'declined' };
   saveLocal(requests);
-
-  try {
-    const req = requests[idx];
-    if (req.studentId) {
-      await createNotification({
-        userId:    req.studentId,
-        type:      'DECLINED',
-        title:     'Interview Request Update',
-        message:   'Your request was not accepted this time. Try another mentor.',
-        requestId,
-      });
-    }
-  } catch {}
 
   pushLocalNotif({
     studentName,
