@@ -235,4 +235,175 @@ router.get('/recent-activity', async (req, res) => {
   }
 });
 
+// GET /stats/analytics — full analytics data for the TNP Analytics tab
+router.get('/analytics', async (req, res) => {
+  try {
+    const now = new Date();
+
+    // ── 1. KPI counts ────────────────────────────────────────────────────────
+    const [
+      sessionsCompleted,
+      sessionsPending,
+      activeMentors,
+      totalStudents,
+    ] = await Promise.all([
+      prisma.sessionFeedback.count(),
+      prisma.interviewRequest.count({ where: { status: 'PENDING' } }),
+      prisma.user.count({ where: { role: 'ALUMNI',  verification_status: 'VERIFIED' } }),
+      prisma.user.count({ where: { role: 'STUDENT', verification_status: 'VERIFIED' } }),
+    ]);
+
+    // Avg rating from session feedback
+    const allRatings = await prisma.sessionFeedback.findMany({
+      where: { student_rating: { not: null } },
+      select: { student_rating: true },
+    });
+    const avgRating = allRatings.length
+      ? Math.round((allRatings.reduce((s, r) => s + (r.student_rating || 0), 0) / allRatings.length) * 10) / 10
+      : null;
+
+    // Completion rate = completed sessions / total requests
+    const totalRequests = await prisma.interviewRequest.count();
+    const completionRate = totalRequests > 0
+      ? Math.round((sessionsCompleted / totalRequests) * 100)
+      : 0;
+
+    // ── 2. Weekly session volume (last 8 weeks) ───────────────────────────────
+    const weeklySessions = [];
+    for (let i = 7; i >= 0; i--) {
+      const weekStart = new Date(now);
+      weekStart.setDate(now.getDate() - i * 7 - now.getDay());
+      weekStart.setHours(0, 0, 0, 0);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 7);
+
+      const count = await prisma.sessionFeedback.count({
+        where: { createdAt: { gte: weekStart, lt: weekEnd } },
+      });
+
+      const label = weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      weeklySessions.push({ week: label, sessions: count });
+    }
+
+    // ── 3. Domain demand — top topics from interview requests ────────────────
+    const requests = await prisma.interviewRequest.findMany({
+      select: { topic: true },
+    });
+    const topicCounts = {};
+    for (const r of requests) {
+      const t = (r.topic || 'General').trim();
+      topicCounts[t] = (topicCounts[t] || 0) + 1;
+    }
+    const totalTopics = requests.length || 1;
+    const domainData = Object.entries(topicCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([domain, sessions]) => ({
+        domain,
+        sessions,
+        pct: Math.round((sessions / totalTopics) * 100),
+      }));
+
+    // ── 4. Top mentors by sessions + rating ──────────────────────────────────
+    const alumniUsers = await prisma.user.findMany({
+      where: { role: 'ALUMNI', verification_status: 'VERIFIED' },
+      select: {
+        id: true, name: true, profile_data: true, department: true,
+        _count: { select: { received_requests: true } },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    const feedbackRows = await prisma.sessionFeedback.findMany({
+      where: { student_rating: { not: null } },
+      select: { alumni_id: true, student_rating: true },
+    });
+    const ratingMap = {};
+    const ratingCount = {};
+    for (const f of feedbackRows) {
+      if (!f.alumni_id) continue;
+      ratingMap[f.alumni_id] = (ratingMap[f.alumni_id] || 0) + f.student_rating;
+      ratingCount[f.alumni_id] = (ratingCount[f.alumni_id] || 0) + 1;
+    }
+
+    const topMentors = alumniUsers
+      .map(u => {
+        let profile = {};
+        try { profile = JSON.parse(u.profile_data || '{}'); } catch {}
+        const sessions = u._count.received_requests;
+        const avgR = ratingCount[u.id]
+          ? Math.round((ratingMap[u.id] / ratingCount[u.id]) * 10) / 10
+          : null;
+        return {
+          id: u.id,
+          name: u.name,
+          company: profile.company || u.department || 'Alumni',
+          sessions,
+          rating: avgR,
+          domain: (profile.skills || [])[0] || profile.jobTitle || 'General',
+        };
+      })
+      .filter(m => m.sessions > 0 || m.rating !== null)
+      .sort((a, b) => (b.sessions - a.sessions) || ((b.rating || 0) - (a.rating || 0)))
+      .slice(0, 10);
+
+    // ── 5. Rating distribution ────────────────────────────────────────────────
+    const ratingDist = [5, 4, 3, 2, 1].map(star => {
+      const count = feedbackRows.filter(f => f.student_rating === star).length;
+      return {
+        stars: `${star} ★`,
+        count,
+        pct: allRatings.length > 0 ? Math.round((count / allRatings.length) * 100) : 0,
+      };
+    });
+
+    // ── 6. Student progress groups ────────────────────────────────────────────
+    const studentUsers = await prisma.user.findMany({
+      where: { role: 'STUDENT', verification_status: 'VERIFIED' },
+      select: {
+        id: true,
+        _count: { select: { sent_requests: true } },
+      },
+    });
+
+    const progressGroups = { '0': 0, '1-2': 0, '3-5': 0, '6-10': 0, '10+': 0 };
+    for (const s of studentUsers) {
+      const n = s._count.sent_requests;
+      if (n === 0)       progressGroups['0']++;
+      else if (n <= 2)   progressGroups['1-2']++;
+      else if (n <= 5)   progressGroups['3-5']++;
+      else if (n <= 10)  progressGroups['6-10']++;
+      else               progressGroups['10+']++;
+    }
+
+    const studentProgress = [
+      { range: '0 sessions',    count: progressGroups['0'],    color: '#ffb4ab' },
+      { range: '1–2 sessions',  count: progressGroups['1-2'],  color: '#ffb95f' },
+      { range: '3–5 sessions',  count: progressGroups['3-5'],  color: '#c3c0ff' },
+      { range: '6–10 sessions', count: progressGroups['6-10'], color: '#60a5fa' },
+      { range: '10+ sessions',  count: progressGroups['10+'],  color: '#4edea3' },
+    ];
+
+    res.json({
+      kpis: {
+        sessions_this_month: sessionsCompleted,
+        active_mentors: activeMentors,
+        avg_rating: avgRating,
+        completion_rate: completionRate,
+        total_reviews: allRatings.length,
+      },
+      weekly_sessions: weeklySessions,
+      domain_data: domainData,
+      top_mentors: topMentors,
+      rating_dist: ratingDist,
+      student_progress: studentProgress,
+      totals: { students: totalStudents, pending: sessionsPending },
+    });
+  } catch (err) {
+    console.error('[Analytics] Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
+
