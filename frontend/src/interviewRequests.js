@@ -293,10 +293,13 @@ export async function bookSlot(requestId, scheduledTime) {
   const authUser = JSON.parse(localStorage.getItem('alumnex_user') || '{}');
   const alumniId = authUser.role === 'ALUMNI' ? authUser.id : req.alumni_id;
 
-  // Use backend to generate the link (will handle Google Meet if connected)
-  let meetLink = `https://meet.jit.si/room-${requestId.replace(/[^a-z0-9]/gi, '').slice(-16).toLowerCase()}`;
-  let roomId = `room-${requestId.replace(/[^a-z0-9]/gi, '').slice(-16).toLowerCase()}`;
+  // Generate deterministic room ID for AlumNEX internal routing (chat, signaling)
+  const deterministicRoomId = `room-${requestId.slice(-8)}`;
 
+  // Use backend to generate the link (will handle Google Meet if connected)
+  // We don't wait for it to block the status update if it's slow,
+  // but we should try to get it to store in room_id if possible.
+  let meetLink = null;
   try {
     const result = await api.createMeetLink(
       requestId, 
@@ -306,24 +309,25 @@ export async function bookSlot(requestId, scheduledTime) {
     );
     if (result?.success && result.meetLink) {
       meetLink = result.meetLink;
-      roomId   = result.roomId || roomId;
     }
   } catch (e) {
     console.warn('bookSlot Meet API call failed:', e.message);
   }
 
+  const finalRoomId = meetLink || deterministicRoomId;
+
   try {
-    await api.updateRequest(requestId, { status: 'SLOT_BOOKED', scheduledTime, roomId: meetLink });
+    await api.updateRequest(requestId, { status: 'SLOT_BOOKED', scheduledTime, roomId: finalRoomId });
   } catch (e) {
     console.warn('bookSlot Backend error, trying Supabase:', e.message);
     try {
-      await dbUpdateRequest(requestId, { status: 'SLOT_BOOKED', scheduledTime, roomId: meetLink });
+      await dbUpdateRequest(requestId, { status: 'SLOT_BOOKED', scheduledTime, roomId: finalRoomId });
     } catch (dbErr) {
       console.warn('bookSlot Supabase error:', dbErr.message);
     }
   }
 
-  requests[idx] = { ...requests[idx], status: 'slot_booked', scheduledTime, roomId: meetLink };
+  requests[idx] = { ...requests[idx], status: 'slot_booked', scheduledTime, roomId: finalRoomId };
   saveLocal(requests);
 
   const formatted = new Date(scheduledTime).toLocaleString('en-US', {
@@ -339,7 +343,7 @@ export async function bookSlot(requestId, scheduledTime) {
       ? 'Your mock interview is starting now. Click Join to enter the room.'
       : `Your interview is scheduled for ${formatted}.`,
     requestId,
-    roomId,
+    roomId: finalRoomId,
   });
   return requests[idx];
 }

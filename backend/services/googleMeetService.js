@@ -11,6 +11,9 @@ const { google } = require('googleapis');
 // In-memory cache: roomId -> meetLink (so all users get the same link)
 const meetLinksCache = {};
 
+// Track pending creations to avoid race conditions
+const pendingCreations = {};
+
 /**
  * Build an OAuth2 client with the app's credentials.
  */
@@ -42,43 +45,61 @@ async function createGoogleMeetLink(refreshToken, roomId, title, startTime, endT
     return meetLinksCache[roomId];
   }
 
-  const oauth2Client = getOAuth2Client();
-  oauth2Client.setCredentials({ refresh_token: refreshToken });
-
-  const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
-
-  const now = new Date();
-  const event = {
-    summary: title || 'AlumNEX Mock Interview',
-    description: `Interview session via AlumNEX Platform.\nRoom: ${roomId || 'N/A'}`,
-    start: { dateTime: startTime || now.toISOString() },
-    end:   { dateTime: endTime   || new Date(now.getTime() + 60 * 60 * 1000).toISOString() },
-    conferenceData: {
-      createRequest: {
-        requestId: `alumnex-${roomId || Date.now()}-${Date.now()}`,
-        conferenceSolutionKey: { type: 'hangoutsMeet' },
-      },
-    },
-  };
-
-  const response = await calendar.events.insert({
-    calendarId: 'primary',
-    resource: event,
-    conferenceDataVersion: 1,
-  });
-
-  const meetLink = response.data.hangoutLink;
-  if (!meetLink) {
-    throw new Error('Google Calendar API did not return a hangoutLink');
+  // If another request is already creating a link for this room, wait for it
+  if (roomId && pendingCreations[roomId]) {
+    console.log(`[GoogleMeet] Waiting for pending creation for room ${roomId}`);
+    return pendingCreations[roomId];
   }
 
-  // Cache the link so all participants get the same URL
+  const creationPromise = (async () => {
+    try {
+      const oauth2Client = getOAuth2Client();
+      oauth2Client.setCredentials({ refresh_token: refreshToken });
+
+      const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+      const now = new Date();
+      const event = {
+        summary: title || 'AlumNEX Mock Interview',
+        description: `Interview session via AlumNEX Platform.\nRoom: ${roomId || 'N/A'}`,
+        start: { dateTime: startTime || now.toISOString() },
+        end:   { dateTime: endTime   || new Date(now.getTime() + 60 * 60 * 1000).toISOString() },
+        conferenceData: {
+          createRequest: {
+            requestId: `alumnex-${roomId || Date.now()}-${Date.now()}`,
+            conferenceSolutionKey: { type: 'hangoutsMeet' },
+          },
+        },
+      };
+
+      const response = await calendar.events.insert({
+        calendarId: 'primary',
+        resource: event,
+        conferenceDataVersion: 1,
+      });
+
+      const meetLink = response.data.hangoutLink;
+      if (!meetLink) {
+        throw new Error('Google Calendar API did not return a hangoutLink');
+      }
+
+      // Cache the link so all participants get the same URL
+      if (roomId) {
+        meetLinksCache[roomId] = meetLink;
+        console.log(`[GoogleMeet] Created real Meet link for room ${roomId}: ${meetLink}`);
+      }
+
+      return meetLink;
+    } finally {
+      if (roomId) delete pendingCreations[roomId];
+    }
+  })();
+
   if (roomId) {
-    meetLinksCache[roomId] = meetLink;
-    console.log(`[GoogleMeet] Created real Meet link for room ${roomId}: ${meetLink}`);
+    pendingCreations[roomId] = creationPromise;
   }
 
-  return meetLink;
+  return creationPromise;
 }
 
 /**
