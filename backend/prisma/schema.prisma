@@ -19,6 +19,10 @@ model User {
   profile_data        String?
   google_refresh_token String?
 
+  company             String?
+  batch_year          Int?
+  college_id          String?
+
   given_slots         ScheduleSlot[]    @relation("AlumniSlots")
   booked_slots        ScheduleSlot[]    @relation("StudentBookings")
   student_interviews  InterviewRecord[] @relation("StudentInterviews")
@@ -33,6 +37,8 @@ model User {
 
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
+
+  @@map("users")
 }
 
 model InterviewRequest {
@@ -55,6 +61,7 @@ model InterviewRequest {
   @@index([student_id])
   @@index([alumni_id])
   @@index([status])
+  @@map("interview_requests")
 }
 
 model Notification {
@@ -88,6 +95,8 @@ model ScheduleSlot {
 
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+
+  @@map("schedule_slots")
 }
 
 model InterviewRecord {
@@ -99,6 +108,9 @@ model InterviewRecord {
   alumni_feedback String?
   ai_action_items String?
 
+  request_id      String?  @unique
+  status          String   @default("COMPLETED")
+
   student         User     @relation("StudentInterviews", fields: [student_id], references: [id])
   alumni          User     @relation("AlumniInterviews", fields: [alumni_id], references: [id])
 
@@ -107,6 +119,7 @@ model InterviewRecord {
 
   @@index([student_id])
   @@index([alumni_id])
+  @@map("interview_records")
 }
 
 model SessionFeedback {
@@ -133,6 +146,8 @@ model SessionFeedback {
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  @@map("session_feedbacks")
 }
 
 model ActivityLog {
@@ -143,6 +158,8 @@ model ActivityLog {
   desc      String
   category  String   @default("general")
   createdAt DateTime @default(now())
+
+  @@map("activity_logs")
 }
 
 model PlatformConfig {
@@ -150,4 +167,14 @@ model PlatformConfig {
   key       String   @unique
   value     String
   updatedAt DateTime @updatedAt
+
+  @@map("platform_configs")
+}
+
+model CollegeRegistry {
+  college_id String @id
+  name       String
+  department String
+
+  @@map("college_registry")
 }
