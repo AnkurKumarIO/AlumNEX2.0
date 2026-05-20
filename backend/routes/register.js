@@ -94,30 +94,159 @@ async function sendWelcomeEmail({ to, name, username, password, role, loginUrl }
     if (status === 'failed') emailQueue.failedCount++;
   };
 
-  const subject = `Welcome to AlumNEX, ${name}!`;
+  const roleLabel = role === 'STUDENT' ? 'Student' : 'Alumni Mentor';
+  const subject   = `Welcome to AlumNEX — Your ${roleLabel} Account is Ready`;
+  const actionText = role === 'STUDENT' ? 'connect with mentors for mock interviews' : 'start mentoring students through mock interviews';
+  
   const html = `
-    <div style="font-family: 'Inter', sans-serif; color: #1a1a1a; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
-      <div style="background: #4f46e5; padding: 32px; text-align: center;">
-        <h1 style="color: white; margin: 0; font-size: 24px;">Welcome to AlumNEX</h1>
-      </div>
-      <div style="padding: 40px 32px; background: white;">
-        <p style="font-size: 16px; margin-bottom: 24px;">Hello <strong>${name}</strong>,</p>
-        <p style="font-size: 16px; line-height: 1.6; color: #4b5563;">Your account has been created successfully. You can now log in using the credentials below:</p>
-        <div style="background: #f9fafb; border-radius: 8px; padding: 24px; margin: 32px 0;">
-          <p style="margin: 0 0 12px 0;"><strong>Username:</strong> <code style="background: #e5e7eb; padding: 2px 6px; border-radius: 4px;">${username}</code></p>
-          <p style="margin: 0;"><strong>Password:</strong> <code style="background: #e5e7eb; padding: 2px 6px; border-radius: 4px;">${password}</code></p>
-        </div>
-        <div style="text-align: center; margin-top: 32px;">
-          <a href="${loginUrl}" style="background: #4f46e5; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">Log In to Your Account</a>
-        </div>
-      </div>
-      <div style="background: #f9fafb; padding: 24px; text-align: center; border-top: 1px solid #e2e8f0;">
-        <p style="font-size: 14px; color: #9ca3af; margin: 0;">Developed by <strong>The Tesseract</strong></p>
-      </div>
-    </div>
-  `;
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Welcome to AlumNEX</title>
+  <style type="text/css">
+    @media only screen and (max-width: 600px) {
+      .main-wrap { width: 100% !important; border-radius: 0 !important; border: none !important; }
+      .sec-header { padding: 32px 20px !important; }
+      .sec-body { padding: 32px 20px !important; }
+      .cred-inner { padding: 20px !important; }
+      .cred-row { display: block !important; width: 100% !important; }
+      .cred-label { display: block !important; width: 100% !important; margin-bottom: 6px !important; }
+      .cred-value { display: block !important; width: 100% !important; }
+      .btn-link { width: 100% !important; box-sizing: border-box !important; }
+      .sec-footer { padding: 32px 20px !important; }
+    }
+  </style>
+</head>
+<body style="margin:0;padding:0;background-color:#F4F7FA;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+  <table border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout:fixed;">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
+        <!--[if (gte mso 9)|(IE)]><table align="center" border="0" cellspacing="0" cellpadding="0" width="600"><tr><td align="center" valign="top" width="600"><![endif]-->
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width:600px;background-color:#FFFFFF;border-radius:16px;overflow:hidden;border:1px solid #E5E9F0;box-shadow:0 4px 20px rgba(0,0,0,0.05);" class="main-wrap">
 
-  // 1. Try Gmail API first (Highest reliability, bypasses SMTP firewalls)
+          <!-- HEADER -->
+          <tr>
+            <td align="center" style="padding:48px 40px;background-color:#2C3647;" class="sec-header">
+              <div style="font-size:32px;font-weight:800;color:#FFFFFF;letter-spacing:-0.5px;margin-bottom:8px;">Alum<span style="color:#818CF8;">NEX</span></div>
+              <div style="color:#94A3B8;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:2px;">Intelligence Platform</div>
+            </td>
+          </tr>
+
+          <!-- BODY -->
+          <tr>
+            <td style="padding:48px 40px 40px 40px;" class="sec-body">
+
+              <!-- Greeting -->
+              <p style="margin:0 0 24px 0;font-size:22px;font-weight:700;color:#0F172A;">Welcome Aboard, ${name}! 👋</p>
+
+              <!-- Intro -->
+              <p style="margin:0 0 16px 0;font-size:14px;line-height:22px;color:#64748B;">Your journey on AlumNEX starts here.</p>
+              <p style="margin:0 0 32px 0;font-size:14px;line-height:22px;color:#64748B;">Your <strong>${roleLabel}</strong> account has been successfully created. You can now use the credentials below to sign in and ${actionText}.</p>
+
+              <!-- Credentials Card -->
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;margin-bottom:36px;">
+                <tr>
+                  <td style="padding:32px;" class="cred-inner">
+                    <p style="margin:0 0 24px 0;font-size:12px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:1px;">🔐 YOUR ACCOUNT CREDENTIALS</p>
+
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                      <!-- Username -->
+                      <tr>
+                        <td style="padding:0 0 16px 0;border-bottom:1px solid #E2E8F0;" class="cred-row">
+                          <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                            <tr>
+                              <td width="100" style="font-size:14px;font-weight:600;color:#64748B;" class="cred-label">Username</td>
+                              <td align="left">
+                                <div style="background-color:#FFFFFF;border:1px solid #E2E8F0;border-radius:6px;padding:10px 14px;font-family:'Courier New',Courier,monospace;font-size:15px;font-weight:700;color:#0F172A;display:block;width:100%;box-sizing:border-box;">${username}</div>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                      
+                      <!-- Password -->
+                      <tr>
+                        <td style="padding:16px 0;border-bottom:1px solid #E2E8F0;" class="cred-row">
+                          <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                            <tr>
+                              <td width="100" style="font-size:14px;font-weight:600;color:#64748B;" class="cred-label">Password</td>
+                              <td align="left">
+                                <div style="background-color:#FFFFFF;border:1px solid #E2E8F0;border-radius:6px;padding:10px 14px;font-family:'Courier New',Courier,monospace;font-size:15px;font-weight:700;color:#0F172A;display:block;width:100%;box-sizing:border-box;">${password}</div>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+
+                      <!-- Role -->
+                      <tr>
+                        <td style="padding:16px 0 0 0;" class="cred-row">
+                          <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                            <tr>
+                              <td width="100" style="font-size:14px;font-weight:600;color:#64748B;" class="cred-label">Role</td>
+                              <td align="left">
+                                <div style="background-color:#FFFFFF;border:1px solid #E2E8F0;border-radius:6px;padding:10px 14px;font-size:15px;font-weight:700;color:#0F172A;display:block;width:100%;box-sizing:border-box;">${roleLabel}</div>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA -->
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:36px;">
+                <tr>
+                  <td align="center">
+                    <a href="${loginUrl}" style="display:inline-block;padding:16px 40px;background-color:#6366F1;color:#FFFFFF;text-decoration:none;border-radius:10px;font-weight:700;font-size:15px;" class="btn-link">Sign In to AlumNEX &rarr;</a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Next Steps -->
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#FFFBEB;border-radius:12px;border-left:4px solid #F59E0B;">
+                <tr>
+                  <td style="padding:24px;">
+                    <p style="margin:0 0 12px 0;font-size:14px;font-weight:700;color:#92400E;">📌 Next Steps &amp; Security</p>
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td valign="top" style="padding:0 8px 8px 0;font-size:14px;color:#92400E;">&bull;</td>
+                        <td style="padding:0 0 8px 0;font-size:13px;line-height:20px;color:#92400E;"><strong>Complete Your Profile:</strong> Ensure your bio and skills are up to date to get the best matches.</td>
+                      </tr>
+                      <tr>
+                        <td valign="top" style="padding:0 8px 0 0;font-size:14px;color:#92400E;">&bull;</td>
+                        <td style="padding:0;font-size:13px;line-height:20px;color:#92400E;"><strong>Important Security Note:</strong> Please change your password immediately after your first login. To protect your data, keep these credentials safe and do not share them with anyone.</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- FOOTER -->
+          <tr>
+            <td align="center" style="padding:40px;background-color:#F8FAFC;border-top:1px solid #E2E8F0;" class="sec-footer">
+              <p style="margin:0 0 4px 0;font-size:14px;font-weight:700;color:#0F172A;">College Training &amp; Placement Office</p>
+              <p style="margin:0 0 16px 0;font-size:13px;color:#64748B;">AlumNEX &mdash; Intelligence Platform</p>
+              <p style="margin:0 0 24px 0;font-size:12px;color:#94A3B8;">Developed by The Tesseract</p>
+              <p style="margin:0;font-size:11px;color:#CBD5E1;font-style:italic;">This is an automated message. Please do not reply directly to this email.</p>
+            </td>
+          </tr>
+
+        </table>
+        <!--[if (gte mso 9)|(IE)]></td></tr></table><![endif]-->
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  // 1. Try Gmail API first
   if (gmail) {
     try {
       console.log(`[EMAIL-DEBUG] Attempting send via Gmail API for ${to}`);
@@ -147,11 +276,10 @@ async function sendWelcomeEmail({ to, name, username, password, role, loginUrl }
       return { sent: true };
     } catch (err) {
       console.error('[EMAIL-DEBUG] ❌ Gmail API error:', err.message);
-      // Fallback to SMTP if API fails
     }
   }
 
-  // 2. Try Resend (Secondary fallback)
+  // 2. Try Resend
   if (process.env.RESEND_API_KEY) {
     try {
       console.log(`[EMAIL-DEBUG] Attempting fallback via Resend API for ${to}`);
@@ -169,118 +297,34 @@ async function sendWelcomeEmail({ to, name, username, password, role, loginUrl }
         })
       });
       if (res.ok) {
-        console.log(`[EMAIL-DEBUG] ✅ Sent via Resend fallback`);
+        console.log(`[EMAIL-DEBUG] ✅ Sent via Resend`);
         updateQueueStatus('sent', null);
         return { sent: true };
       }
     } catch (err) {
-      console.error('[EMAIL-DEBUG] ❌ Resend fallback error:', err.message);
+      console.error('[EMAIL-DEBUG] ❌ Resend error:', err.message);
     }
   }
 
-  // 3. Last Fallback: SMTP (Nodemailer)
+  // 3. Fallback: SMTP (Nodemailer)
   if (!transporter) {
     console.log('[EMAIL-DEBUG] ❌ No email delivery methods available.');
     updateQueueStatus('failed', 'Email not configured');
     return { skipped: true, reason: 'Email not configured' };
   }
   try {
-    const roleLabel = role === 'STUDENT' ? 'Student' : 'Alumni Mentor';
-    const roleColor = role === 'STUDENT' ? '#c3c0ff' : '#4edea3';
-    const subject   = `Welcome to AlumNEX — Your ${roleLabel} Account is Ready`;
-    const html = `
-<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
-  body{font-family:'Segoe UI',Inter,Arial,sans-serif;background:#f5f5f5;color:#1a1a2e;margin:0;padding:0;}
-  .wrap{max-width:600px;margin:32px auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);}
-  .header{background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);padding:36px 32px;text-align:center;}
-  .logo-row{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:8px;}
-  .logo-icon{width:44px;height:44px;background:linear-gradient(135deg,#4f46e5,#818cf8);border-radius:12px;display:flex;align-items:center;justify-content:center;}
-  .logo-text{font-size:1.6rem;font-weight:900;color:#ffffff;letter-spacing:-0.03em;}
-  .logo-text span{color:#818cf8;}
-  .header-sub{font-size:0.72rem;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:0.15em;margin-top:6px;}
-  .body{padding:32px;}
-  .greeting{font-size:1.15rem;font-weight:700;color:#1a1a2e;margin-bottom:16px;}
-  .role-badge{display:inline-block;background:${roleColor}20;color:${role === 'STUDENT' ? '#4f46e5' : '#059669'};padding:4px 12px;border-radius:20px;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:16px;}
-  .intro{color:#4a5568;line-height:1.7;font-size:0.875rem;margin-bottom:24px;}
-  .cred-box{background:#f8fafc;border-radius:12px;padding:0;margin:24px 0;border:1px solid #e2e8f0;overflow:hidden;}
-  .cred-header{background:#1a1a2e;padding:12px 20px;}
-  .cred-header span{color:#ffffff;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;}
-  .cred-row{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid #e2e8f0;}
-  .cred-row:last-child{border-bottom:none;}
-  .cred-label{font-size:0.75rem;font-weight:600;color:#718096;text-transform:uppercase;letter-spacing:0.08em;}
-  .cred-value{font-family:'Courier New',monospace;font-size:0.95rem;font-weight:700;color:#1a1a2e;}
-  .btn{display:block;width:fit-content;margin:28px auto 0;padding:14px 40px;background:linear-gradient(135deg,#4f46e5,#818cf8);color:#ffffff;text-decoration:none;border-radius:12px;font-weight:700;font-size:0.9rem;text-align:center;box-shadow:0 4px 14px rgba(79,70,229,0.3);}
-  .note{font-size:0.78rem;color:#718096;line-height:1.6;margin-top:24px;padding:16px;background:#fffbeb;border-radius:10px;border-left:3px solid #f59e0b;}
-  .note strong{color:#92400e;}
-  .footer{padding:24px 32px;border-top:1px solid #e2e8f0;text-align:center;background:#f8fafc;}
-  .footer-brand{font-size:0.7rem;font-weight:700;color:#4f46e5;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;}
-  .footer-inst{font-size:0.72rem;color:#a0aec0;line-height:1.6;}
-</style></head>
-<body>
-  <div class="wrap">
-    <div class="header">
-      <div class="logo-row">
-        <div class="logo-icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5z" fill="#ffffff" opacity="0.9"/><path d="M2 17l10 5 10-5" stroke="#ffffff" stroke-width="2" fill="none" opacity="0.6"/><path d="M2 12l10 5 10-5" stroke="#ffffff" stroke-width="2" fill="none" opacity="0.8"/></svg>
-        </div>
-        <div class="logo-text">Alum<span>NEX</span></div>
-      </div>
-      <div class="header-sub">VNIT Training & Placement Cell — Mentorship Platform</div>
-    </div>
-    <div class="body">
-      <div class="greeting">Hi ${name} 👋</div>
-      <div class="role-badge">${roleLabel} Account</div>
-      <p class="intro">
-        Your <strong>${roleLabel}</strong> account on AlumNEX has been created by the VNIT T&P Cell.
-        Use the credentials below to sign in and ${role === 'STUDENT' ? 'connect with alumni mentors for mock interviews' : 'start mentoring students through mock interviews'}.
-      </p>
-      <div class="cred-box">
-        <div class="cred-header"><span>🔑 Your Login Credentials</span></div>
-        <div class="cred-row">
-          <span class="cred-label">Username</span>
-          <span class="cred-value">${username}</span>
-        </div>
-        <div class="cred-row">
-          <span class="cred-label">Password</span>
-          <span class="cred-value">${password}</span>
-        </div>
-        <div class="cred-row">
-          <span class="cred-label">Role</span>
-          <span class="cred-value">${roleLabel}</span>
-        </div>
-      </div>
-      <a href="${loginUrl}" class="btn">Sign In to AlumNEX →</a>
-      <div class="note">
-        ⚠️ <strong>Change your password</strong> after your first login. Keep these credentials safe and do not share them with anyone.
-      </div>
-    </div>
-    <div class="footer">
-      <div class="footer-brand">AlumNEX — Bridging Campus & Career</div>
-      <div class="footer-inst">
-        VNIT Training & Placement Office<br>
-        Developed by <strong>The Tesseract</strong><br>
-        This is an automated message. Do not reply.
-      </div>
-    </div>
-  </div>
-</body>
-</html>`;
-
     await transporter.sendMail({
       from:    process.env.EMAIL_FROM || `AlumNEX <${process.env.EMAIL_USER}>`,
       to,
       subject,
       html,
     });
-    console.log(`[EMAIL-DEBUG] ✅ Email sent successfully to ${to}`);
+    console.log(`[EMAIL-DEBUG] ✅ Email sent via SMTP to ${to}`);
     updateQueueStatus('sent', null);
     return { sent: true };
   } catch (err) {
     console.error(`[EMAIL-DEBUG] ❌ Email FAILED for ${to}:`, err.message);
     updateQueueStatus('failed', err.message);
-    try { require('fs').appendFileSync('scratch/email_error.txt', new Date().toISOString() + ' - ' + to + ' - ' + err.message + '\n'); } catch (e) {}
     return { skipped: true, reason: err.message };
   }
 }
