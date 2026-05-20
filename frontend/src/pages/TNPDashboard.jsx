@@ -30,23 +30,34 @@ function ActivityFeedTab() {
   const categories = ['All', 'Alumni', 'Student', 'Interview', 'Mentorship', 'System'];
 
   React.useEffect(() => {
-    Promise.all([
-      api.getActivityLogs(50).catch(() => []),
-      api.getPlatformConfigKey('category_colors').catch(() => null),
-    ]).then(([logs, colors]) => {
-      if (Array.isArray(logs) && logs.length > 0) {
-        setFeedData(logs.map(l => ({
-          icon: l.icon,
-          color: l.color,
-          title: l.title,
-          desc: l.desc,
-          category: l.category || 'System',
-          time: l.createdAt ? new Date(l.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '',
-        })));
-      }
-      if (colors && typeof colors === 'object') setCategoryColors({ ...DEFAULT_CATEGORY_COLORS, ...colors });
-      setLoading(false);
-    });
+    const fetchLogs = () => {
+      Promise.all([
+        fetch(`${API_BASE}/stats/recent-activity`).then(r => r.json()).catch(() => []),
+        api.getPlatformConfigKey('category_colors').catch(() => null),
+      ]).then(([logs, colors]) => {
+        if (Array.isArray(logs)) {
+          setFeedData(logs.map(l => ({
+            icon: l.icon,
+            color: l.color,
+            title: l.title,
+            desc: l.desc,
+            category: l.category || 'System',
+            time: l.time ? new Date(l.time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '',
+          })));
+        }
+        if (colors && typeof colors === 'object') setCategoryColors({ ...DEFAULT_CATEGORY_COLORS, ...colors });
+        setLoading(false);
+      });
+    };
+
+    fetchLogs();
+    const unsubscribe = subscribeRealtimeSync(fetchLogs);
+    const interval = setInterval(fetchLogs, 15000);
+
+    return () => {
+      unsubscribe();
+      clearInterval(interval);
+    };
   }, []);
 
   const filtered = filter === 'All' ? feedData : feedData.filter(f => f.category === filter);
@@ -331,14 +342,23 @@ function HomeDashboard({ stats, setActiveTab }) {
   const [feedPreview, setFeedPreview] = React.useState([]);
 
   React.useEffect(() => {
-    fetch(`${API_BASE}/stats/recent-activity`)
-      .then(r => r.json())
-      .then(data => {
-        if (Array.isArray(data) && data.length > 0) {
-          setFeedPreview(data.slice(0, 3));
-        }
-      })
-      .catch(() => {});
+    const fetchFeed = () => {
+      fetch(`${API_BASE}/stats/recent-activity`)
+        .then(r => r.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            setFeedPreview(data.slice(0, 3));
+          }
+        })
+        .catch(() => {});
+    };
+    fetchFeed();
+    const unsubscribe = subscribeRealtimeSync(fetchFeed);
+    const interval = setInterval(fetchFeed, 15000);
+    return () => {
+      unsubscribe();
+      clearInterval(interval);
+    };
   }, []);
 
   const timeAgo = (iso) => {
