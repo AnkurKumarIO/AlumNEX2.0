@@ -8,6 +8,7 @@ import SystemSettingsTab from './TNPSettings';
 
 import BulkUploadTab from './TNPBulkUpload';
 import DirectoryTab from './TNPDirectory';
+import TNPMeetingTools from './TNPMeetingTools';
 import { subscribeRealtimeSync } from '../lib/realtimeSync';
 import { api } from '../api';
 
@@ -189,6 +190,7 @@ export default function TNPDashboard() {
     { icon: 'people',           label: 'Directory',    tab: 'directory' },
     { icon: 'analytics',        label: 'Analytics',    tab: 'analytics' },
     { icon: 'dynamic_feed',     label: 'Activity Feed',tab: 'activity' },
+    { icon: 'video_call',       label: 'Meeting Tools',tab: 'meeting' },
 
     { icon: 'settings_suggest', label: 'Settings',     tab: 'settings' },
   ];
@@ -198,6 +200,7 @@ export default function TNPDashboard() {
     if (activeTab === 'directory')  return <DirectoryTab />;
     if (activeTab === 'analytics')  return <AnalyticsTab />;
     if (activeTab === 'activity')   return <ActivityFeedTab />;
+    if (activeTab === 'meeting')    return <TNPMeetingTools />;
 
     if (activeTab === 'settings')   return <SystemSettingsTab commSettings={commSettings} setCommSettings={setCommSettings} roles={roles} setRoles={setRoles} />;
     return null; // home rendered inline

@@ -95,10 +95,26 @@ router.post('/create', async (req, res) => {
           );
           console.log(`[Meet] Created Google Meet for alumni ${alumni.name}: ${meetLink}`);
         } else {
-          console.log(`[Meet] Alumni ${alumniId} has no Google token — using Jitsi fallback`);
+          console.log(`[Meet] Alumni ${alumniId} has no Google token — trying platform token`);
         }
       } catch (err) {
         console.error(`[Meet] Google Meet creation failed for alumni ${alumniId}:`, err.message);
+      }
+    }
+
+    // Try platform-wide Google refresh token if meetLink is still null
+    if (!meetLink && process.env.GOOGLE_REFRESH_TOKEN) {
+      try {
+        meetLink = await createGoogleMeetLink(
+          process.env.GOOGLE_REFRESH_TOKEN,
+          roomId,
+          title || `AlumNEX Centralized Meeting - Room ${roomId}`,
+          startTime,
+          endTime
+        );
+        console.log(`[Meet] Created Google Meet using platform token: ${meetLink}`);
+      } catch (err) {
+        console.error(`[Meet] Platform Google Meet creation failed:`, err.message);
       }
     }
 
@@ -196,6 +212,19 @@ router.get('/:roomId', async (req, res) => {
           );
         } catch (err) {
           console.error(`[Meet] On-demand Google Meet failed:`, err.message);
+        }
+      }
+
+      // Try platform token fallback
+      if (!meetLink && process.env.GOOGLE_REFRESH_TOKEN) {
+        try {
+          meetLink = await createGoogleMeetLink(
+            process.env.GOOGLE_REFRESH_TOKEN,
+            roomId,
+            `AlumNEX Centralized Meeting`
+          );
+        } catch (err) {
+          console.error(`[Meet] On-demand Platform Google Meet failed:`, err.message);
         }
       }
     } catch (dbErr) {
