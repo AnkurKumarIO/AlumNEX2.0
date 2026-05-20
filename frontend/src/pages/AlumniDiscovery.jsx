@@ -12,7 +12,9 @@ const TOPICS = [
 // ── Map Supabase row → display shape ─────────────────────────────────────────
 function toDisplay(u, ratingsMap = {}) {
   const p = u.profile_data || {};
-  const yrs = u.batch_year ? new Date().getFullYear() - u.batch_year : null;
+  const company = u.company || p.company || 'Alumni';
+  const batch_year = u.batch_year || p.batchYear || p.batch_year || null;
+  const yrs = batch_year ? new Date().getFullYear() - batch_year : null;
   const expRange = !yrs ? '0-2 Years' : yrs <= 2 ? '0-2 Years' : yrs <= 5 ? '3-5 Years' : yrs <= 10 ? '6-10 Years' : '10+ Years';
   const skills = p.skills || [];
   const domain = skills.length > 0 ? skills[0] : (u.department || 'Engineering');
@@ -31,14 +33,16 @@ function toDisplay(u, ratingsMap = {}) {
   }
   const totalSessions = ratingData?.totalSessions || 0;
   
+  const title = p.title || p.jobTitle || (company ? `Alumni at ${company}` : 'Alumni');
+  
   return {
     id: u.id,
     name: u.name,
-    company: u.company || 'Alumni',
+    company,
     department: u.department || '',
-    batch_year: u.batch_year,
-    title: p.title || (u.company ? `Alumni at ${u.company}` : 'Alumni'),
-    role: `${p.title || 'Alumni'} • ${u.company || ''}`,
+    batch_year,
+    title,
+    role: `${title} • ${company}`,
     experience: yrs ? `${yrs} yr${yrs !== 1 ? 's' : ''}` : '',
     expRange,
     domain,

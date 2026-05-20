@@ -125,11 +125,15 @@ export default function TNPDashboard() {
   // Platform stats
   const [stats, setStats] = useState({ total_students: 0, active_mentors: 0, mock_interviews: 0, scheduled_today: 0 });
 
-  useEffect(() => {
+  const refreshStats = () => {
     fetch(`${API_BASE}/stats/platform`)
       .then(r => r.json())
       .then(d => { if (!d.error) setStats(d); })
       .catch(() => {});
+  };
+
+  useEffect(() => {
+    refreshStats();
   }, []);
 
   // Notifications — live from API
@@ -196,7 +200,7 @@ export default function TNPDashboard() {
   ];
 
   const renderContent = () => {
-    if (activeTab === 'upload')     return <BulkUploadTab />;
+    if (activeTab === 'upload')     return <BulkUploadTab onUploadSuccess={refreshStats} />;
     if (activeTab === 'directory')  return <DirectoryTab />;
     if (activeTab === 'analytics')  return <AnalyticsTab />;
     if (activeTab === 'activity')   return <ActivityFeedTab />;

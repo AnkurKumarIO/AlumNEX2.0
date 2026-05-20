@@ -68,13 +68,16 @@ export async function updateUserProfile(userId, profileData) {
 }
 
 export async function getAllAlumni() {
-  const { data } = await supabase
-    .from('users')
-    .select('id, name, email, department, company, batch_year, profile_data')
-    .eq('role', 'ALUMNI')
-    .eq('verification_status', 'VERIFIED')
-    .order('created_at', { ascending: true });
-  return data || [];
+  try {
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+    const res = await fetch(`${API_URL}/alumni`);
+    if (!res.ok) throw new Error('Failed to fetch alumni');
+    const data = await res.json();
+    return data || [];
+  } catch (err) {
+    console.error('getAllAlumni error:', err);
+    return [];
+  }
 }
 
 // ── Interview Requests ────────────────────────────────────────────────────────

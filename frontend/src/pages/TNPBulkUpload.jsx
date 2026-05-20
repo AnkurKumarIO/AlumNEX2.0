@@ -103,7 +103,7 @@ function UploadResult({ result, onReset }) {
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export default function BulkUploadTab() {
+export default function BulkUploadTab({ onUploadSuccess }) {
   const [type, setType]           = useState('students'); // 'students' | 'alumni'
   const [step, setStep]           = useState('upload');   // 'upload' | 'preview' | 'uploading' | 'done'
   const [parsed, setParsed]       = useState(null);       // { headers, rows }
@@ -181,6 +181,9 @@ export default function BulkUploadTab() {
       if (!res.ok) throw new Error(data.error || 'Upload failed');
       setUploadResult(data);
       setStep('done');
+      if (typeof onUploadSuccess === 'function') {
+        onUploadSuccess();
+      }
     } catch (err) {
       setError(err.message);
       setStep('preview');
