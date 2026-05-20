@@ -518,9 +518,6 @@ export default function Dashboard() {
             <button onClick={() => setActiveTab('premium')} style={{ width: '100%', padding: '0.4rem', background: '#060e20', color: '#c3c0ff', fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', border: 'none', borderRadius: 8, cursor: 'pointer' }}>Upgrade to Pro</button>
           </div>
           <div style={{ borderTop: '1px solid rgba(70,69,85,0.3)', paddingTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <a href="mailto:support@alumnex.ai" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0.5rem 1rem', color: '#c7c4d8', fontSize: '0.875rem', textDecoration: 'none' }}>
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>help</span> Support
-            </a>
             <button onClick={() => setShowLogoutConfirm(true)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0.5rem 1rem', color: '#c7c4d8', fontSize: '0.875rem', background: 'none', border: 'none', cursor: 'pointer', width: '100%', textAlign: 'left' }}>
               <span className="material-symbols-outlined" style={{ fontSize: 18 }}>logout</span> Logout
             </button>
@@ -727,11 +724,8 @@ export default function Dashboard() {
           {renderContent()}
         </section>
 
-        <footer style={{ marginTop: 'auto', padding: '3rem 2rem', borderTop: '1px solid rgba(70,69,85,0.2)', background: '#0b1326', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <footer style={{ marginTop: 'auto', padding: '3rem 2rem', borderTop: '1px solid rgba(70,69,85,0.2)', background: '#0b1326', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
           <p style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#c7c4d8', opacity: 0.8 }}>&copy; 2026 AlumNEX. The Intelligence Platform.</p>
-          <div style={{ display: 'flex', gap: '1.5rem' }}>
-            {['Privacy','Terms','API','Contact'].map(l => <a key={l} href="#" style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#c7c4d8', textDecoration: 'none' }}>{l}</a>)}
-          </div>
         </footer>
       </main>
     </div>
