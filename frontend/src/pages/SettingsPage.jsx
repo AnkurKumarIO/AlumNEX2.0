@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext, useRef } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { updateUserProfile } from '../lib/db';
 import { api } from '../api';
+import { emitRealtimeSync } from '../lib/realtimeSync';
 
 const NOTIF_ITEMS = [
   { key: 'interview_requests', label: 'Interview Requests', desc: 'When a student sends you a booking request' },
@@ -144,6 +145,7 @@ export default function SettingsPage({ role }) {
   const saveProfile = async () => {
     const updated = { ...savedProfile, ...profile };
     localStorage.setItem('alumnex_profile', JSON.stringify(updated));
+    emitRealtimeSync({ type: 'profile_updated' });
     const updatedUser = { ...user, name: profile.name, department: profile.department };
     login(updatedUser, localStorage.getItem('alumnex_token'));
     if (user?.id && !user.id.startsWith('stu-') && !user.id.startsWith('alm-')) {

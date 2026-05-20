@@ -10,6 +10,7 @@ import { useInterviewRequests } from '../hooks/useInterviewRequests';
 import { useNotifications } from '../hooks/useNotifications';
 import SettingsPage from './SettingsPage';
 import LogoutConfirmModal from '../components/LogoutConfirmModal';
+import { subscribeRealtimeSync, emitRealtimeSync } from '../lib/realtimeSync';
 
 // â”€â”€ Student Detail + Accept Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function StudentDetailModal({ request, onClose, onAccept }) {
@@ -704,9 +705,12 @@ function AlumniSessionHistory({ userId, userName }) {
 }
 
 export default function AlumniDashboard() {
-  const { user, logout } = useContext(AuthContext);
+  const { user, login, logout } = useContext(AuthContext);
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('home');
+  const [localRefresh, setLocalRefresh] = useState(0);
+
+  useEffect(() => subscribeRealtimeSync(() => setLocalRefresh(v => v + 1)), []);
   const [showSlotModal, setShowSlotModal] = useState(false);
   const [extraSlots, setExtraSlots] = useState([]);
   const [viewingRequest, setViewingRequest] = useState(null);
@@ -841,7 +845,7 @@ export default function AlumniDashboard() {
         try { supabase.removeChannel(channel); } catch {}
       }
     };
-  }, [user.name, user.id]);
+  }, [user.name, user.id, localRefresh]);
 
   // Build notifications list: combine real-time notifications from DB + upcoming meetings
   const allScheduled = [...SCHEDULE, ...extraSlots];
@@ -881,6 +885,9 @@ export default function AlumniDashboard() {
   const saveProfileForm = () => {
     const updated = { ...savedProfile, ...profileForm };
     localStorage.setItem('alumnex_profile', JSON.stringify(updated));
+    const updatedUser = { ...user, name: profileForm.username };
+    login(updatedUser, localStorage.getItem('alumnex_token'));
+    emitRealtimeSync({ type: 'profile_updated' });
     setEditProfile(false);
   };
 

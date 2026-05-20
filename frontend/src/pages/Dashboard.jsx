@@ -202,7 +202,7 @@ export default function Dashboard() {
       const saved = JSON.parse(localStorage.getItem('alumnex_profile') || '{}');
       setProfileData(saved);
     }
-  }, [user?.id]);
+  }, [user?.id, localRefresh]);
 
   const unreadNotifCount = studentNotifs.filter(n => !n.read).length;
 
