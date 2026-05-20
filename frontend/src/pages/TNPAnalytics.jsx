@@ -353,17 +353,6 @@ export default function AnalyticsTab() {
               </div>
             ))}
           </div>
-
-          {/* Improvement insight */}
-          <div style={{ background: 'linear-gradient(135deg,rgba(79,70,229,0.15),rgba(11,19,38,0.9))', borderRadius: 16, padding: '1.5rem', border: '1px solid rgba(195,192,255,0.15)', display: 'flex', alignItems: 'center', gap: 14 }}>
-            <span className="material-symbols-outlined" style={{ fontSize: 32, color: '#c3c0ff', fontVariationSettings: "'FILL' 1", flexShrink: 0 }}>trending_up</span>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: '1rem', marginBottom: 4 }}>AI Score Improvement</div>
-              <div style={{ fontSize: '0.8rem', color: '#c7c4d8', lineHeight: 1.6 }}>
-                Students who completed <span style={{ color: '#c3c0ff', fontWeight: 700 }}>5+ mock sessions</span> show an average AI confidence score improvement of <span style={{ color: '#4edea3', fontWeight: 700 }}>+23 points</span> compared to their first session.
-              </div>
-            </div>
-          </div>
         </div>
       )}
     </div>
