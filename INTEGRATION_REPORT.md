@@ -51,8 +51,21 @@ This report summarizes the current state of the AlumNEX platform, its integratio
 
 ---
 
-## 3. Recommended Next Steps
-- Implement the missing `/auth/student/verify` route or remove the call from the frontend.
-- Refactor render-time date calculations into `useMemo` or `useEffect`.
-- Standardize data fetching to use the `api.js` wrapper exclusively.
-- Add a transaction-like wrapper for the Supabase/Prisma user creation flow.
+## 3. Proposed Fixes & Implementation Plan
+
+### Phase 1: Stability & Purity (Immediate)
+- **Fix 5 & 6 (React Rules):** Move all `useEffect` and `useCallback` hooks to the top level of components in `Dashboard.jsx` and `ResumeAnalyzer.jsx`. Wrap `Date.now()` calculations in `useMemo` or update them via a `setInterval` inside a `useEffect` to avoid impure renders.
+- **Fix 8 (Environment Config):** Update `frontend/.env` to default to `http://localhost:5001` and add a `vite.config.js` proxy configuration to handle CORS during development.
+
+### Phase 2: API & Auth Integrity
+- **Fix 1 (Missing Route):** Implement `POST /auth/student/verify` in `backend/routes/auth.js`. This route will use Agent 4 (`verifyDocument`) to validate student IDs and update the `verification_status` in the database.
+- **Fix 2 (Atomic Registration):** Wrap the user creation logic in `backend/routes/register.js` with a try/catch block that performs a "manual rollback" (deleting the Supabase Auth user) if the subsequent Prisma DB write fails.
+- **Fix 9 (Cleanup):** Delete the deprecated `StudentRegistration.jsx` and `AlumniRegistration.jsx` files to reduce technical debt and bundle size.
+
+### Phase 3: Feature Robustness
+- **Fix 3 (OCR UX):** Update `backend/routes/aiRoutes.js` to return a clear "Text Extraction Failed" error instead of generic results when a scanned PDF cannot be read.
+- **Fix 4 (Degraded Mode):** Implement a `GET /platform-config/status` endpoint that the frontend can query on load to gracefully hide or disable features (like Google Meet) if the required API keys are missing.
+- **Fix 7 (Data Layer Refactor):** Consolidate all fetching logic into `api.js`. Deprecate direct Supabase calls from the UI components to ensure consistent mock/real behavior.
+
+### Phase 4: Environment & DevOps
+- **Fix 10 (Build Fix):** Create a `Dockerfile` or a setup script that installs the necessary system libraries (`libcairo2-dev`, `libpango1.0-dev`, etc.) required for the `canvas` dependency, ensuring the PDF OCR pipeline works in production.
