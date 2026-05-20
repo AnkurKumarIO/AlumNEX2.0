@@ -586,5 +586,6 @@ module.exports = {
   summarizeStudentProfile, 
   analyzeSpokenChunk, 
   factCheck,
-  extractTextViaOpenAI 
+  extractTextViaOpenAI,
+  extractTextViaHuggingFace
 };
