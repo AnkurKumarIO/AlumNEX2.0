@@ -4,7 +4,6 @@ import { AuthContext } from '../context/AuthContext';
 import AlumNexLogo from '../AlumNexLogo';
 import LogoutConfirmModal from '../components/LogoutConfirmModal';
 import AnalyticsTab from './TNPAnalytics';
-import SystemSettingsTab from './TNPSettings';
 
 import BulkUploadTab from './TNPBulkUpload';
 import DirectoryTab from './TNPDirectory';
@@ -175,17 +174,6 @@ export default function TNPDashboard() {
     return `${Math.floor(h / 24)}d ago`;
   };
 
-  // Settings state (passed down to SystemSettingsTab)
-  const [commSettings, setCommSettings] = useState({
-    emailNotifs: true, smsAlerts: false, weeklyReport: true,
-    instantApproval: false, mentorMatchAlert: true,
-  });
-  const [roles, setRoles] = useState([
-    { id: 1, name: 'TNP Coordinator',  permissions: ['upload', 'analytics', 'settings', 'logs'], active: true },
-    { id: 2, name: 'Placement Officer', permissions: ['upload', 'analytics'],                    active: true },
-    { id: 3, name: 'Analytics Viewer',  permissions: ['analytics'],                               active: true },
-  ]);
-
   if (!user) return <Navigate to="/login" replace />;
 
   const TNP_NAV = [
@@ -195,8 +183,6 @@ export default function TNPDashboard() {
     { icon: 'analytics',        label: 'Analytics',    tab: 'analytics' },
     { icon: 'dynamic_feed',     label: 'Activity Feed',tab: 'activity' },
     { icon: 'video_call',       label: 'Meeting Tools',tab: 'meeting' },
-
-    { icon: 'settings_suggest', label: 'Settings',     tab: 'settings' },
   ];
 
   const renderContent = () => {
@@ -205,8 +191,6 @@ export default function TNPDashboard() {
     if (activeTab === 'analytics')  return <AnalyticsTab />;
     if (activeTab === 'activity')   return <ActivityFeedTab />;
     if (activeTab === 'meeting')    return <TNPMeetingTools />;
-
-    if (activeTab === 'settings')   return <SystemSettingsTab commSettings={commSettings} setCommSettings={setCommSettings} roles={roles} setRoles={setRoles} />;
     return null; // home rendered inline
   };
 
@@ -321,13 +305,6 @@ export default function TNPDashboard() {
                       </div>
                     </div>
                     <div style={{ padding: '0.5rem' }}>
-                      <button onClick={() => { setShowProfile(false); setActiveTab('settings'); }}
-                        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '0.75rem 0.875rem', background: 'none', border: 'none', cursor: 'pointer', borderRadius: 10, textAlign: 'left' }}>
-                        <span className="material-symbols-outlined" style={{ fontSize: 17, color: '#c3c0ff' }}>settings</span>
-                        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#dae2fd' }}>Settings</span>
-                      </button>
-                    </div>
-                    <div style={{ padding: '0.5rem', borderTop: '1px solid rgba(70,69,85,0.15)' }}>
                       <button onClick={() => { setShowProfile(false); setShowLogoutConfirm(true); }}
                         style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '0.75rem 0.875rem', background: 'none', border: 'none', cursor: 'pointer', borderRadius: 10, color: '#ffb4ab', fontSize: '0.8rem', fontWeight: 600 }}>
                         <span className="material-symbols-outlined" style={{ fontSize: 17 }}>logout</span> Sign Out
