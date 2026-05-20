@@ -405,5 +405,37 @@ router.get('/analytics', async (req, res) => {
   }
 });
 
+// GET /stats/pending-users — list of users waiting for verification
+router.get('/pending-users', async (req, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      where: {
+        verification_status: 'PENDING',
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /stats/verify/:id — verify or reject user
+router.patch('/verify/:id', async (req, res) => {
+  try {
+    const { status } = req.body; // 'VERIFIED' or 'REJECTED'
+    if (!status || !['VERIFIED', 'REJECTED'].includes(status)) {
+      return res.status(400).json({ error: 'Valid status required.' });
+    }
+    const updated = await prisma.user.update({
+      where: { id: req.params.id },
+      data: { verification_status: status },
+    });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
 

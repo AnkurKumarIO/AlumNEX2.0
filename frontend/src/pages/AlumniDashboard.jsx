@@ -5,6 +5,7 @@ import AlumNexLogo from '../AlumNexLogo';
 import { getRequests, acceptRequestOnly, bookSlot, rescheduleSlot, declineRequest, formatScheduledTime } from '../interviewRequests';
 import { api } from '../api';
 import { getAllAlumni, getRequestsForAlumni, getUserById } from '../lib/db';
+import { supabase } from '../lib/supabaseClient';
 import { useInterviewRequests } from '../hooks/useInterviewRequests';
 import { useNotifications } from '../hooks/useNotifications';
 import SettingsPage from './SettingsPage';
@@ -796,37 +797,49 @@ export default function AlumniDashboard() {
 
     // Supabase Realtime — fires instantly on new/updated requests for this alumni
     let channel = null;
-    let supabaseRef = null;
-    (async () => {
+    let isMounted = true;
+
+    const setupRealtime = async () => {
       try {
         let alumniId = user.id;
         const isMockId = !alumniId || String(alumniId).startsWith('alm-') || String(alumniId).startsWith('stu-');
         if (isMockId) {
-          const { getAllAlumni } = await import('../lib/db');
           const alumniList = await getAllAlumni();
           const match = alumniList.find(a => a.name === user.name);
           if (match) alumniId = match.id;
         }
+        if (!isMounted) return;
+
         if (alumniId && !String(alumniId).startsWith('alm-') && !String(alumniId).startsWith('stu-')) {
-          const { supabase } = await import('../lib/supabaseClient');
-          supabaseRef = supabase;
           channel = supabase
             .channel(`alumni-reqs-${alumniId}`)
             .on('postgres_changes',
               { event: 'INSERT', schema: 'public', table: 'interview_requests', filter: `alumni_id=eq.${alumniId}` },
-              () => load()
+              () => { if (isMounted) load(); }
             )
             .on('postgres_changes',
               { event: 'UPDATE', schema: 'public', table: 'interview_requests', filter: `alumni_id=eq.${alumniId}` },
-              () => load()
-            )
-            .subscribe();
+              () => { if (isMounted) load(); }
+            );
+
+          channel.subscribe((status) => {
+            if (status === 'SUBSCRIBED') {
+              console.log(`[Realtime] Subscribed to alumni-reqs-${alumniId}`);
+            }
+          });
         }
-      } catch(e) { console.warn('Alumni Realtime setup failed:', e.message); }
-    })();
+      } catch (e) {
+        console.warn('Alumni Realtime setup failed:', e.message);
+      }
+    };
+
+    setupRealtime();
 
     return () => {
-      try { if (channel && supabaseRef) supabaseRef.removeChannel(channel); } catch {}
+      isMounted = false;
+      if (channel) {
+        try { supabase.removeChannel(channel); } catch {}
+      }
     };
   }, [user.name, user.id]);
 

@@ -11,7 +11,7 @@ const http = require('http');
 const https = require('https');
 
 // ── Config ────────────────────────────────────────────────────────────────────
-const API = 'http://localhost:5000';
+const API = 'http://localhost:5001';
 const SUPABASE_URL = 'https://hfngnstxfitukofbkapy.supabase.co';
 const SUPABASE_ANON_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhmbmduc3R4Zml0dWtvZmJrYXB5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MjAxMTYsImV4cCI6MjA5MTQ5NjExNn0.QTJ8P_EbMgUSM3RN0ZRSJdn0lThJRAOVtSGnsIXf4PI';
@@ -33,6 +33,8 @@ const TEST_ALUMNI = {
   department: 'Computer Science',
   company: 'Google',
   batch_year: 2018,
+  username: `alm_${TS}`,
+  password: `Pass_${TS}!`,
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -158,14 +160,14 @@ let alumniId = null;
 async function testStudentRegistration() {
   console.log('\n━━━ 4. STUDENT REGISTRATION ━━━');
   try {
-    const r = await request('POST', '/register/student', TEST_STUDENT);
-    const ok = r.status === 200 && (r.body?.user?.id || r.body?.message);
-    log('Register new student', ok, r.body?.message || r.body?.error);
+    const r = await request('POST', '/auth/student/register', TEST_STUDENT);
+    const ok = (r.status === 200 || r.status === 201) && (r.body?.user?.id || r.body?.message);
+    log('Register new student', ok, r.body?.message || r.body?.error || `status=${r.status}`);
     if (r.body?.user?.id) studentId = r.body.user.id;
 
     // Duplicate registration
-    const r2 = await request('POST', '/register/student', TEST_STUDENT);
-    log('Duplicate student registration (should return existing)', r2.status === 200, r2.body?.message);
+    const r2 = await request('POST', '/auth/student/register', TEST_STUDENT);
+    log('Duplicate student registration (should return existing)', r2.status === 200 || r2.status === 400, r2.body?.message || r2.body?.error);
   } catch (e) {
     log('Student registration', false, e.message);
   }
@@ -174,12 +176,16 @@ async function testStudentRegistration() {
 async function testAlumniLogin() {
   console.log('\n━━━ 5. ALUMNI LOGIN / REGISTRATION ━━━');
   try {
-    const r = await request('POST', '/auth/alumni/login', TEST_ALUMNI);
+    const rReg = await request('POST', '/auth/alumni/register', TEST_ALUMNI);
+    const okReg = (rReg.status === 200 || rReg.status === 201) && rReg.body?.user;
+    log('Alumni register', okReg, rReg.body?.message || rReg.body?.error || `status=${rReg.status}`);
+
+    const r = await request('POST', '/auth/alumni/login', { username: TEST_ALUMNI.username, password: TEST_ALUMNI.password });
     const ok = r.status === 200 && r.body?.user;
-    log('Alumni login/register', ok, r.body?.message || r.body?.error);
+    log('Alumni login', ok, r.body?.message || r.body?.error || `status=${r.status}`);
     if (r.body?.user?.id) alumniId = r.body.user.id;
   } catch (e) {
-    log('Alumni login', false, e.message);
+    log('Alumni registration/login', false, e.message);
   }
 }
 
@@ -309,8 +315,8 @@ async function testPlatformStats() {
   console.log('\n━━━ 10. PLATFORM STATS (TNP) ━━━');
   try {
     const r = await request('GET', '/stats/platform');
-    log('GET /stats/platform', r.status === 200 && r.body?.verified_students !== undefined,
-      `students=${r.body?.verified_students}, mentors=${r.body?.active_mentors}, interviews=${r.body?.mock_interviews}`);
+    log('GET /stats/platform', r.status === 200 && r.body?.total_students !== undefined,
+      `students=${r.body?.total_students}, mentors=${r.body?.active_mentors}, interviews=${r.body?.mock_interviews}`);
 
     const r2 = await request('GET', '/stats/pending-users');
     log('GET /stats/pending-users', r2.status === 200 && Array.isArray(r2.body),
@@ -410,9 +416,11 @@ async function testTNPVerification() {
       email: `pendingalumni_${TS}@test.com`,
       department: 'Electrical Engineering',
       company: 'Amazon',
-      batch_year: 2020,
+      batchYear: 2020,
+      username: `pendingalm_${TS}`,
+      password: `Pass_${TS}!`,
     };
-    const r1 = await request('POST', '/auth/alumni/login', pendingAlumni);
+    const r1 = await request('POST', '/auth/alumni/register', pendingAlumni);
     const pendingId = r1.body?.user?.id;
     log('Create pending alumni for verification', !!pendingId, `id=${pendingId}`);
 
@@ -463,8 +471,8 @@ async function testBulkRandomData() {
       password: `BulkPass${ts2}!`,
     };
     try {
-      const r = await request('POST', '/register/student', student);
-      log(`Bulk student ${i + 1}: ${student.name.split(' ')[0]}`, r.status === 200,
+      const r = await request('POST', '/auth/student/register', student);
+      log(`Bulk student ${i + 1}: ${student.name.split(' ')[0]}`, r.status === 200 || r.status === 201,
         r.body?.message || r.body?.error);
     } catch (e) {
       log(`Bulk student ${i + 1}`, false, e.message);
@@ -479,10 +487,12 @@ async function testBulkRandomData() {
       department: departments[(i + 1) % departments.length],
       company: companies[i % companies.length],
       batch_year: 2015 + i,
+      username: `bulkalm${ts2}`,
+      password: `BulkPass${ts2}!`,
     };
     try {
-      const r = await request('POST', '/auth/alumni/login', alumni);
-      log(`Bulk alumni ${i + 1}: ${alumni.name.split(' ')[0]}`, r.status === 200,
+      const r = await request('POST', '/auth/alumni/register', alumni);
+      log(`Bulk alumni ${i + 1}: ${alumni.name.split(' ')[0]}`, r.status === 200 || r.status === 201,
         r.body?.message || r.body?.error);
     } catch (e) {
       log(`Bulk alumni ${i + 1}`, false, e.message);

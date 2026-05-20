@@ -43,6 +43,7 @@ export async function createUser({ id, role, name, email, department, college, y
       department: department || 'General',
       verification_status: 'VERIFIED',
       profile_data: { college, year, username },
+      updatedAt: new Date().toISOString(),
     })
     .select()
     .single();
@@ -55,7 +56,11 @@ export async function updateUserProfile(userId, profileData) {
   // Try with current session first
   const { data, error } = await supabase
     .from('users')
-    .update({ profile_data: profileData, ...(profileData.department ? { department: profileData.department } : {}) })
+    .update({ 
+      profile_data: profileData, 
+      ...(profileData.department ? { department: profileData.department } : {}),
+      updatedAt: new Date().toISOString(),
+    })
     .eq('id', userId)
     .select()
     .single();
@@ -71,11 +76,32 @@ export async function getAllAlumni() {
   try {
     const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
     const res = await fetch(`${API_URL}/alumni`);
-    if (!res.ok) throw new Error('Failed to fetch alumni');
-    const data = await res.json();
-    return data || [];
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        return data;
+      }
+    }
   } catch (err) {
-    console.error('getAllAlumni error:', err);
+    console.warn('getAllAlumni backend fetch failed:', err.message);
+  }
+
+  // Fallback: Query Supabase directly
+  try {
+    console.log('Fetching alumni list directly from Supabase...');
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, name, email, department, profile_data, company, batch_year')
+      .eq('role', 'ALUMNI')
+      .eq('verification_status', 'VERIFIED');
+    
+    if (error) throw error;
+    return (data || []).map(u => ({
+      ...u,
+      profile_data: typeof u.profile_data === 'string' ? JSON.parse(u.profile_data) : (u.profile_data || {})
+    }));
+  } catch (err) {
+    console.error('getAllAlumni Supabase fallback error:', err);
     return [];
   }
 }
@@ -95,15 +121,18 @@ export async function createRequest({ studentId, alumniId, topic, message, stude
     } catch {}
   }
 
+  const requestId = crypto.randomUUID();
   const { data, error } = await supabase
     .from('interview_requests')
     .insert({
+      request_id: requestId,
       student_id: studentId,
       alumni_id:  alumniId,
       topic:      topic   || 'Mock Interview',
       message:    message || '',
       student_profile_snapshot: studentProfileSnapshot || null,
       status: 'PENDING',
+      updatedAt: new Date().toISOString(),
     })
     .select()
     .single();
@@ -152,6 +181,7 @@ export async function updateRequest(requestId, updates) {
   if (updates.status)        payload.status         = updates.status.toUpperCase().replace('SLOT_BOOKED','SLOT_BOOKED');
   if (updates.scheduledTime) payload.scheduled_time = updates.scheduledTime;
   if (updates.roomId)        payload.room_id        = updates.roomId;
+  payload.updatedAt = new Date().toISOString();
 
   const { data, error } = await supabase
     .from('interview_requests')
@@ -167,6 +197,7 @@ export async function updateRequest(requestId, updates) {
 
 export async function createNotification({ userId, type, title, message, requestId }) {
   await supabase.from('notifications').insert({
+    notification_id: crypto.randomUUID(),
     user_id:    userId,
     type:       type.toUpperCase(),
     title,
@@ -216,7 +247,10 @@ export async function getPendingUsers() {
 export async function verifyUser(id, status) {
   const { data } = await supabase
     .from('users')
-    .update({ verification_status: status })
+    .update({ 
+      verification_status: status,
+      updatedAt: new Date().toISOString(),
+    })
     .eq('id', id)
     .select()
     .single();
@@ -237,6 +271,7 @@ export async function upsertInterviewRecord({ student_id, alumni_id, request_id,
       student_score:   student_score   || 0,
       ai_action_items: ai_action_items || null,
       status:          status          || 'COMPLETED',
+      updatedAt:       new Date().toISOString(),
     }, { onConflict: 'request_id' })
     .select()
     .single();
@@ -262,7 +297,10 @@ export async function updateInterviewRecord(interviewId, updates) {
     // Fallback: direct Supabase update if backend unreachable
     const { data, error } = await supabase
       .from('interview_records')
-      .update(updates)
+      .update({
+        ...updates,
+        updatedAt: new Date().toISOString(),
+      })
       .eq('interview_id', interviewId)
       .select()
       .single();

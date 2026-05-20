@@ -3,7 +3,7 @@ import { useNavigate, Navigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import AlumNexLogo from "../AlumNexLogo";
 import { supabase } from "../lib/supabaseClient";
-import { api } from "../api";
+import { api, API_BASE } from "../api";
 
 const CREDENTIAL_STORE = [
   { username: "admin",           password: "tnp_secure_123", role: "TNP",     name: "TNP Coordinator",  department: "Administration",         id: "tnp-admin" },
@@ -45,25 +45,161 @@ export default function UnifiedLogin() {
     if (!username.trim() || !password.trim()) { setError("Please enter both username and password."); return; }
     setLoading(true);
 
-    // 1. Try local credential store
+    // 1. Try backend API auth (Robust lookup via Prisma + Supabase Auth)
+    let apiSuccess = false;
+    let apiResult = null;
+    try {
+      if (role === "STUDENT") {
+        apiResult = await api.studentLogin(username.trim(), password.trim());
+      } else if (role === "ALUMNI") {
+        apiResult = await api.alumniLogin(username.trim(), password.trim());
+      } else if (role === "TNP") {
+        apiResult = await api.tnpLogin(username.trim(), password.trim());
+      }
+
+      if (apiResult && !apiResult.error && apiResult.token && apiResult.user) {
+        apiSuccess = true;
+      }
+    } catch (err) {
+      console.warn("Backend auth failed, falling back to direct Supabase auth...", err.message);
+    }
+
+    if (apiSuccess && apiResult) {
+      login(apiResult.user, apiResult.token);
+      // Try to sign in on the Supabase client directly to establish session
+      try {
+        const email = apiResult.user.email;
+        if (email) {
+          await supabase.auth.signInWithPassword({ email, password: password.trim() });
+        }
+      } catch {}
+      // Redirect logic
+      if (apiResult.user.role === "STUDENT" && !localStorage.getItem("alumnex_profile") && !localStorage.getItem("alumniconnect_profile")) {
+        navigate("/profile-setup");
+      } else {
+        navigate("/dashboard");
+      }
+      setLoading(false);
+      return;
+    }
+
+    // 2. Direct Supabase Auth Fallback
+    try {
+      let email = username.trim();
+      if (!email.includes("@")) {
+        // Look up email by username in public.users
+        const { data, error } = await supabase
+          .from("users")
+          .select("email")
+          .eq("username", username.trim())
+          .maybeSingle();
+        if (data?.email) {
+          email = data.email;
+        } else {
+          // Try lookup by name
+          const { data: data2 } = await supabase
+            .from("users")
+            .select("email")
+            .ilike("name", `%${username.trim()}%`)
+            .limit(1);
+          if (data2?.[0]?.email) {
+            email = data2[0].email;
+          }
+        }
+      }
+
+      if (email.includes("@")) {
+        // Try Supabase sign in directly
+        const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({
+          email,
+          password: password.trim(),
+        });
+
+        if (!authErr && authData?.user) {
+          // Fetch user record from users table
+          const { data: dbUser } = await supabase
+            .from("users")
+            .select("*")
+            .eq("id", authData.user.id)
+            .maybeSingle();
+
+          if (dbUser) {
+            const profileData = typeof dbUser.profile_data === "string" ? JSON.parse(dbUser.profile_data) : (dbUser.profile_data || {});
+            const userData = {
+              id: dbUser.id,
+              name: dbUser.name,
+              role: dbUser.role,
+              email: dbUser.email,
+              department: dbUser.department,
+              profile_data: profileData,
+            };
+            login(userData, authData.session?.access_token || `token-${Date.now()}`);
+            if (dbUser.role === "STUDENT" && !localStorage.getItem("alumnex_profile") && !localStorage.getItem("alumniconnect_profile")) {
+              navigate("/profile-setup");
+            } else {
+              navigate("/dashboard");
+            }
+            setLoading(false);
+            return;
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Direct Supabase auth fallback failed:", err.message);
+    }
+
+    // 3. Last Resort: Local Credential Store (Mock)
     const localCred = findLocalCredential(username, password);
     if (localCred) {
       if (localCred.role !== role) { setError(`These credentials belong to a ${localCred.role.toLowerCase()} account.`); setLoading(false); return; }
       
-      let finalId = localCred.id || `${localCred.role.toLowerCase()}-${Date.now()}`;
+      // Auto-register mock users into the real database so sync works perfectly!
       try {
-        const { data, error } = await supabase
-          .from("users")
-          .select("id")
-          .eq("name", localCred.name)
-          .single();
-        if (!error && data && data.id) {
-          finalId = data.id;
+        const email = `${localCred.username}@alumniconnect.edu`;
+        const endpoint = localCred.role === 'STUDENT' ? '/auth/student/register' : '/auth/alumni/register';
+        const payload = {
+          name: localCred.name,
+          username: localCred.username,
+          email,
+          password: localCred.password,
+          department: localCred.department,
+          batchYear: localCred.role === 'ALUMNI' ? 2020 : undefined,
+          company: localCred.role === 'ALUMNI' ? 'Mock Corp' : undefined,
+        };
+        
+        let regRes = await fetch(`${API_BASE}${endpoint}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        
+        // If it failed because it already exists, let's login instead!
+        if (regRes.status === 400 || regRes.status === 401) {
+          const loginEndpoint = localCred.role === 'STUDENT' ? '/auth/student/login' : '/auth/alumni/login';
+          regRes = await fetch(`${API_BASE}${loginEndpoint}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: localCred.username, password: localCred.password }),
+          });
         }
-      } catch (dbErr) {
-        console.warn("Failed to lookup real user ID from Supabase:", dbErr.message);
+        
+        const data = await regRes.json();
+        if (regRes.ok && data.user) {
+          login(data.user, data.token);
+          if (data.user.role === "STUDENT" && !localStorage.getItem("alumnex_profile") && !localStorage.getItem("alumniconnect_profile")) {
+             navigate("/profile-setup");
+          } else {
+             navigate("/dashboard");
+          }
+          setLoading(false);
+          return;
+        }
+      } catch (e) {
+        console.warn("Auto-registration of mock user failed:", e.message);
       }
 
+      // If auto-registration fails for some reason, fallback to original offline behavior
+      let finalId = localCred.id || `${localCred.role.toLowerCase()}-${Date.now()}`;
       const userData = { id: finalId, name: localCred.name, role: localCred.role, department: localCred.department };
       login(userData, `token-${Date.now()}`);
       if (localCred.role === "STUDENT" && !localStorage.getItem("alumnex_profile") && !localStorage.getItem("alumniconnect_profile")) { navigate("/profile-setup"); } else { navigate("/dashboard"); }
@@ -71,38 +207,7 @@ export default function UnifiedLogin() {
       return;
     }
 
-    // 2. Try backend API auth (Robust lookup via Prisma + Supabase Auth)
-    try {
-      let result;
-      if (role === "STUDENT") {
-        result = await api.studentLogin(username.trim(), password.trim());
-      } else if (role === "ALUMNI") {
-        result = await api.alumniLogin(username.trim(), password.trim());
-      } else if (role === "TNP") {
-        result = await api.tnpLogin(username.trim(), password.trim());
-      }
-
-      if (result?.error) {
-        setError(result.error);
-        setLoading(false);
-        return;
-      }
-
-      if (result?.token && result?.user) {
-        login(result.user, result.token);
-        // Redirect logic
-        if (result.user.role === "STUDENT" && !localStorage.getItem("alumnex_profile") && !localStorage.getItem("alumniconnect_profile")) {
-          navigate("/profile-setup");
-        } else {
-          navigate("/dashboard");
-        }
-      } else {
-        setError("Invalid username or password.");
-      }
-    } catch (err) {
-      console.error("Login error:", err);
-      setError("Login failed. Please try again.");
-    }
+    setError("Invalid username or password.");
     setLoading(false);
   };
 

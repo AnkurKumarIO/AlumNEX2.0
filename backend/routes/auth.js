@@ -51,6 +51,8 @@ router.post('/student/register', async (req, res) => {
       data: {
         id:                  authData.user.id,
         role:                'STUDENT',
+        username:            username || null,
+        password:            password || null,
         name,
         email,
         department:          department || 'General',
@@ -59,7 +61,7 @@ router.post('/student/register', async (req, res) => {
       },
     });
 
-    res.json({ message: 'Registration successful', token: makeToken(user), user: { id: user.id, name: user.name, role: user.role, email: user.email } });
+    res.json({ message: 'Registration successful', token: makeToken(user), user: { id: user.id, name: user.name, role: user.role, email: user.email, username: user.username } });
   } catch (err) {
     console.error('Student Register Error:', err.message);
     res.status(500).json({ error: err.message });

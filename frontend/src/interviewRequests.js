@@ -68,7 +68,7 @@ export async function sendRequest({ studentName, studentId, alumniName, alumniRo
   // Smart ID resolution: If we have a mock alumniId but no real UUID, 
   // try to find the real alumni record in the DB by name.
   let finalAlumniId = alumniId;
-  if (alumniId && (String(alumniId).startsWith('alm-') || !alumniId)) {
+  if (!finalAlumniId || String(finalAlumniId).startsWith('alm-')) {
     try {
       const { getAllAlumni } = await import('./lib/db');
       const list = await getAllAlumni();
@@ -87,7 +87,8 @@ export async function sendRequest({ studentName, studentId, alumniName, alumniRo
     }
   } catch {}
 
-  const hasRealIds = realStudentId && finalAlumniId;
+  const hasRealIds = realStudentId && finalAlumniId &&
+    !String(realStudentId).startsWith('stu-') && !String(finalAlumniId).startsWith('alm-');
 
   if (hasRealIds) {
     try {

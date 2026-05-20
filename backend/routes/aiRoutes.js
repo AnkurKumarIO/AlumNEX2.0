@@ -454,7 +454,13 @@ router.post('/profile-strength', async (req, res) => {
   try {
     const { profileData } = req.body;
     const summary = await summarizeStudentProfile(profileData || {});
-    res.json({ message: 'Profile strength evaluated', summary });
+    res.json({
+      message: 'Profile strength evaluated',
+      summary,
+      score: summary.match_score || 60,
+      label: summary.experience_level || 'Growing',
+      top_skills: summary.top_skills || [],
+    });
   } catch (e) {
     res.status(500).json({ error: 'Profile strength evaluation failed.' });
   }
