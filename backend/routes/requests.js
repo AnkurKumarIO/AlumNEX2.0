@@ -85,12 +85,13 @@ router.post('/', async (req, res) => {
 router.patch('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, scheduledTime } = req.body;
+    const { status, scheduledTime, roomId } = req.body;
 
     const updates = { status };
     if (scheduledTime) {
       updates.scheduled_time = new Date(scheduledTime);
-      updates.room_id = `room-${id.slice(-8)}-${Date.now()}`;
+      // Use provided roomId (can be a Google Meet URL) or generate a deterministic one
+      updates.room_id = roomId || `room-${id.slice(-8)}`;
     }
 
     const request = await prisma.interviewRequest.update({

@@ -227,6 +227,19 @@ router.get('/:roomId', async (req, res) => {
           console.error(`[Meet] On-demand Platform Google Meet failed:`, err.message);
         }
       }
+
+      // 4. Persist newly created link back to the request
+      if (meetLink && request && request.room_id !== meetLink) {
+        try {
+          await prisma.interviewRequest.update({
+            where: { request_id: request.request_id },
+            data: { room_id: meetLink },
+          });
+          console.log(`[Meet] Persisted meetLink to request ${request.request_id}`);
+        } catch (persistErr) {
+          console.error(`[Meet] Failed to persist meetLink:`, persistErr.message);
+        }
+      }
     } catch (dbErr) {
       console.error('[Meet] DB lookup error:', dbErr.message);
     }
