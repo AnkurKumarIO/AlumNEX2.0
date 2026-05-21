@@ -441,9 +441,17 @@ export default function SettingsPage({ role }) {
                     Connect your Google Calendar to create real Google Meet links for interview sessions. You'll be the meeting Host, so you can admit students directly — no waiting room issues.
                   </div>
                   <button 
-                    onClick={() => {
+                    onClick={async () => {
                       const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5001';
-                      window.location.href = `${apiBase}/auth/google/url?userId=${user?.id}`;
+                      try {
+                        const res = await fetch(`${apiBase}/auth/google/url?userId=${user?.id}`);
+                        const data = await res.json();
+                        if (data.url) {
+                          window.location.href = data.url;
+                        }
+                      } catch (e) {
+                        console.error('Failed to get Google OAuth URL:', e);
+                      }
                     }}
                     style={{ width: '100%', padding: '0.75rem', background: 'white', color: '#3c4043', border: '1px solid #dadce0', borderRadius: 8, fontWeight: 600, fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: 'pointer', transition: 'background 0.2s' }}
                     onMouseOver={(e) => e.currentTarget.style.background = '#f8f9fa'}
