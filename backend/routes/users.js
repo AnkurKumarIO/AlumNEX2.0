@@ -21,12 +21,27 @@ router.delete('/bulk', async (req, res) => {
       }
     }
 
-    // 2. Delete from Prisma
-    const deleted = await prisma.user.deleteMany({
-      where: { id: { in: ids } }
-    });
+    // 2. Delete from Prisma with history cleanup
+    // Although schema has onDelete: Cascade, we'll explicitly clean up key tables to be sure
+    const results = await prisma.$transaction([
+      prisma.notification.deleteMany({ where: { user_id: { in: ids } } }),
+      prisma.interviewRequest.deleteMany({
+        where: { OR: [{ student_id: { in: ids } }, { alumni_id: { in: ids } }] }
+      }),
+      prisma.scheduleSlot.deleteMany({
+        where: { OR: [{ alumni_id: { in: ids } }, { student_id: { in: ids } }] }
+      }),
+      prisma.interviewRecord.deleteMany({
+        where: { OR: [{ student_id: { in: ids } }, { alumni_id: { in: ids } }] }
+      }),
+      prisma.sessionFeedback.deleteMany({
+        where: { OR: [{ student_id: { in: ids } }, { alumni_id: { in: ids } }] }
+      }),
+      prisma.user.deleteMany({ where: { id: { in: ids } } }),
+    ]);
 
-    res.json({ message: 'Users deleted successfully', count: deleted.count });
+    const deletedCount = results[results.length - 1].count;
+    res.json({ message: 'Users and their history deleted successfully', count: deletedCount });
   } catch (err) {
     console.error('Bulk delete error:', err);
     res.status(500).json({ error: err.message });
