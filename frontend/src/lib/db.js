@@ -152,7 +152,7 @@ export async function getRequestsForAlumni(alumniId) {
       student:users!interview_requests_student_id_fkey(id, name, email, profile_data)
     `)
     .eq('alumni_id', alumniId)
-    .order('created_at', { ascending: false });
+    .order('createdAt', { ascending: false });
 
   return (data || []).map(r => ({
     ...r,
@@ -168,7 +168,7 @@ export async function getRequestsForStudent(studentId) {
       alumni:users!interview_requests_alumni_id_fkey(id, name, email, company, profile_data)
     `)
     .eq('student_id', studentId)
-    .order('created_at', { ascending: false });
+    .order('createdAt', { ascending: false });
 
   return (data || []).map(r => ({
     ...r,
@@ -211,7 +211,7 @@ export async function getNotificationsForUser(userId) {
     .from('notifications')
     .select('*')
     .eq('user_id', userId)
-    .order('created_at', { ascending: false });
+    .order('createdAt', { ascending: false });
   return data || [];
 }
 
@@ -237,9 +237,9 @@ export async function getPlatformStats() {
 export async function getPendingUsers() {
   const { data } = await supabase
     .from('users')
-    .select('id, name, role, department, email, verification_status, created_at')
-    .eq('verification_status', 'PENDING')
-    .order('created_at', { ascending: false })
+    .select('id, name, role, department, email, verification_status, createdAt')
+    .in('role', roles)
+    .order('createdAt', { ascending: false })
     .limit(20);
   return data || [];
 }

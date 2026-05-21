@@ -510,7 +510,32 @@ flags (empty array), message (string).`,
 
 // ─── Agent 5: Student Profile Summarizer ─────────────────────────────────────
 const summarizeStudentProfile = async (profileData) => {
-  if (USE_AI) {
+  // Deterministic fallback — always works, uses actual profile data
+  const deterministicSummary = () => {
+    const skills = Array.isArray(profileData?.skills) ? profileData.skills : [];
+    const name = profileData?.name || 'the student';
+    const college = profileData?.college || '';
+    const dept = profileData?.department || '';
+    const year = profileData?.year || '';
+    const cgpa = profileData?.cgpa ? `CGPA ${profileData.cgpa}` : '';
+    const exp = skills.length > 3 ? 'Mid-level' : 'Junior';
+    const context = [college, dept, year, cgpa].filter(Boolean).join(', ');
+    return {
+      summary: `${name}${context ? ` (${context})` : ''} is preparing for technical interviews with skills in ${skills.slice(0, 3).join(', ') || 'software development'}. ${profileData?.bio?.slice(0, 100) || 'Looking to grow through mentorship.'}`,
+      top_skills: skills.slice(0, 5).length > 0 ? skills.slice(0, 5) : ['Problem Solving', 'Communication'],
+      experience_level: exp,
+      interview_focus_areas: [
+        skills.includes('React') || skills.includes('Frontend') ? 'Frontend fundamentals and React patterns' : 'Core CS fundamentals',
+        skills.includes('System Design') ? 'System design and scalability' : 'Data structures and algorithms',
+        'Behavioral questions and communication',
+      ],
+      red_flags: [],
+      match_score: Math.floor(70 + skills.length * 2),
+      is_mock: true,
+    };
+  };
+
+  if (USE_GROQ) {
     try {
       return await ask(
         `You are an AI assistant briefing an alumni mentor before a mock interview.
@@ -519,15 +544,30 @@ experience_level (Junior|Mid-level|Senior), interview_focus_areas (array of 3 to
 red_flags (array, can be empty), match_score (70-99).`,
         `Student profile: ${JSON.stringify(profileData)}`
       );
-    } catch (e) { console.error('Agent 5 error:', e.message); }
+    } catch (e) {
+      console.error('Agent 5 error:', e.message);
+      // On rate limit or any Groq error, fall through to OpenAI then deterministic
+    }
   }
-  return {
-    summary: 'Strong full-stack developer with 2+ years in React and Node.js. Built scalable microservices and led a team of 4 on a distributed systems project.',
-    top_skills: ['React', 'Node.js', 'System Design', 'Distributed Systems', 'Python'],
-    experience_level: 'Mid-level',
-    interview_focus_areas: ['System design at scale', 'Node.js middleware and performance', 'Leadership and team collaboration'],
-    red_flags: [], match_score: Math.floor(Math.random() * 15 + 82),
-  };
+
+  if (USE_OPENAI) {
+    try {
+      const rawText = await askOpenAI(
+        `You are an AI assistant briefing an alumni mentor before a mock interview.
+Return JSON with keys: summary (2-3 sentence professional summary), top_skills (array of 4-5 strings),
+experience_level (Junior|Mid-level|Senior), interview_focus_areas (array of 3 topics to probe),
+red_flags (array, can be empty), match_score (70-99).`,
+        `Student profile: ${JSON.stringify(profileData)}`,
+        600
+      );
+      const parsed = parseJsonResponse(rawText);
+      if (parsed) return parsed;
+    } catch (e) {
+      console.error('Agent 5 OpenAI fallback error:', e.message);
+    }
+  }
+
+  return deterministicSummary();
 };
 
 // ─── Agent 6: Live Speech Coach ───────────────────────────────────────────────
@@ -586,5 +626,6 @@ module.exports = {
   summarizeStudentProfile, 
   analyzeSpokenChunk, 
   factCheck,
-  extractTextViaOpenAI 
+  extractTextViaOpenAI,
+  extractTextViaHuggingFace
 };

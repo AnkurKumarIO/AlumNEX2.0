@@ -21,7 +21,7 @@ const TOPICS = [
   'Career Guidance', 'Resume Review',
 ];
 
-function MentorBookModal({ mentor, studentName, onClose, onSent }) {
+function MentorBookModal({ mentor, studentName, studentProfile, onClose, onSent }) {
   const [topic, setTopic] = useState(TOPICS[0]);
   const [message, setMessage] = useState('');
   const [sent, setSent] = useState(false);
@@ -38,6 +38,7 @@ function MentorBookModal({ mentor, studentName, onClose, onSent }) {
       alumniRole: `${mentor.title} • ${mentor.company}`,
       topic,
       message,
+      studentProfile: studentProfile || null,
     });
     setSent(true);
     setTimeout(() => { onSent(); onClose(); }, 1800);
@@ -189,7 +190,14 @@ export default function Dashboard() {
 
     if (user?.id) {
       getUserById(user.id).then(u => {
-        const pd = u?.profile_data || JSON.parse(localStorage.getItem('alumnex_profile') || '{}');
+        // profile_data from Supabase may be a raw JSON string — always parse it
+        let rawPd = u?.profile_data;
+        if (typeof rawPd === 'string') {
+          try { rawPd = JSON.parse(rawPd); } catch { rawPd = {}; }
+        }
+        const pd = (rawPd && Object.keys(rawPd).length > 0)
+          ? rawPd
+          : JSON.parse(localStorage.getItem('alumnex_profile') || '{}');
         setProfileData(pd);
         if (Object.keys(pd).length > 0) {
           api.profileStrength(pd).then(r => { if (r && !r.error) setAiProfileStrength(r); }).catch(() => {});
@@ -202,7 +210,7 @@ export default function Dashboard() {
       const saved = JSON.parse(localStorage.getItem('alumnex_profile') || '{}');
       setProfileData(saved);
     }
-  }, [user?.id]);
+  }, [user?.id, localRefresh]);
 
   const unreadNotifCount = studentNotifs.filter(n => !n.read).length;
 
@@ -288,25 +296,37 @@ export default function Dashboard() {
                         <div style={{ marginTop: 10 }}>
                           {(() => {
                             // roomId: prefer stored, then derive deterministically from requestId
-                            const joinRoomId = n.requestId || req?.id || n.roomId || req?.roomId;
+                            const joinRoomId = n.roomId || req?.roomId || n.requestId || req?.id;
                             const scheduledTime = req?.scheduledTime;
                             const isNowJoinable = scheduledTime
                               ? Date.now() >= new Date(scheduledTime).getTime() - 5 * 60 * 1000
                               : !!joinRoomId; // instant meet = always joinable
+
+                            const joinUrl = joinRoomId && joinRoomId.startsWith('http') ? joinRoomId : `/interview/${joinRoomId}?name=${encodeURIComponent(user?.name || 'Student')}`;
+
                             if (n.type === 'live' && joinRoomId) {
                               return (
-                                <a href={`/interview/${joinRoomId}?name=${encodeURIComponent(user?.name || 'Student')}`}
+                                <a href={joinUrl} target={joinUrl.startsWith('http') ? "_blank" : undefined} rel="noopener noreferrer"
                                   style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.5rem 1.25rem', background: 'linear-gradient(135deg,#ff4444,#ff6b6b)', color: '#fff', borderRadius: 10, fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none', animation: 'pulse 1.5s ease-in-out infinite' }}>
                                   <span className="material-symbols-outlined" style={{ fontSize: 16 }}>videocam</span> Join Now — Live
                                 </a>
                               );
                             }
                             if (joinRoomId && isNowJoinable) {
+                              const isGoogleMeet = joinUrl.includes('meet.google.com');
                               return (
-                                <a href={`/interview/${joinRoomId}?name=${encodeURIComponent(user?.name || 'Student')}`}
-                                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.5rem 1.25rem', background: 'linear-gradient(135deg,#00a572,#4edea3)', color: '#003d29', borderRadius: 10, fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none' }}>
-                                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>videocam</span> Join Now
-                                </a>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                  <a href={joinUrl} target={joinUrl.startsWith('http') ? "_blank" : undefined} rel="noopener noreferrer"
+                                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.5rem 1.25rem', background: 'linear-gradient(135deg,#00a572,#4edea3)', color: '#003d29', borderRadius: 10, fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none' }}>
+                                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>videocam</span> Join Now
+                                  </a>
+                                  {isGoogleMeet && (
+                                    <div style={{ fontSize: '0.68rem', color: 'rgba(199,196,216,0.6)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                      <span className="material-symbols-outlined" style={{ fontSize: 13 }}>info</span>
+                                      The alumni (host) must start the meeting first. You may see a waiting screen briefly.
+                                    </div>
+                                  )}
+                                </div>
                               );
                             }
                             if (scheduledTime) {
@@ -477,6 +497,7 @@ export default function Dashboard() {
         <MentorBookModal
           mentor={recommendedMentor}
           studentName={user?.name || 'Student'}
+          studentProfile={profileData}
           onClose={() => setShowMentorBook(false)}
           onSent={() => setMentorBookSent(true)}
         />
@@ -594,27 +615,32 @@ export default function Dashboard() {
                               {new Date(n.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                             </div>
                             {/* Join Now — instant meet */}
-                            {n.type === 'live' && (n.requestId || n.roomId) && (
-                              <a href={`/interview/${n.requestId || n.roomId}`} onClick={() => setShowNotifs(false)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 8, padding: '0.35rem 0.875rem', background: 'linear-gradient(135deg,#ff4444,#ff6b6b)', color: '#fff', borderRadius: 8, fontSize: '0.7rem', fontWeight: 700, textDecoration: 'none' }}>
-                                <span className="material-symbols-outlined" style={{ fontSize: 14 }}>videocam</span> Join Now — Live
-                              </a>
-                            )}
+                            {n.type === 'live' && (n.roomId || req?.roomId || n.requestId || req?.id) && (() => {
+                              const joinRoomId = n.roomId || req?.roomId || n.requestId || req?.id;
+                              const joinUrl = joinRoomId.startsWith('http') ? joinRoomId : `/interview/${joinRoomId}?name=${encodeURIComponent(user?.name || 'Student')}`;
+                              return (
+                                <a href={joinUrl} target={joinUrl.startsWith('http') ? "_blank" : undefined} rel="noopener noreferrer" onClick={() => setShowNotifs(false)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 8, padding: '0.35rem 0.875rem', background: 'linear-gradient(135deg,#ff4444,#ff6b6b)', color: '#fff', borderRadius: 8, fontSize: '0.7rem', fontWeight: 700, textDecoration: 'none' }}>
+                                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>videocam</span> Join Now — Live
+                                </a>
+                              );
+                            })()}
                             {/* Join Now button for slot_booked notifications */}
                             {n.type === 'slot_booked' && (() => {
                               const req = myRequests.find(r => r.id === n.requestId);
-                              const joinRoomId = n.requestId || req?.id || n.roomId || req?.roomId;
+                              const joinRoomId = n.roomId || req?.roomId || n.requestId || req?.id;
                               const scheduledTime = req?.scheduledTime;
                               if (!joinRoomId) return null;
                               const nowMs = Date.now();
                               const endMs = scheduledTime ? new Date(scheduledTime).getTime() + 2 * 60 * 60 * 1000 : null;
                               const isEnded = endMs && nowMs > endMs;
                               const canJoin = !isEnded && (scheduledTime ? nowMs >= new Date(scheduledTime).getTime() - 5 * 60 * 1000 : true);
+                              const joinUrl = joinRoomId.startsWith('http') ? joinRoomId : `/interview/${joinRoomId}?name=${encodeURIComponent(user?.name || 'Student')}`;
                               return isEnded ? (
                                 <div style={{ marginTop: 6, fontSize: '0.68rem', color: '#6b7280', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
                                   <span className="material-symbols-outlined" style={{ fontSize: 13 }}>videocam_off</span> Session ended
                                 </div>
                               ) : canJoin ? (
-                                <a href={`/interview/${joinRoomId}?name=${encodeURIComponent(user?.name || 'Student')}`} onClick={() => setShowNotifs(false)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 8, padding: '0.35rem 0.875rem', background: 'linear-gradient(135deg,#00a572,#4edea3)', color: '#003d29', borderRadius: 8, fontSize: '0.7rem', fontWeight: 700, textDecoration: 'none' }}>
+                                <a href={joinUrl} target={joinUrl.startsWith('http') ? "_blank" : undefined} rel="noopener noreferrer" onClick={() => setShowNotifs(false)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 8, padding: '0.35rem 0.875rem', background: 'linear-gradient(135deg,#00a572,#4edea3)', color: '#003d29', borderRadius: 8, fontSize: '0.7rem', fontWeight: 700, textDecoration: 'none' }}>
                                   <span className="material-symbols-outlined" style={{ fontSize: 14 }}>videocam</span> Join Now
                                 </a>
                               ) : (

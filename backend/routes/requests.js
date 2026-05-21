@@ -58,7 +58,7 @@ router.post('/', async (req, res) => {
     });
 
     // Notify alumni of new request
-    await prisma.notification.create({
+    const notification = await prisma.notification.create({
       data: {
         user_id: alumniId,
         type: 'NEW_REQUEST',
@@ -67,6 +67,33 @@ router.post('/', async (req, res) => {
         request_id: request.request_id,
       }
     });
+
+    // Emit real-time notification
+    const io = req.app.get('io');
+    if (io) {
+      io.of('/notifications').to(alumniId).emit('notification', notification);
+      // Also emit new_request so AlumniDashboard can prepend without a full re-fetch
+      io.of('/notifications').to(alumniId).emit('new_request', {
+        id:            request.request_id,
+        studentName:   request.student?.name || '',
+        studentId:     request.student_id,
+        alumniName:    request.alumni?.name || '',
+        alumniId:      request.alumni_id,
+        topic:         request.topic,
+        message:       request.message || '',
+        status:        'pending',
+        scheduledTime: null,
+        roomId:        null,
+        createdAt:     request.createdAt,
+        studentProfile: request.student_profile_snapshot
+          ? JSON.parse(request.student_profile_snapshot)
+          : (request.student?.profile_data
+              ? (typeof request.student.profile_data === 'string'
+                  ? JSON.parse(request.student.profile_data)
+                  : request.student.profile_data)
+              : null),
+      });
+    }
 
     res.json({ ...request, id: request.request_id });
   } catch (err) {
@@ -79,12 +106,13 @@ router.post('/', async (req, res) => {
 router.patch('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, scheduledTime } = req.body;
+    const { status, scheduledTime, roomId } = req.body;
 
     const updates = { status };
     if (scheduledTime) {
       updates.scheduled_time = new Date(scheduledTime);
-      updates.room_id = `room-${id.slice(-8)}-${Date.now()}`;
+      // Use provided roomId (can be a Google Meet URL) or generate a deterministic one
+      updates.room_id = roomId || `room-${id.slice(-8)}`;
     }
 
     const request = await prisma.interviewRequest.update({
@@ -139,10 +167,15 @@ router.patch('/:id', async (req, res) => {
     }
 
     // Create all notifications
+    const io = req.app.get('io');
     for (const notifPayload of notificationsToCreate) {
-      await prisma.notification.create({
+      const createdNotif = await prisma.notification.create({
         data: notifPayload
       });
+      // Emit real-time notification
+      if (io) {
+        io.of('/notifications').to(notifPayload.user_id).emit('notification', createdNotif);
+      }
     }
 
     res.json({ ...request, id: request.request_id });

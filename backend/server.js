@@ -30,6 +30,31 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// ── Dev-only: clear interview data for testing ────────────────────────────────
+// DELETE /dev/clear-interviews  — remove after testing
+if (process.env.NODE_ENV !== 'production') {
+  const prisma = require('./lib/prisma');
+  app.delete('/dev/clear-interviews', async (req, res) => {
+    try {
+      const [sf, ir, notif, ireq] = await Promise.all([
+        prisma.sessionFeedback.deleteMany({}),
+        prisma.interviewRecord.deleteMany({}),
+        prisma.notification.deleteMany({}),
+        prisma.interviewRequest.deleteMany({}),
+      ]);
+      res.json({
+        message: 'Cleared',
+        session_feedbacks: sf.count,
+        interview_records: ir.count,
+        notifications: notif.count,
+        interview_requests: ireq.count,
+      });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+}
+
 // ── Routes (mounted at root, no /api prefix) ──────────────────────────────────
 app.use('/auth',          require('./routes/auth'));
 app.use('/auth/google',   require('./routes/google'));
@@ -64,6 +89,9 @@ const io = new Server(server, {
   allowEIO3: true,
 });
 require('./socket/interviewRoom')(io);
+require('./socket/notificationHandler')(io);
+
+app.set('io', io);
 
 // ── Health & info ─────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {

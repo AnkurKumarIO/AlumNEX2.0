@@ -408,12 +408,10 @@ export const api = {
     () => fetch(`${API_BASE}/meet/create`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ roomId, title, alumniId, startTime, endTime, consistent: true }),
+      body: JSON.stringify({ roomId, title, alumniId, startTime, endTime }),
     }).then(r => r.json()),
     async () => {
       await mockDelay(300);
-      // Generate a valid-format code for mock
-      const code = 'abc-defg-hij'; 
       return {
         success: true,
         meetLink: `https://meet.jit.si/AlumNEX-${roomId}`,

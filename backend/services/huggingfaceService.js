@@ -1,6 +1,9 @@
 const { HfInference } = require('@huggingface/inference');
 
-const HF_MODEL = process.env.HF_MODEL || 'tiiuae/falcon-7b-instruct';
+// Use a text-generation model available on the free HF Inference API.
+// Must support text-generation task — NOT token-classification or image-captioning.
+// Override via HF_MODEL env var if needed.
+const HF_MODEL = process.env.HF_MODEL || 'mistralai/Mistral-7B-Instruct-v0.2';
 const hf = new HfInference({ apiKey: process.env.HUGGINGFACE_API_KEY });
 
 async function analyzeResumeWithHuggingFace(prompt) {
@@ -36,37 +39,32 @@ async function extractTextViaHuggingFace(fileBuffer, mimeType = 'image/jpeg') {
     return { unavailable: true, reason: 'Hugging Face API key missing' };
   }
 
-  try {
-    // Use TrOCR model for OCR - this should work with HF Inference API
-    const response = await hf.imageToText({
-      model: 'microsoft/trocr-base-printed',
-      data: fileBuffer,
-    });
+  // OCR model priority list — available on the free HF Inference API.
+  // trocr-large-printed is best for printed document/resume OCR.
+  const ocrModels = [
+    'microsoft/trocr-large-printed',
+    'microsoft/trocr-base-handwritten',
+  ];
 
-    if (response && response.generated_text) {
-      return { text: response.generated_text };
-    }
-
-    return { unavailable: true, reason: 'No text extracted from image' };
-  } catch (error) {
-    console.error('Hugging Face OCR Error:', error.message);
-    // If TrOCR fails, try a fallback captioning model
+  for (const model of ocrModels) {
     try {
-      console.log('Trying fallback captioning model for OCR...');
-      const fallbackResponse = await hf.imageToText({
-        model: 'Salesforce/blip-image-captioning-large',
+      console.log(`[HF OCR] Trying model: ${model}`);
+      const response = await hf.imageToText({
+        model,
         data: fileBuffer,
       });
 
-      if (fallbackResponse && fallbackResponse.generated_text) {
-        return { text: fallbackResponse.generated_text };
+      if (response && response.generated_text) {
+        console.log(`[HF OCR] Success with model: ${model}`);
+        return { text: response.generated_text };
       }
-    } catch (fallbackError) {
-      console.error('Hugging Face fallback OCR Error:', fallbackError.message);
+    } catch (error) {
+      console.error(`Hugging Face OCR Error (${model}):`, error.message);
+      // Continue to next model in the list
     }
-
-    return { unavailable: true, reason: error.message };
   }
+
+  return { unavailable: true, reason: 'All HF OCR models failed or returned no text' };
 }
 
 module.exports = { analyzeResumeWithHuggingFace, extractTextViaHuggingFace };

@@ -3,13 +3,15 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import AlumNexLogo from '../AlumNexLogo';
 import { getRequests, acceptRequestOnly, bookSlot, rescheduleSlot, declineRequest, formatScheduledTime } from '../interviewRequests';
-import { api } from '../api';
+import { api, SOCKET_URL } from '../api';
 import { getAllAlumni, getRequestsForAlumni, getUserById } from '../lib/db';
 import { supabase } from '../lib/supabaseClient';
+import { io } from 'socket.io-client';
 import { useInterviewRequests } from '../hooks/useInterviewRequests';
 import { useNotifications } from '../hooks/useNotifications';
 import SettingsPage from './SettingsPage';
 import LogoutConfirmModal from '../components/LogoutConfirmModal';
+import { subscribeRealtimeSync, emitRealtimeSync } from '../lib/realtimeSync';
 
 // â”€â”€ Student Detail + Accept Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function StudentDetailModal({ request, onClose, onAccept }) {
@@ -29,9 +31,14 @@ function StudentDetailModal({ request, onClose, onAccept }) {
       if (!sid || String(sid).startsWith('stu-') || String(sid).startsWith('alm-')) return;
       try {
         const user = await getUserById(sid);
-        const dbProfile = user?.profile_data || {};
+        // profile_data from Supabase may be a JSON string — parse it
+        let dbProfile = user?.profile_data || {};
+        if (typeof dbProfile === 'string') {
+          try { dbProfile = JSON.parse(dbProfile); } catch { dbProfile = {}; }
+        }
         if (!cancelled && dbProfile && Object.keys(dbProfile).length > 0) {
-          setP(prev => ({ ...dbProfile, ...prev }));
+          // Live DB profile takes priority over the snapshot stored at request time
+          setP(prev => ({ ...prev, ...dbProfile }));
         }
       } catch {}
     };
@@ -402,14 +409,18 @@ function RescheduleModal({ request, onClose, onRescheduled }) {
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
   };
 
-  const handleReschedule = () => {
+  const handleReschedule = async () => {
     const h = parseInt(timeHH, 10);
     const m = parseInt(timeMM, 10);
     if (isNaN(h) || h < 1 || h > 12) { setTimeError('Hour must be 1-12'); return; }
     if (isNaN(m) || m < 0 || m > 59) { setTimeError('Minutes must be 00-59'); return; }
     setTimeError('');
     const newTime = new Date(`${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(selectedDate).padStart(2, '0')}T${to24h()}`).toISOString();
-    rescheduleSlot(request.id, newTime);
+    try {
+      await rescheduleSlot(request.id, newTime);
+    } catch (e) {
+      console.error('Reschedule failed:', e.message);
+    }
     setDone(true);
     setTimeout(() => { onRescheduled(newTime); onClose(); }, 1600);
   };
@@ -704,9 +715,12 @@ function AlumniSessionHistory({ userId, userName }) {
 }
 
 export default function AlumniDashboard() {
-  const { user, logout } = useContext(AuthContext);
+  const { user, login, logout } = useContext(AuthContext);
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('home');
+  const [localRefresh, setLocalRefresh] = useState(0);
+
+  useEffect(() => subscribeRealtimeSync(() => setLocalRefresh(v => v + 1)), []);
   const [showSlotModal, setShowSlotModal] = useState(false);
   const [extraSlots, setExtraSlots] = useState([]);
   const [viewingRequest, setViewingRequest] = useState(null);
@@ -772,7 +786,12 @@ export default function AlumniDashboard() {
             scheduledTime: r.scheduled_time || null,
             roomId:        r.room_id || null,
             createdAt:     r.created_at,
-            studentProfile: r.student_profile_snapshot || r.student?.profile_data || null,
+            studentProfile: (() => {
+              const raw = r.student_profile_snapshot || r.student?.profile_data || null;
+              if (!raw) return null;
+              if (typeof raw === 'string') { try { return JSON.parse(raw); } catch { return null; } }
+              return raw;
+            })(),
           }));
           const local = JSON.parse(localStorage.getItem('alumnex_interview_requests') || '[]');
           mapped.forEach(dbReq => {
@@ -835,13 +854,41 @@ export default function AlumniDashboard() {
 
     setupRealtime();
 
+    // Socket.io listener — backend emits 'new_request' on POST /requests
+    // This lets us prepend the new card instantly without waiting for Supabase Realtime
+    let socket = null;
+    const alumniIdForSocket = user.id;
+    const isMockIdForSocket = !alumniIdForSocket ||
+      String(alumniIdForSocket).startsWith('alm-') ||
+      String(alumniIdForSocket).startsWith('stu-');
+
+    if (!isMockIdForSocket) {
+      socket = io(`${SOCKET_URL}/notifications`, {
+        transports: ['websocket', 'polling'],
+        withCredentials: true,
+      });
+      socket.on('connect', () => {
+        socket.emit('join', alumniIdForSocket);
+      });
+      socket.on('new_request', (newReq) => {
+        if (!isMounted) return;
+        setLiveRequests(prev => {
+          if (prev.some(r => r.id === newReq.id)) return prev;
+          return [newReq, ...prev];
+        });
+      });
+    }
+
     return () => {
       isMounted = false;
       if (channel) {
         try { supabase.removeChannel(channel); } catch {}
       }
+      if (socket) {
+        socket.disconnect();
+      }
     };
-  }, [user.name, user.id]);
+  }, [user.name, user.id, localRefresh]);
 
   // Build notifications list: combine real-time notifications from DB + upcoming meetings
   const allScheduled = [...SCHEDULE, ...extraSlots];
@@ -881,6 +928,9 @@ export default function AlumniDashboard() {
   const saveProfileForm = () => {
     const updated = { ...savedProfile, ...profileForm };
     localStorage.setItem('alumnex_profile', JSON.stringify(updated));
+    const updatedUser = { ...user, name: profileForm.username };
+    login(updatedUser, localStorage.getItem('alumnex_token'));
+    emitRealtimeSync({ type: 'profile_updated' });
     setEditProfile(false);
   };
 
@@ -1367,7 +1417,7 @@ export default function AlumniDashboard() {
                     background: r.status === 'accepted' ? 'rgba(255,185,95,0.15)' : r.status === 'slot_booked' ? 'rgba(78,222,163,0.15)' : 'rgba(195,192,255,0.1)',
                     color: r.status === 'accepted' ? '#ffb95f' : r.status === 'slot_booked' ? '#4edea3' : '#c3c0ff',
                   }}>
-                    {r.status === 'slot_booked' ? '📅 Booked' : r.status === 'accepted' ? '✓ Accepted' : 'â³ Pending'}
+                    {r.status === 'slot_booked' ? '📅 Booked' : r.status === 'accepted' ? '✓ Accepted' : 'Pending'}
                   </span>
                 </div>
                 <div style={{ fontSize: '0.72rem', color: '#c7c4d8' }}>{r.topic}</div>
@@ -1395,9 +1445,14 @@ export default function AlumniDashboard() {
                   </>
                 )}
                 {r.status === 'accepted' && (
-                  <button onClick={() => setBookingRequest(r)} style={{ padding: '0.45rem 1rem', background: 'linear-gradient(135deg,#00a572,#4edea3)', color: '#003d29', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 14 }}>calendar_month</span> Book Slot
-                  </button>
+                  <>
+                    <button onClick={() => setBookingRequest(r)} style={{ padding: '0.45rem 1rem', background: 'linear-gradient(135deg,#00a572,#4edea3)', color: '#003d29', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 14 }}>calendar_month</span> Book Slot
+                    </button>
+                    <button onClick={() => handleInstantMeet(r)} style={{ padding: '0.45rem 0.875rem', background: 'rgba(255,68,68,0.15)', color: '#ff6b6b', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, border: '1px solid rgba(255,68,68,0.3)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 14 }}>videocam</span> Instant Meet
+                    </button>
+                  </>
                 )}
                 {r.status === 'slot_booked' && (() => {
                   const now = Date.now();
@@ -1405,15 +1460,38 @@ export default function AlumniDashboard() {
                   const endMs = scheduledMs + 2 * 60 * 60 * 1000;
                   const isEnded = now > endMs;
                   const canJoin = !isEnded && now >= scheduledMs - 5 * 60 * 1000;
+                  const joinUrl = r.roomId && r.roomId.startsWith('http') ? r.roomId : `/interview/${r.id}`;
+                  const isGoogleMeet = joinUrl.includes('meet.google.com');
                   return (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
-                      {isEnded ? (<div style={{ padding: '0.45rem 1rem', background: 'rgba(100,100,100,0.12)', color: '#6b7280', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 5, opacity: 0.7 }}><span className="material-symbols-outlined" style={{ fontSize: 14 }}>videocam_off</span> Ended</div>) : canJoin ? (
-                        <a href={`/interview/${r.id}`} style={{ padding: '0.45rem 1rem', background: 'linear-gradient(135deg,#00a572,#4edea3)', color: '#003d29', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 5 }}>
-                          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>videocam</span> Join Now
-                        </a>
+                      {isEnded ? (
+                        <div style={{ padding: '0.45rem 1rem', background: 'rgba(100,100,100,0.12)', color: '#6b7280', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 5, opacity: 0.7 }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>videocam_off</span> Ended
+                        </div>
+                      ) : canJoin ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
+                          <a href={joinUrl} target={joinUrl.startsWith('http') ? "_blank" : undefined} rel="noopener noreferrer"
+                            style={{ padding: '0.45rem 1rem', background: isGoogleMeet ? 'linear-gradient(135deg,#1a73e8,#4285f4)' : 'linear-gradient(135deg,#00a572,#4edea3)', color: '#fff', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 5 }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>videocam</span>
+                            {isGoogleMeet ? 'Start Meeting' : 'Join Now'}
+                          </a>
+                          {isGoogleMeet && (
+                            <div style={{ fontSize: '0.6rem', color: 'rgba(199,196,216,0.5)', textAlign: 'right' }}>
+                              You are the host — students wait until you join
+                            </div>
+                          )}
+                        </div>
                       ) : (
-                        <div style={{ padding: '0.35rem 0.75rem', background: 'rgba(78,222,163,0.1)', border: '1px solid rgba(78,222,163,0.2)', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, color: '#4edea3', textAlign: 'right' }}>
-                          📅 {new Date(r.scheduledTime).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
+                          <div style={{ padding: '0.35rem 0.75rem', background: 'rgba(78,222,163,0.1)', border: '1px solid rgba(78,222,163,0.2)', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, color: '#4edea3', textAlign: 'right' }}>
+                            📅 {new Date(r.scheduledTime).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                          {isGoogleMeet && (
+                            <a href={joinUrl} target="_blank" rel="noopener noreferrer"
+                              style={{ padding: '0.3rem 0.6rem', background: 'rgba(26,115,232,0.15)', border: '1px solid rgba(26,115,232,0.3)', color: '#60a5fa', borderRadius: 7, fontSize: '0.6rem', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <span className="material-symbols-outlined" style={{ fontSize: 12 }}>open_in_new</span> Open Meet Link
+                            </a>
+                          )}
                         </div>
                       )}
                       <button onClick={() => setReschedulingRequest(r)} style={{ padding: '0.35rem 0.75rem', background: 'rgba(255,185,95,0.1)', border: '1px solid rgba(255,185,95,0.25)', borderRadius: 8, fontSize: '0.6rem', fontWeight: 700, color: '#ffb95f', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -1537,12 +1615,13 @@ export default function AlumniDashboard() {
                           const endMs = scheduledMs + 2 * 60 * 60 * 1000;
                           const isEnded = now > endMs;
                           const canJoin = !isEnded && now >= scheduledMs - 5 * 60 * 1000;
+                          const joinUrl = r.roomId && r.roomId.startsWith('http') ? r.roomId : `/interview/${r.roomId || r.id}`;
                           return isEnded ? (
                             <div style={{ fontSize: '0.65rem', color: '#6b7280', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4, opacity: 0.7 }}>
                               <span className="material-symbols-outlined" style={{ fontSize: 13 }}>videocam_off</span> Ended
                             </div>
                           ) : canJoin ? (
-                            <a href={`/interview/${r.roomId}`} style={{ padding: '0.35rem 0.75rem', background: 'linear-gradient(135deg,#00a572,#4edea3)', color: '#003d29', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <a href={joinUrl} target={joinUrl.startsWith('http') ? "_blank" : undefined} rel="noopener noreferrer" style={{ padding: '0.35rem 0.75rem', background: 'linear-gradient(135deg,#00a572,#4edea3)', color: '#003d29', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
                               <span className="material-symbols-outlined" style={{ fontSize: 13 }}>videocam</span> Join
                             </a>
                           ) : (
