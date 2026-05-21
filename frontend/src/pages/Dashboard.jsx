@@ -189,7 +189,14 @@ export default function Dashboard() {
 
     if (user?.id) {
       getUserById(user.id).then(u => {
-        const pd = u?.profile_data || JSON.parse(localStorage.getItem('alumnex_profile') || '{}');
+        // profile_data from Supabase may be a raw JSON string — always parse it
+        let rawPd = u?.profile_data;
+        if (typeof rawPd === 'string') {
+          try { rawPd = JSON.parse(rawPd); } catch { rawPd = {}; }
+        }
+        const pd = (rawPd && Object.keys(rawPd).length > 0)
+          ? rawPd
+          : JSON.parse(localStorage.getItem('alumnex_profile') || '{}');
         setProfileData(pd);
         if (Object.keys(pd).length > 0) {
           api.profileStrength(pd).then(r => { if (r && !r.error) setAiProfileStrength(r); }).catch(() => {});

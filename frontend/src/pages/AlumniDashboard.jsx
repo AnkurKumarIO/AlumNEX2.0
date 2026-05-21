@@ -3,9 +3,10 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import AlumNexLogo from '../AlumNexLogo';
 import { getRequests, acceptRequestOnly, bookSlot, rescheduleSlot, declineRequest, formatScheduledTime } from '../interviewRequests';
-import { api } from '../api';
+import { api, SOCKET_URL } from '../api';
 import { getAllAlumni, getRequestsForAlumni, getUserById } from '../lib/db';
 import { supabase } from '../lib/supabaseClient';
+import { io } from 'socket.io-client';
 import { useInterviewRequests } from '../hooks/useInterviewRequests';
 import { useNotifications } from '../hooks/useNotifications';
 import SettingsPage from './SettingsPage';
@@ -776,7 +777,12 @@ export default function AlumniDashboard() {
             scheduledTime: r.scheduled_time || null,
             roomId:        r.room_id || null,
             createdAt:     r.created_at,
-            studentProfile: r.student_profile_snapshot || r.student?.profile_data || null,
+            studentProfile: (() => {
+              const raw = r.student_profile_snapshot || r.student?.profile_data || null;
+              if (!raw) return null;
+              if (typeof raw === 'string') { try { return JSON.parse(raw); } catch { return null; } }
+              return raw;
+            })(),
           }));
           const local = JSON.parse(localStorage.getItem('alumnex_interview_requests') || '[]');
           mapped.forEach(dbReq => {
@@ -839,10 +845,38 @@ export default function AlumniDashboard() {
 
     setupRealtime();
 
+    // Socket.io listener — backend emits 'new_request' on POST /requests
+    // This lets us prepend the new card instantly without waiting for Supabase Realtime
+    let socket = null;
+    const alumniIdForSocket = user.id;
+    const isMockIdForSocket = !alumniIdForSocket ||
+      String(alumniIdForSocket).startsWith('alm-') ||
+      String(alumniIdForSocket).startsWith('stu-');
+
+    if (!isMockIdForSocket) {
+      socket = io(`${SOCKET_URL}/notifications`, {
+        transports: ['websocket', 'polling'],
+        withCredentials: true,
+      });
+      socket.on('connect', () => {
+        socket.emit('join', alumniIdForSocket);
+      });
+      socket.on('new_request', (newReq) => {
+        if (!isMounted) return;
+        setLiveRequests(prev => {
+          if (prev.some(r => r.id === newReq.id)) return prev;
+          return [newReq, ...prev];
+        });
+      });
+    }
+
     return () => {
       isMounted = false;
       if (channel) {
         try { supabase.removeChannel(channel); } catch {}
+      }
+      if (socket) {
+        socket.disconnect();
       }
     };
   }, [user.name, user.id, localRefresh]);
@@ -1402,9 +1436,14 @@ export default function AlumniDashboard() {
                   </>
                 )}
                 {r.status === 'accepted' && (
-                  <button onClick={() => setBookingRequest(r)} style={{ padding: '0.45rem 1rem', background: 'linear-gradient(135deg,#00a572,#4edea3)', color: '#003d29', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 14 }}>calendar_month</span> Book Slot
-                  </button>
+                  <>
+                    <button onClick={() => setBookingRequest(r)} style={{ padding: '0.45rem 1rem', background: 'linear-gradient(135deg,#00a572,#4edea3)', color: '#003d29', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 14 }}>calendar_month</span> Book Slot
+                    </button>
+                    <button onClick={() => handleInstantMeet(r)} style={{ padding: '0.45rem 0.875rem', background: 'rgba(255,68,68,0.15)', color: '#ff6b6b', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, border: '1px solid rgba(255,68,68,0.3)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 14 }}>videocam</span> Instant Meet
+                    </button>
+                  </>
                 )}
                 {r.status === 'slot_booked' && (() => {
                   const now = Date.now();

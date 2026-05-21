@@ -72,6 +72,27 @@ router.post('/', async (req, res) => {
     const io = req.app.get('io');
     if (io) {
       io.of('/notifications').to(alumniId).emit('notification', notification);
+      // Also emit new_request so AlumniDashboard can prepend without a full re-fetch
+      io.of('/notifications').to(alumniId).emit('new_request', {
+        id:            request.request_id,
+        studentName:   request.student?.name || '',
+        studentId:     request.student_id,
+        alumniName:    request.alumni?.name || '',
+        alumniId:      request.alumni_id,
+        topic:         request.topic,
+        message:       request.message || '',
+        status:        'pending',
+        scheduledTime: null,
+        roomId:        null,
+        createdAt:     request.createdAt,
+        studentProfile: request.student_profile_snapshot
+          ? JSON.parse(request.student_profile_snapshot)
+          : (request.student?.profile_data
+              ? (typeof request.student.profile_data === 'string'
+                  ? JSON.parse(request.student.profile_data)
+                  : request.student.profile_data)
+              : null),
+      });
     }
 
     res.json({ ...request, id: request.request_id });

@@ -4,6 +4,7 @@
  */
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { emitRealtimeSync } from '../lib/realtimeSync';
 
 export function useInterviewRequests(userId, userRole) {
   const [requests, setRequests] = useState([]);
@@ -34,21 +35,30 @@ export function useInterviewRequests(userId, userRole) {
       
       if (!error && data) {
         // Normalize to match frontend format
-        const normalized = data.map(r => ({
-          id: r.request_id,
-          studentName: r.student?.name || r.student_name || '',
-          studentId: r.student_id,
-          alumniName: r.alumni?.name || r.alumni_name || '',
-          alumniId: r.alumni_id,
-          topic: r.topic,
-          message: r.message || '',
-          status: (r.status || 'PENDING').toLowerCase(),
-          scheduledTime: r.scheduled_time || null,
-          roomId: r.room_id || null,
-          createdAt: r.created_at,
-          studentProfile: r.student_profile_snapshot || r.student?.profile_data || null,
-        }));
+        const normalized = data.map(r => {
+          // profile_data from Supabase may be a raw JSON string — parse it
+          const parseJson = (v) => {
+            if (!v) return null;
+            if (typeof v === 'string') { try { return JSON.parse(v); } catch { return null; } }
+            return v;
+          };
+          return {
+            id: r.request_id,
+            studentName: r.student?.name || r.student_name || '',
+            studentId: r.student_id,
+            alumniName: r.alumni?.name || r.alumni_name || '',
+            alumniId: r.alumni_id,
+            topic: r.topic,
+            message: r.message || '',
+            status: (r.status || 'PENDING').toLowerCase(),
+            scheduledTime: r.scheduled_time || null,
+            roomId: r.room_id || null,
+            createdAt: r.created_at,
+            studentProfile: parseJson(r.student_profile_snapshot) || parseJson(r.student?.profile_data) || null,
+          };
+        });
         setRequests(normalized);
+        emitRealtimeSync({ type: 'requests_updated' });
       }
     } catch (err) {
       console.error('Failed to load initial requests:', err.message);
@@ -84,8 +94,31 @@ export function useInterviewRequests(userId, userRole) {
           table: 'interview_requests',
           filter,
         },
-        () => {
+        (payload) => {
           console.log('[Realtime] New interview request');
+          // Optimistically prepend from payload, then do a full re-fetch to get joined data
+          const r = payload.new;
+          if (r) {
+            const optimistic = {
+              id: r.request_id,
+              studentName: r.student_name || '',
+              studentId: r.student_id,
+              alumniName: r.alumni_name || '',
+              alumniId: r.alumni_id,
+              topic: r.topic,
+              message: r.message || '',
+              status: (r.status || 'PENDING').toLowerCase(),
+              scheduledTime: r.scheduled_time || null,
+              roomId: r.room_id || null,
+              createdAt: r.created_at,
+              studentProfile: null,
+            };
+            setRequests(prev => {
+              if (prev.some(x => x.id === optimistic.id)) return prev;
+              return [optimistic, ...prev];
+            });
+          }
+          // Full re-fetch to get joined student/alumni data
           loadInitialRequests();
         }
       )
