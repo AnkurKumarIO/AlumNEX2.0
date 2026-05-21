@@ -126,12 +126,18 @@ function ensureArray(value) {
 async function ask(systemPrompt, userPrompt, maxTokens = 512, clientOverride = null) {
   const client = clientOverride || groq;
   if (!client) throw new Error('Groq client not initialized — key is missing');
+
+  // TRUNCATION SAFEGUARD: Limit user prompt to ~8,000 characters (~2,000 tokens).
+  // This ensures we stay well within the 12,000 TPM limit reported by users.
+  const safeUserPrompt = typeof userPrompt === 'string'
+    ? userPrompt.slice(0, 8000)
+    : JSON.stringify(userPrompt).slice(0, 8000);
   
   const res = await client.chat.completions.create({
     model: MODEL,
     messages: [
       { role: 'system', content: systemPrompt },
-      { role: 'user',   content: userPrompt   },
+      { role: 'user',   content: safeUserPrompt },
     ],
     max_tokens: maxTokens,
     temperature: 0.4,

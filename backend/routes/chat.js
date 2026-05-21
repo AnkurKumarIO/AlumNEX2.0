@@ -19,12 +19,20 @@ Keep responses concise (2-4 sentences max). Be encouraging but rigorous.`
 Give specific, actionable advice. When asked for a question, provide one relevant interview question. 
 Keep responses concise (2-4 sentences max). Be warm and encouraging.`;
 
+  // TRUNCATION SAFEGUARD: Limit message history to prevent 413 errors.
+  // We keep the last 10 messages and truncate EACH to 3000 chars,
+  // ensuring the total payload is well under the 12,000 token limit.
+  const safeMessages = (messages || []).slice(-10).map(m => ({
+    ...m,
+    content: typeof m.content === 'string' ? m.content.slice(0, 3000) : m.content
+  }));
+
   try {
     const completion = await groq.chat.completions.create({
       model: MODEL,
       messages: [
         { role: 'system', content: systemPrompt },
-        ...messages.slice(-10), // last 10 messages for context
+        ...safeMessages,
       ],
       temperature: 0.7,
       max_tokens: 256,
@@ -44,7 +52,10 @@ router.post('/questions', async (req, res) => {
 
   if (!groq) return res.status(503).json({ error: 'AI not configured.' });
 
-  const prompt = `Generate ${count} diverse mock interview questions for a software engineering candidate${topic ? ` focusing on ${topic}` : ''}.
+  // Safeguard: truncate topic to prevent payload issues
+  const safeTopic = typeof topic === 'string' ? topic.slice(0, 1000) : topic;
+
+  const prompt = `Generate ${count} diverse mock interview questions for a software engineering candidate${safeTopic ? ` focusing on ${safeTopic}` : ''}.
 Mix behavioral, technical, and system design questions.
 
 Return ONLY a JSON array:
