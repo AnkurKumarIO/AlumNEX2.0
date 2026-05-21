@@ -194,6 +194,47 @@ router.post('/alumni/login', async (req, res) => {
   }
 });
 
+// ── POST /auth/change-password ────────────────────────────────────────────────
+router.post('/change-password', async (req, res) => {
+  try {
+    const { userId, currentPassword, newPassword } = req.body;
+
+    if (!userId || !currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'All fields are required.' });
+    }
+
+    // Look up user in Prisma to get email
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+
+    // Verify current password by attempting a Supabase sign-in
+    const { error: signInErr } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: currentPassword,
+    });
+    if (signInErr) {
+      return res.status(401).json({ error: 'Incorrect current password.' });
+    }
+
+    // Update password in Supabase Auth (persists authentication)
+    const { error: updateErr } = await supabase.auth.admin.updateUserById(userId, {
+      password: newPassword,
+    });
+    if (updateErr) throw updateErr;
+
+    // Also update password field in Prisma so DB stays in sync
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password: newPassword },
+    }).catch(e => console.warn('[Auth] Prisma password update failed:', e.message));
+
+    res.json({ message: 'Password updated successfully.' });
+  } catch (err) {
+    console.error('Change Password Error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── POST /auth/tnp/login ──────────────────────────────────────────────────────
 router.post('/tnp/login', async (req, res) => {
   try {

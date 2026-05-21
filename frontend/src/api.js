@@ -547,6 +547,22 @@ export const api = {
     }).then(r => r.json()),
     async () => { await mockDelay(200); return { key, value }; }
   ),
+
+  changePassword: (userId, currentPassword, newPassword) => callOrMock(
+    () => fetch(`${API_BASE}/auth/change-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, currentPassword, newPassword }),
+    }).then(async r => {
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Password update failed.');
+      return data;
+    }),
+    async () => {
+      await mockDelay(600);
+      throw new Error('Cannot change password in offline/mock mode.');
+    }
+  ),
 };
 
 export const SOCKET_URL = ROOT_BASE;

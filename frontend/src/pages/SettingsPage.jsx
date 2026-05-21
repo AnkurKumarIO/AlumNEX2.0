@@ -25,6 +25,12 @@ export default function SettingsPage({ role }) {
   const [showPwModal, setShowPwModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
+  // Change-password modal state
+  const [pwForm, setPwForm] = useState({ current: '', newPw: '', confirm: '' });
+  const [pwError, setPwError] = useState('');
+  const [pwSuccess, setPwSuccess] = useState('');
+  const [pwLoading, setPwLoading] = useState(false);
+
   // Google Calendar OAuth state
   const [googleConnected, setGoogleConnected] = useState(false);
   const [googleEmail, setGoogleEmail] = useState('');
@@ -481,14 +487,100 @@ export default function SettingsPage({ role }) {
         {/* Change Password Modal */}
         {showPwModal && (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ background: '#171f33', borderRadius: 16, padding: '2rem', width: 400, border: '1px solid rgba(195,192,255,0.15)' }}>
+            <div style={{ background: '#171f33', borderRadius: 16, padding: '2rem', width: 420, border: '1px solid rgba(195,192,255,0.15)' }}>
               <h3 style={{ fontWeight: 700, marginBottom: '1.5rem' }}>Change Password</h3>
-              <div style={{ marginBottom: '1rem' }}><label style={lbl}>Current Password</label><input type="password" placeholder="••••••••" style={inp} /></div>
-              <div style={{ marginBottom: '1rem' }}><label style={lbl}>New Password</label><input type="password" placeholder="••••••••" style={inp} /></div>
-              <div style={{ marginBottom: '1.5rem' }}><label style={lbl}>Confirm New Password</label><input type="password" placeholder="••••••••" style={inp} /></div>
+
+              {/* Error message */}
+              {pwError && (
+                <div style={{ marginBottom: '1rem', padding: '0.6rem 1rem', background: 'rgba(255,180,171,0.12)', border: '1px solid rgba(255,180,171,0.35)', borderRadius: 8, color: '#ffb4ab', fontSize: '0.82rem', fontWeight: 600 }}>
+                  {pwError}
+                </div>
+              )}
+
+              {/* Success message */}
+              {pwSuccess && (
+                <div style={{ marginBottom: '1rem', padding: '0.6rem 1rem', background: 'rgba(78,222,163,0.12)', border: '1px solid rgba(78,222,163,0.3)', borderRadius: 8, color: '#4edea3', fontSize: '0.82rem', fontWeight: 600 }}>
+                  {pwSuccess}
+                </div>
+              )}
+
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={lbl}>Current Password</label>
+                <input
+                  id="pw-current"
+                  type="password"
+                  placeholder="••••••••"
+                  value={pwForm.current}
+                  onChange={e => { setPwForm(f => ({ ...f, current: e.target.value })); setPwError(''); }}
+                  style={inp}
+                />
+              </div>
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={lbl}>New Password</label>
+                <input
+                  id="pw-new"
+                  type="password"
+                  placeholder="••••••••"
+                  value={pwForm.newPw}
+                  onChange={e => { setPwForm(f => ({ ...f, newPw: e.target.value })); setPwError(''); }}
+                  style={inp}
+                />
+              </div>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={lbl}>Confirm New Password</label>
+                <input
+                  id="pw-confirm"
+                  type="password"
+                  placeholder="••••••••"
+                  value={pwForm.confirm}
+                  onChange={e => { setPwForm(f => ({ ...f, confirm: e.target.value })); setPwError(''); }}
+                  style={inp}
+                />
+              </div>
+
               <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={() => { setShowPwModal(false); flashSaved(); }} style={{ flex: 1, padding: '0.65rem', background: 'linear-gradient(135deg,#4f46e5,#c3c0ff)', color: '#1d00a5', border: 'none', borderRadius: 10, fontWeight: 700, cursor: 'pointer' }}>Update Password</button>
-                <button onClick={() => setShowPwModal(false)} style={{ flex: 1, padding: '0.65rem', background: 'transparent', border: '1px solid rgba(70,69,85,0.3)', borderRadius: 10, color: '#c7c4d8', fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
+                <button
+                  id="pw-submit"
+                  disabled={pwLoading}
+                  onClick={async () => {
+                    setPwError('');
+                    setPwSuccess('');
+
+                    // Bug #3 — all fields mandatory
+                    if (!pwForm.current.trim() || !pwForm.newPw.trim() || !pwForm.confirm.trim()) {
+                      setPwError('All fields are required.');
+                      return;
+                    }
+
+                    // Bug #2 — new and confirm must match
+                    if (pwForm.newPw !== pwForm.confirm) {
+                      setPwError('New and confirm new password do not match.');
+                      return;
+                    }
+
+                    // Bug #1 & #4 — verify current password and persist update
+                    setPwLoading(true);
+                    try {
+                      await api.changePassword(user?.id, pwForm.current, pwForm.newPw);
+                      setPwSuccess('Password updated successfully!');
+                      setPwForm({ current: '', newPw: '', confirm: '' });
+                      setTimeout(() => { setShowPwModal(false); setPwSuccess(''); }, 1800);
+                    } catch (err) {
+                      setPwError(err.message || 'Failed to update password.');
+                    } finally {
+                      setPwLoading(false);
+                    }
+                  }}
+                  style={{ flex: 1, padding: '0.65rem', background: pwLoading ? 'rgba(79,70,229,0.5)' : 'linear-gradient(135deg,#4f46e5,#c3c0ff)', color: '#1d00a5', border: 'none', borderRadius: 10, fontWeight: 700, cursor: pwLoading ? 'not-allowed' : 'pointer', transition: 'opacity 0.2s' }}
+                >
+                  {pwLoading ? 'Updating…' : 'Update Password'}
+                </button>
+                <button
+                  onClick={() => { setShowPwModal(false); setPwForm({ current: '', newPw: '', confirm: '' }); setPwError(''); setPwSuccess(''); }}
+                  style={{ flex: 1, padding: '0.65rem', background: 'transparent', border: '1px solid rgba(70,69,85,0.3)', borderRadius: 10, color: '#c7c4d8', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
               </div>
             </div>
           </div>
