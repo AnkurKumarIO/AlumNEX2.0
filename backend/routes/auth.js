@@ -96,13 +96,31 @@ router.post('/student/login', async (req, res) => {
 
     if (!userEmail || !password) return res.status(400).json({ error: 'Credentials required.' });
 
-    // Sign in via Supabase Auth
-    const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({ email: userEmail, password });
-    if (authErr) return res.status(401).json({ error: 'Invalid credentials.' });
-
-    // Fetch from Prisma
+    // Fetch from Prisma first
     const user = await prisma.user.findUnique({ where: { email: userEmail } });
     if (!user || user.role !== 'STUDENT') return res.status(401).json({ error: 'Not a student account.' });
+
+    // Validate password against Prisma database
+    if (user.password && user.password !== password) {
+      return res.status(401).json({ error: 'Invalid credentials.' });
+    }
+
+    if (supabase) {
+      // Sign in via Supabase Auth
+      const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({ email: userEmail, password });
+      if (authErr) return res.status(401).json({ error: 'Invalid credentials.' });
+
+      // Auto-migrate plain-text password to Prisma if missing
+      if (!user.password) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { password },
+        }).catch(e => console.warn('[Auth] Auto-migration of password failed:', e.message));
+      }
+    } else if (!user.password) {
+      // If supabase is offline/disabled and user has no password in database
+      return res.status(401).json({ error: 'Invalid credentials.' });
+    }
 
     const profileData = JSON.parse(user.profile_data || '{}');
     res.json({ message: 'Login successful', token: makeToken(user), user: { id: user.id, name: user.name, role: user.role, email: user.email, department: user.department, profile_data: profileData } });
@@ -136,6 +154,7 @@ router.post('/alumni/register', async (req, res) => {
         id:                  authData.user.id,
         role:                'ALUMNI',
         username:            username || null,
+        password:            password || null,
         name,
         email,
         department:          department || 'General',
@@ -178,13 +197,31 @@ router.post('/alumni/login', async (req, res) => {
 
     if (!userEmail || !password) return res.status(400).json({ error: 'Credentials required.' });
 
-    // Sign in via Supabase Auth
-    const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({ email: userEmail, password });
-    if (authErr) return res.status(401).json({ error: 'Invalid credentials.' });
-
-    // Fetch from Prisma
+    // Fetch from Prisma first
     const user = await prisma.user.findUnique({ where: { email: userEmail } });
     if (!user || user.role !== 'ALUMNI') return res.status(401).json({ error: 'Not an alumni account.' });
+
+    // Validate password against Prisma database
+    if (user.password && user.password !== password) {
+      return res.status(401).json({ error: 'Invalid credentials.' });
+    }
+
+    if (supabase) {
+      // Sign in via Supabase Auth
+      const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({ email: userEmail, password });
+      if (authErr) return res.status(401).json({ error: 'Invalid credentials.' });
+
+      // Auto-migrate plain-text password to Prisma if missing
+      if (!user.password) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { password },
+        }).catch(e => console.warn('[Auth] Auto-migration of password failed:', e.message));
+      }
+    } else if (!user.password) {
+      // If supabase is offline/disabled and user has no password in database
+      return res.status(401).json({ error: 'Invalid credentials.' });
+    }
 
     const profileData = JSON.parse(user.profile_data || '{}');
     res.json({ message: 'Login successful', token: makeToken(user), user: { id: user.id, name: user.name, role: user.role, email: user.email, department: user.department, profile_data: profileData } });
@@ -207,26 +244,36 @@ router.post('/change-password', async (req, res) => {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return res.status(404).json({ error: 'User not found.' });
 
-    // Verify current password by attempting a Supabase sign-in
-    const { error: signInErr } = await supabase.auth.signInWithPassword({
-      email: user.email,
-      password: currentPassword,
-    });
-    if (signInErr) {
+    // 1. Verify current password against Prisma database first
+    if (user.password && user.password !== currentPassword) {
       return res.status(401).json({ error: 'Incorrect current password.' });
     }
 
-    // Update password in Supabase Auth (persists authentication)
-    const { error: updateErr } = await supabase.auth.admin.updateUserById(userId, {
-      password: newPassword,
-    });
-    if (updateErr) throw updateErr;
+    // 2. Verify and update in Supabase Auth (if active)
+    if (supabase) {
+      const { error: signInErr } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentPassword,
+      });
+      if (signInErr) {
+        return res.status(401).json({ error: 'Incorrect current password.' });
+      }
 
-    // Also update password field in Prisma so DB stays in sync
+      // Update password in Supabase Auth (persists authentication)
+      const { error: updateErr } = await supabase.auth.admin.updateUserById(userId, {
+        password: newPassword,
+      });
+      if (updateErr) throw updateErr;
+    } else if (!user.password) {
+      // If supabase is null/offline and user doesn't have a password in database, we can't verify it.
+      return res.status(401).json({ error: 'Incorrect current password.' });
+    }
+
+    // 3. Update password field in Prisma so DB stays in sync
     await prisma.user.update({
       where: { id: userId },
       data: { password: newPassword },
-    }).catch(e => console.warn('[Auth] Prisma password update failed:', e.message));
+    });
 
     res.json({ message: 'Password updated successfully.' });
   } catch (err) {
