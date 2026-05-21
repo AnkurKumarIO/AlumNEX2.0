@@ -31,9 +31,14 @@ function StudentDetailModal({ request, onClose, onAccept }) {
       if (!sid || String(sid).startsWith('stu-') || String(sid).startsWith('alm-')) return;
       try {
         const user = await getUserById(sid);
-        const dbProfile = user?.profile_data || {};
+        // profile_data from Supabase may be a JSON string — parse it
+        let dbProfile = user?.profile_data || {};
+        if (typeof dbProfile === 'string') {
+          try { dbProfile = JSON.parse(dbProfile); } catch { dbProfile = {}; }
+        }
         if (!cancelled && dbProfile && Object.keys(dbProfile).length > 0) {
-          setP(prev => ({ ...dbProfile, ...prev }));
+          // Live DB profile takes priority over the snapshot stored at request time
+          setP(prev => ({ ...prev, ...dbProfile }));
         }
       } catch {}
     };
@@ -404,14 +409,18 @@ function RescheduleModal({ request, onClose, onRescheduled }) {
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
   };
 
-  const handleReschedule = () => {
+  const handleReschedule = async () => {
     const h = parseInt(timeHH, 10);
     const m = parseInt(timeMM, 10);
     if (isNaN(h) || h < 1 || h > 12) { setTimeError('Hour must be 1-12'); return; }
     if (isNaN(m) || m < 0 || m > 59) { setTimeError('Minutes must be 00-59'); return; }
     setTimeError('');
     const newTime = new Date(`${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(selectedDate).padStart(2, '0')}T${to24h()}`).toISOString();
-    rescheduleSlot(request.id, newTime);
+    try {
+      await rescheduleSlot(request.id, newTime);
+    } catch (e) {
+      console.error('Reschedule failed:', e.message);
+    }
     setDone(true);
     setTimeout(() => { onRescheduled(newTime); onClose(); }, 1600);
   };
