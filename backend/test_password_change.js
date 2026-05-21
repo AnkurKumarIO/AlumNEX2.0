@@ -2,7 +2,7 @@
  * Quick Password Change Test
  * Tests the password change functionality for alumni users
  * 
- * Run: node test_password_change.js
+ * Run:  
  */
 
 const http = require('http');
@@ -158,3 +158,4 @@ async function main() {
 }
 
 main();
+
