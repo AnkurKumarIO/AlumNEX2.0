@@ -245,17 +245,29 @@ router.post('/change-password', async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found.' });
 
     // 1. Verify current password against Prisma database first
-    if (user.password && user.password !== currentPassword) {
-      return res.status(401).json({ error: 'Incorrect current password.' });
+    if (!user.password) {
+      // User has no password in Prisma, must verify via Supabase
+      if (!supabase) {
+        return res.status(401).json({ error: 'Incorrect current password.' });
+      }
+    } else {
+      // User has password in Prisma, verify it
+      if (user.password !== currentPassword) {
+        return res.status(401).json({ error: 'Incorrect current password.' });
+      }
     }
 
     // 2. Verify and update in Supabase Auth (if active)
     if (supabase) {
+      // Try to verify current password with Supabase
       const { error: signInErr } = await supabase.auth.signInWithPassword({
         email: user.email,
         password: currentPassword,
       });
+      
+      // If Supabase verification fails, return appropriate error
       if (signInErr) {
+        console.error('[Change Password] Supabase verification failed:', signInErr.message);
         return res.status(401).json({ error: 'Incorrect current password.' });
       }
 
@@ -263,10 +275,10 @@ router.post('/change-password', async (req, res) => {
       const { error: updateErr } = await supabase.auth.admin.updateUserById(userId, {
         password: newPassword,
       });
-      if (updateErr) throw updateErr;
-    } else if (!user.password) {
-      // If supabase is null/offline and user doesn't have a password in database, we can't verify it.
-      return res.status(401).json({ error: 'Incorrect current password.' });
+      if (updateErr) {
+        console.error('[Change Password] Supabase update failed:', updateErr.message);
+        throw new Error('Failed to update password in authentication system.');
+      }
     }
 
     // 3. Update password field in Prisma so DB stays in sync
@@ -275,6 +287,7 @@ router.post('/change-password', async (req, res) => {
       data: { password: newPassword },
     });
 
+    console.log(`[Change Password] Password updated successfully for user ${userId}`);
     res.json({ message: 'Password updated successfully.' });
   } catch (err) {
     console.error('Change Password Error:', err.message);

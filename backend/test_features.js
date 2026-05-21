@@ -189,6 +189,62 @@ async function testAlumniLogin() {
   }
 }
 
+async function testPasswordChange() {
+  console.log('\n━━━ 5.5. PASSWORD CHANGE ━━━');
+  try {
+    if (!alumniId) {
+      log('Password change test', false, 'No alumniId available');
+      return;
+    }
+
+    // Test 1: Try to change password with wrong current password
+    const wrongPwResult = await request('POST', '/auth/change-password', {
+      userId: alumniId,
+      currentPassword: 'WrongPassword123!',
+      newPassword: 'NewPassword123!',
+    });
+    log('Change password with wrong current password (should fail)', 
+      wrongPwResult.status === 401 && wrongPwResult.body?.error === 'Incorrect current password.',
+      wrongPwResult.body?.error || `status=${wrongPwResult.status}`);
+
+    // Test 2: Change password with correct current password
+    const newPassword = `NewPass_${TS}!`;
+    const correctPwResult = await request('POST', '/auth/change-password', {
+      userId: alumniId,
+      currentPassword: TEST_ALUMNI.password,
+      newPassword: newPassword,
+    });
+    log('Change password with correct current password', 
+      correctPwResult.status === 200 && correctPwResult.body?.message,
+      correctPwResult.body?.message || correctPwResult.body?.error || `status=${correctPwResult.status}`);
+
+    // Test 3: Try to login with old password (should fail)
+    const oldPwLogin = await request('POST', '/auth/alumni/login', {
+      username: TEST_ALUMNI.username,
+      password: TEST_ALUMNI.password,
+    });
+    log('Login with old password after change (should fail)', 
+      oldPwLogin.status === 401 && oldPwLogin.body?.error === 'Invalid credentials.',
+      oldPwLogin.body?.error || `status=${oldPwLogin.status}`);
+
+    // Test 4: Login with new password (should succeed)
+    const newPwLogin = await request('POST', '/auth/alumni/login', {
+      username: TEST_ALUMNI.username,
+      password: newPassword,
+    });
+    log('Login with new password after change', 
+      newPwLogin.status === 200 && newPwLogin.body?.user,
+      newPwLogin.body?.message || newPwLogin.body?.error || `status=${newPwLogin.status}`);
+
+    // Update TEST_ALUMNI password for subsequent tests
+    if (newPwLogin.status === 200) {
+      TEST_ALUMNI.password = newPassword;
+    }
+  } catch (e) {
+    log('Password change test', false, e.message);
+  }
+}
+
 async function testGetUsers() {
   console.log('\n━━━ 6. USER MANAGEMENT ━━━');
   try {
@@ -514,6 +570,7 @@ async function main() {
   await testTNPLogin();
   await testStudentRegistration();
   await testAlumniLogin();
+  await testPasswordChange();
   await testGetUsers();
   await testAlumniDiscovery();
   await testInterviewRequests();
