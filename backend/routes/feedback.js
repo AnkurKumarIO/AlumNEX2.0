@@ -10,7 +10,7 @@ const prisma = require('../lib/prisma');
  */
 router.post('/', async (req, res) => {
   try {
-    const { roomId, studentId, alumniId, studentName, alumniName, topic, meetLink, role, rating, feedback } = req.body;
+    const { roomId, studentId, alumniId, studentName, alumniName, topic, meetLink, role, rating, feedback, requestId } = req.body;
 
     if (!roomId || !studentId || !alumniId || !role) {
       return res.status(400).json({ error: 'roomId, studentId, alumniId, and role are required' });
@@ -54,6 +54,31 @@ router.post('/', async (req, res) => {
         data.alumni_feedback = feedback || null;
       }
       session = await prisma.sessionFeedback.create({ data });
+    }
+
+    // Mark corresponding interview request as COMPLETED
+    try {
+      let finalRequestId = requestId;
+      if (!finalRequestId && roomId) {
+        // Try to infer requestId from roomId if it's a generated one
+        // e.g., room-550e8400-e29b-41d4-a716-446655440000
+        const match = roomId.match(/room-([a-f0-9-]{36})/i);
+        if (match) finalRequestId = match[1];
+      }
+
+      if (finalRequestId) {
+        await prisma.interviewRequest.updateMany({
+          where: {
+            OR: [
+              { request_id: finalRequestId },
+              { room_id: roomId }
+            ]
+          },
+          data: { status: 'COMPLETED' }
+        });
+      }
+    } catch (reqErr) {
+      console.warn('[Feedback] Could not update request status:', reqErr.message);
     }
 
     res.json({ success: true, session });
