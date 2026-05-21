@@ -28,7 +28,10 @@ app.use(cors({
   },
   credentials: true,
 }));
-app.use(express.json());
+
+// Set limit to 10MB to handle large resume text or profile data
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // ── Routes (mounted at root, no /api prefix) ──────────────────────────────────
 app.use('/auth',          require('./routes/auth'));
