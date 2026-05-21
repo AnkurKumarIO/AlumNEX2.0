@@ -76,6 +76,13 @@ function BookModal({ alumni, studentName, onClose, onSent }) {
 
   const handleSend = () => {
     const authUser = JSON.parse(localStorage.getItem('alumnex_user') || localStorage.getItem('alumniconnect_user') || '{}');
+    // Always attach the student's saved profile so alumni can see it immediately
+    const studentProfile = (() => {
+      try {
+        const raw = localStorage.getItem('alumnex_profile');
+        return raw ? JSON.parse(raw) : null;
+      } catch { return null; }
+    })();
     sendRequest({
       studentName,
       studentId: authUser.id || studentName,
@@ -84,6 +91,7 @@ function BookModal({ alumni, studentName, onClose, onSent }) {
       alumniRole: alumni.role,
       topic,
       message,
+      studentProfile,
     });
     setSent(true);
     setTimeout(() => { onSent(); onClose(); }, 1800);

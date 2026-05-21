@@ -1408,7 +1408,7 @@ export default function AlumniDashboard() {
                     background: r.status === 'accepted' ? 'rgba(255,185,95,0.15)' : r.status === 'slot_booked' ? 'rgba(78,222,163,0.15)' : 'rgba(195,192,255,0.1)',
                     color: r.status === 'accepted' ? '#ffb95f' : r.status === 'slot_booked' ? '#4edea3' : '#c3c0ff',
                   }}>
-                    {r.status === 'slot_booked' ? '📅 Booked' : r.status === 'accepted' ? '✓ Accepted' : 'â³ Pending'}
+                    {r.status === 'slot_booked' ? '📅 Booked' : r.status === 'accepted' ? '✓ Accepted' : 'Pending'}
                   </span>
                 </div>
                 <div style={{ fontSize: '0.72rem', color: '#c7c4d8' }}>{r.topic}</div>
@@ -1452,15 +1452,37 @@ export default function AlumniDashboard() {
                   const isEnded = now > endMs;
                   const canJoin = !isEnded && now >= scheduledMs - 5 * 60 * 1000;
                   const joinUrl = r.roomId && r.roomId.startsWith('http') ? r.roomId : `/interview/${r.id}`;
+                  const isGoogleMeet = joinUrl.includes('meet.google.com');
                   return (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
-                      {isEnded ? (<div style={{ padding: '0.45rem 1rem', background: 'rgba(100,100,100,0.12)', color: '#6b7280', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 5, opacity: 0.7 }}><span className="material-symbols-outlined" style={{ fontSize: 14 }}>videocam_off</span> Ended</div>) : canJoin ? (
-                        <a href={joinUrl} target={joinUrl.startsWith('http') ? "_blank" : undefined} rel="noopener noreferrer" style={{ padding: '0.45rem 1rem', background: 'linear-gradient(135deg,#00a572,#4edea3)', color: '#003d29', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 5 }}>
-                          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>videocam</span> Join Now
-                        </a>
+                      {isEnded ? (
+                        <div style={{ padding: '0.45rem 1rem', background: 'rgba(100,100,100,0.12)', color: '#6b7280', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 5, opacity: 0.7 }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>videocam_off</span> Ended
+                        </div>
+                      ) : canJoin ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
+                          <a href={joinUrl} target={joinUrl.startsWith('http') ? "_blank" : undefined} rel="noopener noreferrer"
+                            style={{ padding: '0.45rem 1rem', background: isGoogleMeet ? 'linear-gradient(135deg,#1a73e8,#4285f4)' : 'linear-gradient(135deg,#00a572,#4edea3)', color: '#fff', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 5 }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>videocam</span>
+                            {isGoogleMeet ? 'Start Meeting' : 'Join Now'}
+                          </a>
+                          {isGoogleMeet && (
+                            <div style={{ fontSize: '0.6rem', color: 'rgba(199,196,216,0.5)', textAlign: 'right' }}>
+                              You are the host — students wait until you join
+                            </div>
+                          )}
+                        </div>
                       ) : (
-                        <div style={{ padding: '0.35rem 0.75rem', background: 'rgba(78,222,163,0.1)', border: '1px solid rgba(78,222,163,0.2)', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, color: '#4edea3', textAlign: 'right' }}>
-                          📅 {new Date(r.scheduledTime).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
+                          <div style={{ padding: '0.35rem 0.75rem', background: 'rgba(78,222,163,0.1)', border: '1px solid rgba(78,222,163,0.2)', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, color: '#4edea3', textAlign: 'right' }}>
+                            📅 {new Date(r.scheduledTime).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                          {isGoogleMeet && (
+                            <a href={joinUrl} target="_blank" rel="noopener noreferrer"
+                              style={{ padding: '0.3rem 0.6rem', background: 'rgba(26,115,232,0.15)', border: '1px solid rgba(26,115,232,0.3)', color: '#60a5fa', borderRadius: 7, fontSize: '0.6rem', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <span className="material-symbols-outlined" style={{ fontSize: 12 }}>open_in_new</span> Open Meet Link
+                            </a>
+                          )}
                         </div>
                       )}
                       <button onClick={() => setReschedulingRequest(r)} style={{ padding: '0.35rem 0.75rem', background: 'rgba(255,185,95,0.1)', border: '1px solid rgba(255,185,95,0.25)', borderRadius: 8, fontSize: '0.6rem', fontWeight: 700, color: '#ffb95f', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>

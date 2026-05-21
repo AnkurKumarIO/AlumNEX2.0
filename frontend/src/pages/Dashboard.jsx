@@ -21,7 +21,7 @@ const TOPICS = [
   'Career Guidance', 'Resume Review',
 ];
 
-function MentorBookModal({ mentor, studentName, onClose, onSent }) {
+function MentorBookModal({ mentor, studentName, studentProfile, onClose, onSent }) {
   const [topic, setTopic] = useState(TOPICS[0]);
   const [message, setMessage] = useState('');
   const [sent, setSent] = useState(false);
@@ -38,6 +38,7 @@ function MentorBookModal({ mentor, studentName, onClose, onSent }) {
       alumniRole: `${mentor.title} • ${mentor.company}`,
       topic,
       message,
+      studentProfile: studentProfile || null,
     });
     setSent(true);
     setTimeout(() => { onSent(); onClose(); }, 1800);
@@ -312,11 +313,20 @@ export default function Dashboard() {
                               );
                             }
                             if (joinRoomId && isNowJoinable) {
+                              const isGoogleMeet = joinUrl.includes('meet.google.com');
                               return (
-                                <a href={joinUrl} target={joinUrl.startsWith('http') ? "_blank" : undefined} rel="noopener noreferrer"
-                                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.5rem 1.25rem', background: 'linear-gradient(135deg,#00a572,#4edea3)', color: '#003d29', borderRadius: 10, fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none' }}>
-                                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>videocam</span> Join Now
-                                </a>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                  <a href={joinUrl} target={joinUrl.startsWith('http') ? "_blank" : undefined} rel="noopener noreferrer"
+                                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.5rem 1.25rem', background: 'linear-gradient(135deg,#00a572,#4edea3)', color: '#003d29', borderRadius: 10, fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none' }}>
+                                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>videocam</span> Join Now
+                                  </a>
+                                  {isGoogleMeet && (
+                                    <div style={{ fontSize: '0.68rem', color: 'rgba(199,196,216,0.6)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                      <span className="material-symbols-outlined" style={{ fontSize: 13 }}>info</span>
+                                      The alumni (host) must start the meeting first. You may see a waiting screen briefly.
+                                    </div>
+                                  )}
+                                </div>
                               );
                             }
                             if (scheduledTime) {
@@ -487,6 +497,7 @@ export default function Dashboard() {
         <MentorBookModal
           mentor={recommendedMentor}
           studentName={user?.name || 'Student'}
+          studentProfile={profileData}
           onClose={() => setShowMentorBook(false)}
           onSent={() => setMentorBookSent(true)}
         />
