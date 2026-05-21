@@ -167,12 +167,17 @@ function BookButton({ alumni, studentName, onBook }) {
     </div>
   );
   if (existing.status === 'slot_booked') {
-    const canJoin = Date.now() >= new Date(existing.scheduledTime).getTime() - 5 * 60 * 1000;
-    if (canJoin) return (
-      <a href={`/interview/${existing.roomId}`} style={{ width: '100%', padding: '0.6rem', background: 'linear-gradient(135deg,#00a572,#4edea3)', color: '#003d29', border: 'none', borderRadius: 10, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, textDecoration: 'none', boxSizing: 'border-box' }}>
-        <span className="material-symbols-outlined" style={{ fontSize: 15 }}>videocam</span>Join Mock Interview
-      </a>
-    );
+    const canJoin = Date.now() >= new Date(existing.scheduledTime).getTime() - 10 * 60 * 1000;
+    if (canJoin) {
+      const isExternal = existing.roomId && existing.roomId.startsWith('http');
+      const joinUrl = isExternal ? existing.roomId : `/interview/${existing.roomId}?name=${encodeURIComponent(user?.name || 'Student')}`;
+      return (
+        <a href={joinUrl} target={isExternal ? "_blank" : undefined} rel="noopener noreferrer"
+           style={{ width: '100%', padding: '0.6rem', background: 'linear-gradient(135deg,#00a572,#4edea3)', color: '#003d29', border: 'none', borderRadius: 10, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, textDecoration: 'none', boxSizing: 'border-box' }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 15 }}>videocam</span>Join Mock Interview
+        </a>
+      );
+    }
     const formatted = new Date(existing.scheduledTime).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
     return (
       <div style={{ width: '100%', padding: '0.6rem', background: 'rgba(78,222,163,0.08)', border: '1px solid rgba(78,222,163,0.2)', borderRadius: 10, textAlign: 'center' }}>

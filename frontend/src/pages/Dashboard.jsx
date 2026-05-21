@@ -262,7 +262,7 @@ export default function Dashboard() {
                 const req = myRequests.find(r => r.id === n.requestId);
                 const isLive = n.type === 'live';
                 const canJoin = (n.type === 'slot_booked' || isLive) && req?.roomId && req?.scheduledTime &&
-                  Date.now() >= new Date(req.scheduledTime).getTime() - 5 * 60 * 1000;
+                  Date.now() >= new Date(req.scheduledTime).getTime() - 10 * 60 * 1000;
                 const iconMap = { slot_booked: 'event_available', accepted: 'check_circle', declined: 'cancel', live: 'videocam', default: 'notifications' };
                 const colorMap = { slot_booked: '#4edea3', accepted: '#c3c0ff', declined: '#ffb4ab', live: '#ff4444', default: '#c7c4d8' };
                 const bgMap = { slot_booked: 'rgba(78,222,163,0.1)', accepted: 'rgba(195,192,255,0.1)', declined: 'rgba(255,180,171,0.1)', live: 'rgba(255,68,68,0.1)', default: 'rgba(70,69,85,0.1)' };
@@ -291,7 +291,7 @@ export default function Dashboard() {
                             const joinRoomId = n.roomId || req?.roomId || n.requestId || req?.id;
                             const scheduledTime = req?.scheduledTime;
                             const isNowJoinable = scheduledTime
-                              ? Date.now() >= new Date(scheduledTime).getTime() - 5 * 60 * 1000
+                              ? Date.now() >= new Date(scheduledTime).getTime() - 10 * 60 * 1000
                               : !!joinRoomId; // instant meet = always joinable
 
                             const joinUrl = joinRoomId && joinRoomId.startsWith('http') ? joinRoomId : `/interview/${joinRoomId}?name=${encodeURIComponent(user?.name || 'Student')}`;
@@ -322,8 +322,10 @@ export default function Dashboard() {
                             }
                             // slot_booked with no scheduled time = instant meet, show join
                             if (joinRoomId) {
+                              const isExternal = joinRoomId.startsWith('http');
                               return (
-                                <a href={`/interview/${joinRoomId}?name=${encodeURIComponent(user?.name || 'Student')}`}
+                                <a href={isExternal ? joinRoomId : `/interview/${joinRoomId}?name=${encodeURIComponent(user?.name || 'Student')}`}
+                                  target={isExternal ? "_blank" : undefined} rel="noopener noreferrer"
                                   style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.5rem 1.25rem', background: 'linear-gradient(135deg,#ff4444,#ff6b6b)', color: '#fff', borderRadius: 10, fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none' }}>
                                   <span className="material-symbols-outlined" style={{ fontSize: 16 }}>videocam</span> Join Now
                                 </a>
@@ -615,7 +617,7 @@ export default function Dashboard() {
                               const nowMs = Date.now();
                               const endMs = scheduledTime ? new Date(scheduledTime).getTime() + 2 * 60 * 60 * 1000 : null;
                               const isEnded = endMs && nowMs > endMs;
-                              const canJoin = !isEnded && (scheduledTime ? nowMs >= new Date(scheduledTime).getTime() - 5 * 60 * 1000 : true);
+                              const canJoin = !isEnded && (scheduledTime ? nowMs >= new Date(scheduledTime).getTime() - 10 * 60 * 1000 : true);
                               const joinUrl = joinRoomId.startsWith('http') ? joinRoomId : `/interview/${joinRoomId}?name=${encodeURIComponent(user?.name || 'Student')}`;
                               return isEnded ? (
                                 <div style={{ marginTop: 6, fontSize: '0.68rem', color: '#6b7280', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>

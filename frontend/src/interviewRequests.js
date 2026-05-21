@@ -422,7 +422,7 @@ export function isJoinable(scheduledTime) {
   if (!scheduledTime) return false;
   const scheduled = new Date(scheduledTime).getTime();
   const now = Date.now();
-  return now >= scheduled - 5 * 60 * 1000 && now <= scheduled + 2 * 60 * 60 * 1000;
+  return now >= scheduled - 10 * 60 * 1000 && now <= scheduled + 2 * 60 * 60 * 1000;
 }
 
 export function formatScheduledTime(isoString) {
