@@ -187,7 +187,7 @@ export async function sendRequest({ studentName, studentId, alumniName, alumniRo
   return req;
 }
 
-// Normalize DB status (PENDING/ACCEPTED/SLOT_BOOKED/DECLINED) → local (pending/accepted/slot_booked/declined)
+// Normalize DB status (PENDING/ACCEPTED/SLOT_BOOKED/DECLINED/COMPLETED) → local
 function normalizeStatus(status) {
   if (!status) return 'pending';
   return status.toLowerCase();
@@ -212,7 +212,15 @@ export async function syncStudentRequests(studentId) {
     if (studentId) {
       const data = await getRequestsForStudent(studentId);
       if (Array.isArray(data)) {
-        const local = loadLocal();
+        let local = loadLocal();
+
+        // Remove local requests for THIS student that are not in the DB (syncing deletion/cleanup)
+        const dbIds = new Set(data.map(d => d.request_id));
+        local = local.filter(r => {
+          if (String(r.studentId) !== String(studentId)) return true;
+          return dbIds.has(r.id);
+        });
+
         data.forEach(dbReq => {
           const idx = local.findIndex(r => r.id === dbReq.request_id);
           const mapped = {
@@ -250,6 +258,11 @@ export function getRequestsForAlumni(alumniName) {
 
 export function getRequestsByStudent(studentName) {
   return loadLocal().filter(r => r.studentName === studentName);
+}
+
+export function getRequestsByStudentId(studentId) {
+  if (!studentId) return [];
+  return loadLocal().filter(r => String(r.studentId) === String(studentId));
 }
 
 // ── Accept (alumni) ───────────────────────────────────────────────────────────
@@ -440,6 +453,7 @@ export default {
   getRequests,
   getRequestsForAlumni,
   getRequestsByStudent,
+  getRequestsByStudentId,
   acceptRequestOnly,
   bookSlot,
   rescheduleSlot,

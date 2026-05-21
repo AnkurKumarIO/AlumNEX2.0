@@ -5,22 +5,6 @@ import AlumNexLogo from "../AlumNexLogo";
 import { supabase } from "../lib/supabaseClient";
 import { api, API_BASE } from "../api";
 
-const CREDENTIAL_STORE = [
-  // Demo accounts removed to ensure deleted users stay deleted.
-  // Use seeded accounts from the database.
-];
-
-function findLocalCredential(username, password) {
-  const found = CREDENTIAL_STORE.find(c => c.username === username.trim() && c.password === password.trim());
-  if (found) return found;
-  try {
-    const pending = JSON.parse(localStorage.getItem("alumniconnect_pending_profile") || "{}");
-    if (pending.username === username.trim() && pending.password === password.trim()) return { ...pending, role: pending.role || "STUDENT" };
-    const approved = JSON.parse(localStorage.getItem("alumniconnect_approved_accounts") || "[]");
-    return approved.find(c => c.username === username.trim() && c.password === password.trim()) || null;
-  } catch { return null; }
-}
-
 export default function UnifiedLogin() {
   const { user, login } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -140,35 +124,6 @@ export default function UnifiedLogin() {
       }
     } catch (err) {
       console.warn("Direct Supabase auth fallback failed:", err.message);
-    }
-
-    // 3. Last Resort: Local Credential Store (Pending/Approved only)
-    const localCred = findLocalCredential(username, password);
-    if (localCred) {
-      if (localCred.role !== role) {
-        setError(`These credentials belong to a ${localCred.role.toLowerCase()} account.`);
-        setLoading(false);
-        return;
-      }
-
-      let finalId = localCred.id || `${localCred.role.toLowerCase()}-${Date.now()}`;
-      const userData = {
-        id: finalId,
-        name: localCred.name,
-        role: localCred.role,
-        department: localCred.department
-      };
-      login(userData, `token-${Date.now()}`);
-
-      if (localCred.role === "STUDENT" &&
-          !localStorage.getItem("alumnex_profile") &&
-          !localStorage.getItem("alumniconnect_profile")) {
-        navigate("/profile-setup");
-      } else {
-        navigate("/dashboard");
-      }
-      setLoading(false);
-      return;
     }
 
     setError("Invalid username or password.");

@@ -1,7 +1,8 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import { sendRequest, getRequestsByStudent } from '../interviewRequests';
+import { sendRequest, getRequestsByStudentId, syncStudentRequests } from '../interviewRequests';
 import { getAllAlumni } from '../lib/db';
+import { subscribeRealtimeSync } from '../lib/realtimeSync';
 import { api } from '../api';
 
 const TOPICS = [
@@ -143,14 +144,17 @@ function BookModal({ alumni, studentName, onClose, onSent }) {
 }
 
 // ── Book Button ───────────────────────────────────────────────────────────────
-function BookButton({ alumni, studentName, onBook }) {
-  const myRequests = getRequestsByStudent(studentName);
-  const existing = myRequests.find(r => r.alumniName === alumni.name);
+function BookButton({ alumni, userId, onBook }) {
+  const myRequests = getRequestsByStudentId(userId);
+  const existing = myRequests.find(r =>
+    (r.alumniId && (r.alumniId === alumni.id || r.alumni_id === alumni.id)) ||
+    (!r.alumniId && r.alumniName === alumni.name)
+  );
 
-  if (!existing || existing.status === 'declined') {
+  if (!existing || existing.status === 'declined' || existing.status === 'completed') {
     return (
       <button onClick={onBook} style={{ width: '100%', padding: '0.6rem', background: existing?.status === 'declined' ? 'rgba(255,180,171,0.1)' : 'rgba(79,70,229,0.15)', color: existing?.status === 'declined' ? '#ffb4ab' : '#c3c0ff', border: `1px solid ${existing?.status === 'declined' ? 'rgba(255,180,171,0.3)' : 'rgba(195,192,255,0.15)'}`, borderRadius: 10, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-        {existing?.status === 'declined' ? <><span className="material-symbols-outlined" style={{ fontSize: 14 }}>refresh</span>Send Again</> : <><span className="material-symbols-outlined" style={{ fontSize: 14 }}>send</span>Book Mock Interview</>}
+        {existing?.status === 'declined' ? <><span className="material-symbols-outlined" style={{ fontSize: 14 }}>refresh</span>Send Again</> : existing?.status === 'completed' ? <><span className="material-symbols-outlined" style={{ fontSize: 14 }}>history</span>Book Again</> : <><span className="material-symbols-outlined" style={{ fontSize: 14 }}>send</span>Book Mock Interview</>}
       </button>
     );
   }
@@ -231,7 +235,19 @@ export default function AlumniDiscovery({ searchQuery = '' }) {
 
   const visible = filtered.slice(0, visibleCount);
   const studentName = user?.name || 'Student';
+  const userId = user?.id;
   const hasFilters = companyFilter || expFilter || domainFilter;
+
+  // Real-time synchronization
+  useEffect(() => {
+    const unsub = subscribeRealtimeSync((data) => {
+      if (data.type === 'requests_updated' || data.type === 'profile_updated' || data.type === 'alumni_updated') {
+        setRefreshKey(k => k + 1);
+        if (userId) syncStudentRequests(userId);
+      }
+    });
+    return unsub;
+  }, [userId]);
 
   const selStyle = (active) => ({
     padding: '0.35rem 0.875rem', borderRadius: 999, fontSize: '0.78rem', fontWeight: 600,
@@ -322,7 +338,7 @@ export default function AlumniDiscovery({ searchQuery = '' }) {
             <div style={{ height: 4, background: '#2d3449', borderRadius: 999, overflow: 'hidden', marginBottom: '1rem' }}>
               <div style={{ height: '100%', width: `${a.score}%`, background: `linear-gradient(90deg,#4f46e5,${a.scoreColor})`, borderRadius: 999 }} />
             </div>
-            <BookButton alumni={a} studentName={studentName} onBook={() => setBookingAlumni(a)} />
+            <BookButton alumni={a} userId={userId} onBook={() => setBookingAlumni(a)} />
           </div>
         ))}
       </div>
