@@ -100,25 +100,27 @@ router.post('/student/login', async (req, res) => {
     const user = await prisma.user.findUnique({ where: { email: userEmail } });
     if (!user || user.role !== 'STUDENT') return res.status(401).json({ error: 'Not a student account.' });
 
-    // Validate password against Prisma database
-    if (user.password && user.password !== password) {
-      return res.status(401).json({ error: 'Invalid credentials.' });
-    }
-
-    if (supabase) {
-      // Sign in via Supabase Auth
+    // Validate password against Prisma database (PRIMARY SOURCE OF TRUTH)
+    if (user.password) {
+      // User has password in Prisma - use it as the source of truth
+      if (user.password !== password) {
+        return res.status(401).json({ error: 'Invalid credentials.' });
+      }
+      // Password is correct in Prisma - login successful
+      console.log(`[Student Login] User ${user.id} authenticated via Prisma`);
+    } else if (supabase) {
+      // User has no password in Prisma, try Supabase Auth
       const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({ email: userEmail, password });
       if (authErr) return res.status(401).json({ error: 'Invalid credentials.' });
 
-      // Auto-migrate plain-text password to Prisma if missing
-      if (!user.password) {
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { password },
-        }).catch(e => console.warn('[Auth] Auto-migration of password failed:', e.message));
-      }
-    } else if (!user.password) {
-      // If supabase is offline/disabled and user has no password in database
+      // Auto-migrate password to Prisma for future logins
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { password },
+      }).catch(e => console.warn('[Auth] Auto-migration of password failed:', e.message));
+      console.log(`[Student Login] User ${user.id} authenticated via Supabase (migrated to Prisma)`);
+    } else {
+      // No password in Prisma and Supabase is not available
       return res.status(401).json({ error: 'Invalid credentials.' });
     }
 
@@ -201,25 +203,27 @@ router.post('/alumni/login', async (req, res) => {
     const user = await prisma.user.findUnique({ where: { email: userEmail } });
     if (!user || user.role !== 'ALUMNI') return res.status(401).json({ error: 'Not an alumni account.' });
 
-    // Validate password against Prisma database
-    if (user.password && user.password !== password) {
-      return res.status(401).json({ error: 'Invalid credentials.' });
-    }
-
-    if (supabase) {
-      // Sign in via Supabase Auth
+    // Validate password against Prisma database (PRIMARY SOURCE OF TRUTH)
+    if (user.password) {
+      // User has password in Prisma - use it as the source of truth
+      if (user.password !== password) {
+        return res.status(401).json({ error: 'Invalid credentials.' });
+      }
+      // Password is correct in Prisma - login successful
+      console.log(`[Alumni Login] User ${user.id} authenticated via Prisma`);
+    } else if (supabase) {
+      // User has no password in Prisma, try Supabase Auth
       const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({ email: userEmail, password });
       if (authErr) return res.status(401).json({ error: 'Invalid credentials.' });
 
-      // Auto-migrate plain-text password to Prisma if missing
-      if (!user.password) {
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { password },
-        }).catch(e => console.warn('[Auth] Auto-migration of password failed:', e.message));
-      }
-    } else if (!user.password) {
-      // If supabase is offline/disabled and user has no password in database
+      // Auto-migrate password to Prisma for future logins
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { password },
+      }).catch(e => console.warn('[Auth] Auto-migration of password failed:', e.message));
+      console.log(`[Alumni Login] User ${user.id} authenticated via Supabase (migrated to Prisma)`);
+    } else {
+      // No password in Prisma and Supabase is not available
       return res.status(401).json({ error: 'Invalid credentials.' });
     }
 
@@ -240,6 +244,11 @@ router.post('/change-password', async (req, res) => {
       return res.status(400).json({ error: 'All fields are required.' });
     }
 
+    // Validate new password length (minimum 6 characters)
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'Password length must be at least 6 characters.' });
+    }
+
     // Look up user in Prisma to get email
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return res.status(404).json({ error: 'User not found.' });
@@ -257,37 +266,43 @@ router.post('/change-password', async (req, res) => {
       }
     }
 
-    // 2. Verify and update in Supabase Auth (if active)
-    if (supabase) {
-      // Try to verify current password with Supabase
-      const { error: signInErr } = await supabase.auth.signInWithPassword({
-        email: user.email,
-        password: currentPassword,
-      });
-      
-      // If Supabase verification fails, return appropriate error
-      if (signInErr) {
-        console.error('[Change Password] Supabase verification failed:', signInErr.message);
-        return res.status(401).json({ error: 'Incorrect current password.' });
-      }
-
-      // Update password in Supabase Auth (persists authentication)
-      const { error: updateErr } = await supabase.auth.admin.updateUserById(userId, {
-        password: newPassword,
-      });
-      if (updateErr) {
-        console.error('[Change Password] Supabase update failed:', updateErr.message);
-        throw new Error('Failed to update password in authentication system.');
-      }
-    }
-
-    // 3. Update password field in Prisma so DB stays in sync
+    // 2. Update password in Prisma FIRST (primary source of truth)
     await prisma.user.update({
       where: { id: userId },
       data: { password: newPassword },
     });
+    console.log(`[Change Password] Password updated in Prisma for user ${userId}`);
 
-    console.log(`[Change Password] Password updated successfully for user ${userId}`);
+    // 3. Update in Supabase Auth (if active) - but don't fail if Supabase fails
+    if (supabase) {
+      try {
+        // Try to verify current password with Supabase
+        const { error: signInErr } = await supabase.auth.signInWithPassword({
+          email: user.email,
+          password: currentPassword,
+        });
+        
+        if (signInErr) {
+          console.warn('[Change Password] Supabase verification failed:', signInErr.message);
+          console.warn('[Change Password] Continuing with Prisma-only password update');
+        } else {
+          // Update password in Supabase Auth
+          const { error: updateErr } = await supabase.auth.admin.updateUserById(userId, {
+            password: newPassword,
+          });
+          if (updateErr) {
+            console.warn('[Change Password] Supabase update failed:', updateErr.message);
+            console.warn('[Change Password] Password updated in Prisma only');
+          } else {
+            console.log(`[Change Password] Password updated in both Prisma and Supabase for user ${userId}`);
+          }
+        }
+      } catch (supabaseErr) {
+        console.warn('[Change Password] Supabase error (non-fatal):', supabaseErr.message);
+        console.warn('[Change Password] Password updated in Prisma only');
+      }
+    }
+
     res.json({ message: 'Password updated successfully.' });
   } catch (err) {
     console.error('Change Password Error:', err.message);

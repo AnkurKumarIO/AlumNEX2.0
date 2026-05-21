@@ -88,8 +88,21 @@ async function main() {
       return;
     }
 
-    // Step 3: Try to change password with WRONG current password
-    console.log('3️⃣  Testing password change with WRONG current password...');
+    // Step 3: Try to change password with TOO SHORT password
+    console.log('3️⃣  Testing password change with TOO SHORT password (< 6 chars)...');
+    const shortPwResult = await request('POST', '/auth/change-password', {
+      userId: alumniId,
+      currentPassword: TEST_ALUMNI.password,
+      newPassword: '12345', // Only 5 characters
+    });
+    if (shortPwResult.status === 400 && shortPwResult.body?.error === 'Password length must be at least 6 characters.') {
+      console.log(`   ✅ Correctly rejected: ${shortPwResult.body.error}\n`);
+    } else {
+      console.log(`   ❌ Expected 400 with "Password length must be at least 6 characters", got: ${shortPwResult.status} - ${shortPwResult.body?.error || 'Unknown'}\n`);
+    }
+
+    // Step 4: Try to change password with WRONG current password
+    console.log('4️⃣  Testing password change with WRONG current password...');
     const wrongPwResult = await request('POST', '/auth/change-password', {
       userId: alumniId,
       currentPassword: 'WrongPassword123!',
@@ -101,8 +114,8 @@ async function main() {
       console.log(`   ❌ Expected 401 with "Incorrect current password", got: ${wrongPwResult.status} - ${wrongPwResult.body?.error || 'Unknown'}\n`);
     }
 
-    // Step 4: Change password with CORRECT current password
-    console.log('4️⃣  Testing password change with CORRECT current password...');
+    // Step 5: Change password with CORRECT current password
+    console.log('5️⃣  Testing password change with CORRECT current password...');
     const correctPwResult = await request('POST', '/auth/change-password', {
       userId: alumniId,
       currentPassword: TEST_ALUMNI.password,
@@ -115,8 +128,8 @@ async function main() {
       return;
     }
 
-    // Step 5: Try to login with OLD password (should fail)
-    console.log('5️⃣  Testing login with OLD password (should fail)...');
+    // Step 6: Try to login with OLD password (should fail)
+    console.log('6️⃣  Testing login with OLD password (should fail)...');
     const oldPwLogin = await request('POST', '/auth/alumni/login', {
       username: TEST_ALUMNI.username,
       password: TEST_ALUMNI.password,
@@ -127,8 +140,8 @@ async function main() {
       console.log(`   ❌ Expected 401 with "Invalid credentials", got: ${oldPwLogin.status} - ${oldPwLogin.body?.error || 'Unknown'}\n`);
     }
 
-    // Step 6: Login with NEW password (should succeed)
-    console.log('6️⃣  Testing login with NEW password (should succeed)...');
+    // Step 7: Login with NEW password (should succeed)
+    console.log('7️⃣  Testing login with NEW password (should succeed)...');
     const newPwLogin = await request('POST', '/auth/alumni/login', {
       username: TEST_ALUMNI.username,
       password: newPassword,
@@ -138,6 +151,32 @@ async function main() {
     } else {
       console.log(`   ❌ Login failed with new password: ${newPwLogin.body?.error || 'Unknown error'}\n`);
       return;
+    }
+
+    // Step 8: PERSISTENCE TEST - Simulate server restart by logging in again
+    console.log('8️⃣  Testing password persistence (simulating server restart)...');
+    console.log('   ℹ️  Note: In real scenario, restart server with Ctrl+C and npm run dev\n');
+    
+    // Try old password again (should still fail)
+    const persistOldPw = await request('POST', '/auth/alumni/login', {
+      username: TEST_ALUMNI.username,
+      password: TEST_ALUMNI.password,
+    });
+    if (persistOldPw.status === 401) {
+      console.log(`   ✅ Old password still rejected after "restart"\n`);
+    } else {
+      console.log(`   ❌ Old password should not work: ${persistOldPw.status}\n`);
+    }
+
+    // Try new password again (should still work)
+    const persistNewPw = await request('POST', '/auth/alumni/login', {
+      username: TEST_ALUMNI.username,
+      password: newPassword,
+    });
+    if (persistNewPw.status === 200) {
+      console.log(`   ✅ New password still works after "restart"\n`);
+    } else {
+      console.log(`   ❌ New password should work: ${persistNewPw.body?.error || 'Unknown error'}\n`);
     }
 
     // Summary
@@ -150,6 +189,10 @@ async function main() {
     console.log(`    Email: ${TEST_ALUMNI.email}`);
     console.log(`    Old Password: ${TEST_ALUMNI.password}`);
     console.log(`    New Password: ${newPassword}`);
+    console.log('\n  ℹ️  To fully test persistence:');
+    console.log('     1. Stop the server (Ctrl+C)');
+    console.log('     2. Restart with: npm run dev');
+    console.log('     3. Try logging in with the new password');
     console.log('');
 
   } catch (error) {
