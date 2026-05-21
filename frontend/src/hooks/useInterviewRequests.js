@@ -74,36 +74,18 @@ export function useInterviewRequests(userId, userRole) {
     if (!filter) return;
 
     // Subscribe to INSERT events (new requests)
-    const insertSubscription = supabase
-      .channel(`requests:insert:${userId}`)
+    const requestSubscription = supabase
+      .channel(`requests:${userId}`)
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'interview_requests',
           filter,
         },
-        () => {
-          console.log('[Realtime] New interview request');
-          loadInitialRequests();
-        }
-      )
-      .subscribe();
-
-    // Subscribe to UPDATE events (status changes, slot bookings)
-    const updateSubscription = supabase
-      .channel(`requests:update:${userId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'interview_requests',
-          filter,
-        },
-        () => {
-          console.log('[Realtime] Interview request updated');
+        (payload) => {
+          console.log('[Realtime] Interview request event:', payload.eventType);
           loadInitialRequests();
         }
       )
@@ -111,8 +93,7 @@ export function useInterviewRequests(userId, userRole) {
 
     // Cleanup
     return () => {
-      insertSubscription.unsubscribe();
-      updateSubscription.unsubscribe();
+      requestSubscription.unsubscribe();
     };
   }, [userId, userRole, loadInitialRequests]);
 
