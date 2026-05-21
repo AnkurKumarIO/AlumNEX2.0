@@ -24,9 +24,10 @@ function StudentDetailModal({ request, onClose, onAccept }) {
 
   useEffect(() => {
     let cancelled = false;
+    const sid = request?.studentId;
+    if (!sid || String(sid).startsWith('stu-') || String(sid).startsWith('alm-')) return;
+
     const loadLatestProfile = async () => {
-      const sid = request?.studentId;
-      if (!sid || String(sid).startsWith('stu-') || String(sid).startsWith('alm-')) return;
       try {
         const user = await getUserById(sid);
         const dbProfile = user?.profile_data || {};
@@ -35,8 +36,27 @@ function StudentDetailModal({ request, onClose, onAccept }) {
         }
       } catch {}
     };
+
     loadLatestProfile();
-    return () => { cancelled = true; };
+
+    // Subscribe to real-time updates for this student's profile
+    const channel = supabase
+      .channel(`student-profile-${sid}`)
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'users', filter: `id=eq.${sid}` },
+        (payload) => {
+          if (!cancelled && payload.new && payload.new.profile_data) {
+            console.log('[Realtime] Student profile updated');
+            setP(prev => ({ ...prev, ...payload.new.profile_data }));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
   }, [request?.studentId]);
 
   const handleAccept = () => {
@@ -770,7 +790,7 @@ export default function AlumniDashboard() {
             message:       r.message || '',
             status:        (r.status || 'PENDING').toLowerCase(),
             scheduledTime: r.scheduled_time || null,
-            roomId:        r.room_id || null,
+            roomId:        r.room_id || `room-${r.request_id.slice(-8)}`,
             createdAt:     r.created_at,
             studentProfile: r.student_profile_snapshot || r.student?.profile_data || null,
           }));
@@ -919,7 +939,7 @@ export default function AlumniDashboard() {
 
   const handleSlotBooked = (requestId, scheduledTime) => {
     // roomId MUST match bookSlot formula exactly
-    const roomId = `room-${requestId.replace(/[^a-z0-9]/gi, '').slice(-16).toLowerCase()}`;
+    const roomId = `room-${requestId.slice(-8)}`;
     setLiveRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: 'slot_booked', scheduledTime, roomId } : r));
     const formatted = formatScheduledTime(scheduledTime);
     const req = liveRequests.find(r => r.id === requestId);
@@ -937,7 +957,7 @@ export default function AlumniDashboard() {
   const handleInstantMeet = (req) => {
     const now = new Date().toISOString();
     // roomId MUST match bookSlot formula exactly — no 'instant-' prefix
-    const roomId = `room-${req.id.replace(/[^a-z0-9]/gi, '').slice(-16).toLowerCase()}`;
+    const roomId = `room-${req.id.slice(-8)}`;
     // bookSlot updates DB (status, roomId, scheduledTime) and creates Supabase notification
     bookSlot(req.id, now);
     setLiveRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'slot_booked', scheduledTime: now, roomId } : r));
@@ -1404,8 +1424,8 @@ export default function AlumniDashboard() {
                   const scheduledMs = new Date(r.scheduledTime).getTime();
                   const endMs = scheduledMs + 2 * 60 * 60 * 1000;
                   const isEnded = now > endMs;
-                  const canJoin = !isEnded && now >= scheduledMs - 5 * 60 * 1000;
-                  const joinUrl = r.roomId && r.roomId.startsWith('http') ? r.roomId : `/interview/${r.id}`;
+                  const canJoin = !isEnded && now >= scheduledMs - 10 * 60 * 1000; // Allow joining 10 mins before
+                  const joinUrl = r.roomId && r.roomId.startsWith('http') ? r.roomId : `/interview/${r.roomId || r.id}`;
                   return (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
                       {isEnded ? (<div style={{ padding: '0.45rem 1rem', background: 'rgba(100,100,100,0.12)', color: '#6b7280', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 5, opacity: 0.7 }}><span className="material-symbols-outlined" style={{ fontSize: 14 }}>videocam_off</span> Ended</div>) : canJoin ? (
@@ -1537,7 +1557,7 @@ export default function AlumniDashboard() {
                           const scheduledMs = new Date(r.scheduledTime).getTime();
                           const endMs = scheduledMs + 2 * 60 * 60 * 1000;
                           const isEnded = now > endMs;
-                          const canJoin = !isEnded && now >= scheduledMs - 5 * 60 * 1000;
+                          const canJoin = !isEnded && now >= scheduledMs - 10 * 60 * 1000;
                           const joinUrl = r.roomId && r.roomId.startsWith('http') ? r.roomId : `/interview/${r.roomId || r.id}`;
                           return isEnded ? (
                             <div style={{ fontSize: '0.65rem', color: '#6b7280', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4, opacity: 0.7 }}>

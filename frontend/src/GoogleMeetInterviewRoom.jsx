@@ -364,9 +364,15 @@ export default function GoogleMeetInterviewRoom() {
           </div>
         </div>
 
-        <button onClick={endSession} style={{ display:'flex', alignItems:'center', gap:6, padding:'0 1.1rem', height:40, borderRadius:999, background:'#ffb4ab', color:'#690005', border:'none', fontWeight:700, fontSize:'0.82rem', cursor:'pointer', boxShadow:'0 4px 14px rgba(255,107,107,0.22)' }}>
-          <span className="material-symbols-outlined" style={{ fontSize:16 }}>call_end</span>End Session
-        </button>
+        {meetOpened && elapsed > 120 ? (
+          <button onClick={endSession} style={{ display:'flex', alignItems:'center', gap:6, padding:'0 1.1rem', height:40, borderRadius:999, background:'#ffb4ab', color:'#690005', border:'none', fontWeight:700, fontSize:'0.82rem', cursor:'pointer', boxShadow:'0 4px 14px rgba(255,107,107,0.22)' }}>
+            <span className="material-symbols-outlined" style={{ fontSize:16 }}>call_end</span>End Session
+          </button>
+        ) : (
+          <div style={{ fontSize:'0.7rem', color:'rgba(199,196,216,0.4)', fontWeight:600 }}>
+            {meetOpened ? `Available in ${fmt(Math.max(0, 120 - elapsed))}` : 'Start meeting to enable end button'}
+          </div>
+        )}
 
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
           <div style={{ display:'flex' }}>
