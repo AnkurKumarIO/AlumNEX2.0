@@ -1129,7 +1129,9 @@ export default function AlumniDashboard() {
                     <div style={{ fontSize: '0.68rem', color: s.active ? '#c3c0ff' : 'rgba(199,196,216,0.5)', marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>{highlight(s.when, q)}</div>
                   </div>
                   {s.active && s.roomId && (
-                    <a href={`/interview/${s.roomId}`} style={{ padding: '0.35rem 0.875rem', background: 'rgba(79,70,229,0.2)', color: '#c3c0ff', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+                    <a href={s.roomId.startsWith('http') ? s.roomId : `/interview/${s.roomId}?name=${encodeURIComponent(user?.name || 'Alumni')}`}
+                       target={s.roomId.startsWith('http') ? "_blank" : undefined} rel="noopener noreferrer"
+                       style={{ padding: '0.35rem 0.875rem', background: 'rgba(79,70,229,0.2)', color: '#c3c0ff', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
                       <span className="material-symbols-outlined" style={{ fontSize: 14 }}>videocam</span> Join
                     </a>
                   )}
@@ -1330,9 +1332,11 @@ export default function AlumniDashboard() {
                             <span className="material-symbols-outlined" style={{ fontSize: 14 }}>videocam_off</span> Ended
                           </div>
                         ) : (
-                          <Link to={`/interview/${e.roomId || 'demo-room'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.35rem 0.75rem', background: 'rgba(79,70,229,0.2)', color: '#c3c0ff', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, textDecoration: 'none', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                          <a href={e.roomId && e.roomId.startsWith('http') ? e.roomId : `/interview/${e.roomId || 'demo-room'}?name=${encodeURIComponent(user?.name || 'Alumni')}`}
+                             target={e.roomId && e.roomId.startsWith('http') ? "_blank" : undefined} rel="noopener noreferrer"
+                             style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.35rem 0.75rem', background: 'rgba(79,70,229,0.2)', color: '#c3c0ff', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, textDecoration: 'none', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                             <span className="material-symbols-outlined" style={{ fontSize: 14 }}>videocam</span> Join
-                          </Link>
+                          </a>
                         )
                       )}
                     </div>
@@ -1432,7 +1436,9 @@ export default function AlumniDashboard() {
                   const endMs = scheduledMs + 2 * 60 * 60 * 1000;
                   const isEnded = now > endMs;
                   const canJoin = !isEnded && now >= scheduledMs - 10 * 60 * 1000; // Allow joining 10 mins before
-                  const joinUrl = r.roomId && r.roomId.startsWith('http') ? r.roomId : `/interview/${r.roomId || r.id}`;
+                  const joinUrl = r.roomId && r.roomId.startsWith('http')
+                    ? r.roomId
+                    : `/interview/${r.roomId || r.id}?name=${encodeURIComponent(user?.name || 'Alumni')}`;
                   return (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
                       {isEnded ? (<div style={{ padding: '0.45rem 1rem', background: 'rgba(100,100,100,0.12)', color: '#6b7280', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 5, opacity: 0.7 }}><span className="material-symbols-outlined" style={{ fontSize: 14 }}>videocam_off</span> Ended</div>) : canJoin ? (
@@ -1565,7 +1571,9 @@ export default function AlumniDashboard() {
                           const endMs = scheduledMs + 2 * 60 * 60 * 1000;
                           const isEnded = now > endMs;
                           const canJoin = !isEnded && now >= scheduledMs - 10 * 60 * 1000;
-                          const joinUrl = r.roomId && r.roomId.startsWith('http') ? r.roomId : `/interview/${r.roomId || r.id}`;
+                          const joinUrl = r.roomId && r.roomId.startsWith('http')
+                            ? r.roomId
+                            : `/interview/${r.roomId || r.id}?name=${encodeURIComponent(user?.name || 'Alumni')}`;
                           return isEnded ? (
                             <div style={{ fontSize: '0.65rem', color: '#6b7280', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4, opacity: 0.7 }}>
                               <span className="material-symbols-outlined" style={{ fontSize: 13 }}>videocam_off</span> Ended
