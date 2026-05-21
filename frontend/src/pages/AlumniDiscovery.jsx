@@ -1,10 +1,10 @@
-import React, { useState, useContext, useEffect, useCallback } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { sendRequest, getRequestsByStudent } from '../interviewRequests';
 import { getAllAlumni } from '../lib/db';
 import { api } from '../api';
 import { subscribeRealtimeSync } from '../lib/realtimeSync';
-import { useInterviewRequests } from '../hooks/useInterviewRequests';
+import { supabase } from '../lib/supabaseClient';
 
 const TOPICS = [
   'Mock Interview – General','Mock Interview – System Design','Mock Interview – Frontend',
@@ -261,10 +261,59 @@ export default function AlumniDiscovery({ searchQuery = '' }) {
   const [bookingAlumni, setBookingAlumni] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // Subscribe to Supabase real-time request updates — syncs localStorage
-  // so BookButton re-renders with the latest status when alumni accepts/books
-  const hasRealId = !!user?.id && !user.id.startsWith('stu-') && !user.id.startsWith('alm-');
-  useInterviewRequests(hasRealId ? user.id : null, 'STUDENT');
+  // Subscribe to Supabase Realtime for this student's requests.
+  // On any INSERT/UPDATE, sync the changed row into localStorage and
+  // emit a realtimeSync event so every BookButton re-reads its status.
+  // We do NOT call emitRealtimeSync here — only the Supabase callback does,
+  // preventing the infinite loop that useInterviewRequests caused.
+  useEffect(() => {
+    const studentId = user?.id;
+    if (!studentId || studentId.startsWith('stu-') || studentId.startsWith('alm-')) return;
+
+    const syncRow = (r) => {
+      if (!r) return;
+      const STORAGE_KEY = 'alumnex_interview_requests';
+      try {
+        const local = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+        const reqId = r.request_id;
+        const mapped = {
+          id:            reqId,
+          studentName:   r.student_name || '',
+          studentId:     r.student_id,
+          alumniName:    r.alumni_name  || '',
+          alumniId:      r.alumni_id,
+          topic:         r.topic,
+          message:       r.message || '',
+          status:        (r.status || 'PENDING').toLowerCase(),
+          scheduledTime: r.scheduled_time || null,
+          roomId:        r.room_id || null,
+          createdAt:     r.created_at,
+          studentProfile: null,
+        };
+        const idx = local.findIndex(x => x.id === reqId);
+        if (idx === -1) local.push(mapped);
+        else local[idx] = { ...local[idx], ...mapped };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(local));
+        // Emit sync so BookButton re-renders — but NOT via emitRealtimeSync
+        // from useInterviewRequests (which would loop). Use window event directly.
+        window.dispatchEvent(new CustomEvent('alumnex:sync', { detail: { type: 'requests_updated' } }));
+      } catch {}
+    };
+
+    const channel = supabase
+      .channel(`discovery-reqs-${studentId}`)
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'interview_requests', filter: `student_id=eq.${studentId}` },
+        (payload) => syncRow(payload.new)
+      )
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'interview_requests', filter: `student_id=eq.${studentId}` },
+        (payload) => syncRow(payload.new)
+      )
+      .subscribe();
+
+    return () => { try { supabase.removeChannel(channel); } catch {} };
+  }, [user?.id]);
 
   useEffect(() => {
     // Fetch alumni list and ratings in parallel
