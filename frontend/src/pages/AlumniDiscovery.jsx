@@ -1,8 +1,10 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext, useEffect, useCallback } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { sendRequest, getRequestsByStudent } from '../interviewRequests';
 import { getAllAlumni } from '../lib/db';
 import { api } from '../api';
+import { subscribeRealtimeSync } from '../lib/realtimeSync';
+import { useInterviewRequests } from '../hooks/useInterviewRequests';
 
 const TOPICS = [
   'Mock Interview – General','Mock Interview – System Design','Mock Interview – Frontend',
@@ -151,36 +153,89 @@ function BookModal({ alumni, studentName, onClose, onSent }) {
 }
 
 // ── Book Button ───────────────────────────────────────────────────────────────
-function BookButton({ alumni, studentName, onBook }) {
-  const myRequests = getRequestsByStudent(studentName);
-  const existing = myRequests.find(r => r.alumniName === alumni.name);
+// Reads live request status and re-renders on any realtimeSync event
+function BookButton({ alumni, studentName, userId, onBook }) {
+  const [tick, setTick] = useState(0);
 
-  if (!existing || existing.status === 'declined') {
+  // Re-render whenever any request status changes (accept, slot_book, complete, decline)
+  useEffect(() => {
+    return subscribeRealtimeSync(() => setTick(t => t + 1));
+  }, []);
+
+  // Read the freshest status from localStorage on every render
+  const myRequests = getRequestsByStudent(studentName);
+  const existing = myRequests
+    .filter(r => r.alumniName === alumni.name || r.alumniId === alumni.id)
+    // Pick the most recent non-declined request, or the most recent declined one
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+
+  const status = existing?.status;
+
+  // Completed = session ended (slot_booked + past end time) or explicitly completed
+  const isCompleted = status === 'completed' ||
+    (status === 'slot_booked' && existing?.scheduledTime &&
+      Date.now() > new Date(existing.scheduledTime).getTime() + 2 * 60 * 60 * 1000);
+
+  // No request yet, or declined, or completed → show Book / Re-apply button
+  if (!existing || status === 'declined' || isCompleted) {
+    const isReapply = status === 'declined' || isCompleted;
     return (
-      <button onClick={onBook} style={{ width: '100%', padding: '0.6rem', background: existing?.status === 'declined' ? 'rgba(255,180,171,0.1)' : 'rgba(79,70,229,0.15)', color: existing?.status === 'declined' ? '#ffb4ab' : '#c3c0ff', border: `1px solid ${existing?.status === 'declined' ? 'rgba(255,180,171,0.3)' : 'rgba(195,192,255,0.15)'}`, borderRadius: 10, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-        {existing?.status === 'declined' ? <><span className="material-symbols-outlined" style={{ fontSize: 14 }}>refresh</span>Send Again</> : <><span className="material-symbols-outlined" style={{ fontSize: 14 }}>send</span>Book Mock Interview</>}
+      <button
+        onClick={onBook}
+        style={{
+          width: '100%', padding: '0.6rem',
+          background: isReapply ? 'rgba(195,192,255,0.08)' : 'rgba(79,70,229,0.15)',
+          color: isReapply ? '#c3c0ff' : '#c3c0ff',
+          border: `1px solid ${isReapply ? 'rgba(195,192,255,0.25)' : 'rgba(195,192,255,0.15)'}`,
+          borderRadius: 10, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer',
+          textTransform: 'uppercase', letterSpacing: '0.08em',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+        }}
+      >
+        {isCompleted ? (
+          <><span className="material-symbols-outlined" style={{ fontSize: 14 }}>replay</span>Book Again</>
+        ) : status === 'declined' ? (
+          <><span className="material-symbols-outlined" style={{ fontSize: 14 }}>refresh</span>Send Again</>
+        ) : (
+          <><span className="material-symbols-outlined" style={{ fontSize: 14 }}>send</span>Book Mock Interview</>
+        )}
       </button>
     );
   }
-  if (existing.status === 'pending') return (
+
+  if (status === 'pending') return (
     <div style={{ width: '100%', padding: '0.6rem', background: 'rgba(255,185,95,0.1)', border: '1px solid rgba(255,185,95,0.25)', borderRadius: 10, textAlign: 'center' }}>
       <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#ffb95f', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 }}>⏳ Request Pending</div>
       <div style={{ fontSize: '0.7rem', color: '#c7c4d8' }}>Waiting for {alumni.name.split(' ')[0]} to accept</div>
     </div>
   );
-  if (existing.status === 'accepted') return (
+
+  if (status === 'accepted') return (
     <div style={{ width: '100%', padding: '0.6rem', background: 'rgba(195,192,255,0.08)', border: '1px solid rgba(195,192,255,0.2)', borderRadius: 10, textAlign: 'center' }}>
       <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#c3c0ff', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 }}>✓ Accepted</div>
       <div style={{ fontSize: '0.7rem', color: '#c7c4d8' }}>Alumni is selecting a time slot...</div>
     </div>
   );
-  if (existing.status === 'slot_booked') {
-    const canJoin = Date.now() >= new Date(existing.scheduledTime).getTime() - 5 * 60 * 1000;
+
+  if (status === 'slot_booked') {
+    const joinUrl = existing.roomId?.startsWith('http')
+      ? existing.roomId
+      : `/interview/${existing.roomId || existing.id}`;
+    const canJoin = existing.scheduledTime
+      ? Date.now() >= new Date(existing.scheduledTime).getTime() - 5 * 60 * 1000
+      : true;
+
     if (canJoin) return (
-      <a href={`/interview/${existing.roomId}`} style={{ width: '100%', padding: '0.6rem', background: 'linear-gradient(135deg,#00a572,#4edea3)', color: '#003d29', border: 'none', borderRadius: 10, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, textDecoration: 'none', boxSizing: 'border-box' }}>
+      <a
+        href={joinUrl}
+        target={joinUrl.startsWith('http') ? '_blank' : undefined}
+        rel="noopener noreferrer"
+        style={{ width: '100%', padding: '0.6rem', background: 'linear-gradient(135deg,#00a572,#4edea3)', color: '#003d29', border: 'none', borderRadius: 10, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, textDecoration: 'none', boxSizing: 'border-box' }}
+      >
         <span className="material-symbols-outlined" style={{ fontSize: 15 }}>videocam</span>Join Mock Interview
       </a>
     );
+
     const formatted = new Date(existing.scheduledTime).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
     return (
       <div style={{ width: '100%', padding: '0.6rem', background: 'rgba(78,222,163,0.08)', border: '1px solid rgba(78,222,163,0.2)', borderRadius: 10, textAlign: 'center' }}>
@@ -190,6 +245,7 @@ function BookButton({ alumni, studentName, onBook }) {
       </div>
     );
   }
+
   return null;
 }
 
@@ -204,6 +260,11 @@ export default function AlumniDiscovery({ searchQuery = '' }) {
   const [visibleCount, setVisibleCount] = useState(6);
   const [bookingAlumni, setBookingAlumni] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // Subscribe to Supabase real-time request updates — syncs localStorage
+  // so BookButton re-renders with the latest status when alumni accepts/books
+  const hasRealId = !!user?.id && !user.id.startsWith('stu-') && !user.id.startsWith('alm-');
+  useInterviewRequests(hasRealId ? user.id : null, 'STUDENT');
 
   useEffect(() => {
     // Fetch alumni list and ratings in parallel
@@ -330,7 +391,7 @@ export default function AlumniDiscovery({ searchQuery = '' }) {
             <div style={{ height: 4, background: '#2d3449', borderRadius: 999, overflow: 'hidden', marginBottom: '1rem' }}>
               <div style={{ height: '100%', width: `${a.score}%`, background: `linear-gradient(90deg,#4f46e5,${a.scoreColor})`, borderRadius: 999 }} />
             </div>
-            <BookButton alumni={a} studentName={studentName} onBook={() => setBookingAlumni(a)} />
+            <BookButton alumni={a} studentName={studentName} userId={user?.id} onBook={() => setBookingAlumni(a)} />
           </div>
         ))}
       </div>
