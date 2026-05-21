@@ -6,14 +6,8 @@ import { supabase } from "../lib/supabaseClient";
 import { api, API_BASE } from "../api";
 
 const CREDENTIAL_STORE = [
-  { username: "admin",           password: "tnp_secure_123", role: "TNP",     name: "TNP Coordinator",  department: "Administration",         id: "tnp-admin" },
-  { username: "alice.johnson42", password: "Xk7mP2qR9n",    role: "STUDENT", name: "Alice Johnson",    department: "Computer Science",       id: "stu-alice-johnson" },
-  { username: "bob.smith18",     password: "Ry4nQ8wL3v",    role: "STUDENT", name: "Bob Smith",        department: "Electrical Engineering", id: "stu-bob-smith" },
-  { username: "priya.sharma",    password: "Alumni@2026",    role: "ALUMNI",  name: "Priya Sharma",     department: "Computer Science",       id: "alm-priya-sharma" },
-  { username: "rahul.verma",     password: "Alumni@2026",    role: "ALUMNI",  name: "Rahul Verma",      department: "Electrical Engineering", id: "alm-rahul-verma" },
-  { username: "sarah.chen",      password: "Alumni@2026",    role: "ALUMNI",  name: "Sarah Chen",       department: "Computer Science",       id: "alm-sarah-chen" },
-  { username: "jasmine.patel",   password: "Alumni@2026",    role: "ALUMNI",  name: "Jasmine Patel",    department: "Computer Science",       id: "alm-jasmine-patel" },
-  { username: "aisha.okonkwo",   password: "Alumni@2026",    role: "ALUMNI",  name: "Aisha Okonkwo",    department: "Computer Science",       id: "alm-aisha-okonkwo" },
+  // Demo accounts removed to ensure deleted users stay deleted.
+  // Use seeded accounts from the database.
 ];
 
 function findLocalCredential(username, password) {
@@ -148,61 +142,31 @@ export default function UnifiedLogin() {
       console.warn("Direct Supabase auth fallback failed:", err.message);
     }
 
-    // 3. Last Resort: Local Credential Store (Mock)
+    // 3. Last Resort: Local Credential Store (Pending/Approved only)
     const localCred = findLocalCredential(username, password);
     if (localCred) {
-      if (localCred.role !== role) { setError(`These credentials belong to a ${localCred.role.toLowerCase()} account.`); setLoading(false); return; }
-      
-      // Auto-register mock users into the real database so sync works perfectly!
-      try {
-        const email = `${localCred.username}@alumniconnect.edu`;
-        const endpoint = localCred.role === 'STUDENT' ? '/auth/student/register' : '/auth/alumni/register';
-        const payload = {
-          name: localCred.name,
-          username: localCred.username,
-          email,
-          password: localCred.password,
-          department: localCred.department,
-          batchYear: localCred.role === 'ALUMNI' ? 2020 : undefined,
-          company: localCred.role === 'ALUMNI' ? 'Mock Corp' : undefined,
-        };
-        
-        let regRes = await fetch(`${API_BASE}${endpoint}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        
-        // If it failed because it already exists, let's login instead!
-        if (regRes.status === 400 || regRes.status === 401) {
-          const loginEndpoint = localCred.role === 'STUDENT' ? '/auth/student/login' : '/auth/alumni/login';
-          regRes = await fetch(`${API_BASE}${loginEndpoint}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: localCred.username, password: localCred.password }),
-          });
-        }
-        
-        const data = await regRes.json();
-        if (regRes.ok && data.user) {
-          login(data.user, data.token);
-          if (data.user.role === "STUDENT" && !localStorage.getItem("alumnex_profile") && !localStorage.getItem("alumniconnect_profile")) {
-             navigate("/profile-setup");
-          } else {
-             navigate("/dashboard");
-          }
-          setLoading(false);
-          return;
-        }
-      } catch (e) {
-        console.warn("Auto-registration of mock user failed:", e.message);
+      if (localCred.role !== role) {
+        setError(`These credentials belong to a ${localCred.role.toLowerCase()} account.`);
+        setLoading(false);
+        return;
       }
 
-      // If auto-registration fails for some reason, fallback to original offline behavior
       let finalId = localCred.id || `${localCred.role.toLowerCase()}-${Date.now()}`;
-      const userData = { id: finalId, name: localCred.name, role: localCred.role, department: localCred.department };
+      const userData = {
+        id: finalId,
+        name: localCred.name,
+        role: localCred.role,
+        department: localCred.department
+      };
       login(userData, `token-${Date.now()}`);
-      if (localCred.role === "STUDENT" && !localStorage.getItem("alumnex_profile") && !localStorage.getItem("alumniconnect_profile")) { navigate("/profile-setup"); } else { navigate("/dashboard"); }
+
+      if (localCred.role === "STUDENT" &&
+          !localStorage.getItem("alumnex_profile") &&
+          !localStorage.getItem("alumniconnect_profile")) {
+        navigate("/profile-setup");
+      } else {
+        navigate("/dashboard");
+      }
       setLoading(false);
       return;
     }
@@ -217,8 +181,8 @@ export default function UnifiedLogin() {
     { id: "TNP",     label: "TNP Admin", icon: "admin_panel_settings" },
   ];
   const DEMO_HINTS = {
-    STUDENT: "Demo: alice.johnson42 / Xk7mP2qR9n",
-    ALUMNI:  "Demo: priya.sharma / Alumni@2026",
+    STUDENT: "Demo: stu1001@alumniconnect.edu / Student@123",
+    ALUMNI:  "Demo: priya.sharma@google.com / Alumni@123",
     TNP:     "Demo: admin / tnp_secure_123",
   };
   const inp = { width: "100%", background: "#222a3d", border: "1px solid rgba(70,69,85,0.4)", borderRadius: 10, padding: "0.75rem 0.875rem", color: "#dae2fd", fontSize: "0.875rem", outline: "none", boxSizing: "border-box", fontFamily: "Inter, sans-serif" };
