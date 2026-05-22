@@ -229,22 +229,18 @@ function BookButton({ alumni, studentName, userId, onBook }) {
   );
 
   if (status === 'slot_booked') {
-    const joinUrl = existing.roomId?.startsWith('http')
-      ? existing.roomId
-      : `/interview/${existing.roomId || existing.id}`;
+    const joinUrl = `/interview/${existing.id}?name=${encodeURIComponent(studentName)}`;
     const canJoin = existing.scheduledTime
       ? Date.now() >= new Date(existing.scheduledTime).getTime() - 5 * 60 * 1000
       : true;
 
     if (canJoin) return (
-      <a
-        href={joinUrl}
-        target={joinUrl.startsWith('http') ? '_blank' : undefined}
-        rel="noopener noreferrer"
+      <Link
+        to={joinUrl}
         style={{ width: '100%', padding: '0.6rem', background: 'linear-gradient(135deg,#00a572,#4edea3)', color: '#003d29', border: 'none', borderRadius: 10, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, textDecoration: 'none', boxSizing: 'border-box' }}
       >
         <span className="material-symbols-outlined" style={{ fontSize: 15 }}>videocam</span>Join Mock Interview
-      </a>
+      </Link>
     );
 
     const formatted = new Date(existing.scheduledTime).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });

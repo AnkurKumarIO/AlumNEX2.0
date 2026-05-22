@@ -1360,16 +1360,9 @@ export default function AlumniDashboard() {
         localStorage.setItem(NOTIF_KEY, JSON.stringify(all));
       }
     } catch {}
-    // Navigate alumni to the room — use the real meet URL if it's a Google Meet link,
-    // otherwise use the internal interview route
-    const destination = roomId.startsWith('http')
-      ? roomId
-      : `/interview/${roomId}?name=${encodeURIComponent(user?.name || 'Alumni')}`;
-    if (roomId.startsWith('http')) {
-      window.open(destination, '_blank', 'noopener,noreferrer');
-    } else {
-      navigate(destination);
-    }
+
+    // Always navigate alumni to the internal interview room
+    navigate(`/interview/${req.id}?name=${encodeURIComponent(user?.name || 'Alumni')}`);
   };
 
   const handleRescheduled = (requestId, newScheduledTime) => {
@@ -1509,9 +1502,9 @@ export default function AlumniDashboard() {
                     <div style={{ fontSize: '0.68rem', color: s.active ? '#c3c0ff' : 'rgba(199,196,216,0.5)', marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>{highlight(s.when, q)}</div>
                   </div>
                   {s.active && s.roomId && (
-                    <a href={`/interview/${s.roomId}`} style={{ padding: '0.35rem 0.875rem', background: 'rgba(79,70,229,0.2)', color: '#c3c0ff', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+                    <Link to={`/interview/${s.requestId || s.id || s.roomId}?name=${encodeURIComponent(user?.name || 'Alumni')}`} style={{ padding: '0.35rem 0.875rem', background: 'rgba(79,70,229,0.2)', color: '#c3c0ff', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
                       <span className="material-symbols-outlined" style={{ fontSize: 14 }}>videocam</span> Join
-                    </a>
+                    </Link>
                   )}
                 </div>
               ))}
@@ -1710,7 +1703,7 @@ export default function AlumniDashboard() {
                             <span className="material-symbols-outlined" style={{ fontSize: 14 }}>videocam_off</span> Ended
                           </div>
                         ) : (
-                          <Link to={`/interview/${e.roomId || 'demo-room'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.35rem 0.75rem', background: 'rgba(79,70,229,0.2)', color: '#c3c0ff', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, textDecoration: 'none', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                          <Link to={`/interview/${e.requestId || e.id || e.roomId || 'demo-room'}?name=${encodeURIComponent(user?.name || 'Alumni')}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.35rem 0.75rem', background: 'rgba(79,70,229,0.2)', color: '#c3c0ff', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, textDecoration: 'none', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                             <span className="material-symbols-outlined" style={{ fontSize: 14 }}>videocam</span> Join
                           </Link>
                         )
@@ -1817,8 +1810,8 @@ export default function AlumniDashboard() {
                   const endMs = scheduledMs + 2 * 60 * 60 * 1000;
                   const isEnded = now > endMs;
                   const canJoin = !isEnded && now >= scheduledMs - 5 * 60 * 1000;
-                  const joinUrl = r.roomId && r.roomId.startsWith('http') ? r.roomId : `/interview/${r.id}`;
-                  const isGoogleMeet = joinUrl.includes('meet.google.com');
+                  const joinUrl = `/interview/${r.id}?name=${encodeURIComponent(user?.name || 'Alumni')}`;
+                  const isGoogleMeet = r.roomId?.includes('meet.google.com');
                   return (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
                       {isEnded ? (
@@ -1827,11 +1820,11 @@ export default function AlumniDashboard() {
                         </div>
                       ) : canJoin ? (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
-                          <a href={joinUrl} target={joinUrl.startsWith('http') ? "_blank" : undefined} rel="noopener noreferrer"
+                          <Link to={joinUrl}
                             style={{ padding: '0.45rem 1rem', background: isGoogleMeet ? 'linear-gradient(135deg,#1a73e8,#4285f4)' : 'linear-gradient(135deg,#00a572,#4edea3)', color: '#fff', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 5 }}>
                             <span className="material-symbols-outlined" style={{ fontSize: 14 }}>videocam</span>
                             {isGoogleMeet ? 'Start Meeting' : 'Join Now'}
-                          </a>
+                          </Link>
                           {isGoogleMeet && (
                             <div style={{ fontSize: '0.6rem', color: 'rgba(199,196,216,0.5)', textAlign: 'right' }}>
                               You are the host — students wait until you join
@@ -1978,15 +1971,15 @@ export default function AlumniDashboard() {
                           const endMs = scheduledMs + 2 * 60 * 60 * 1000;
                           const isEnded = now > endMs;
                           const canJoin = !isEnded && now >= scheduledMs - 5 * 60 * 1000;
-                          const joinUrl = r.roomId && r.roomId.startsWith('http') ? r.roomId : `/interview/${r.roomId || r.id}`;
+                          const joinUrl = `/interview/${r.id}?name=${encodeURIComponent(user?.name || 'Alumni')}`;
                           return isEnded ? (
                             <div style={{ fontSize: '0.65rem', color: '#6b7280', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4, opacity: 0.7 }}>
                               <span className="material-symbols-outlined" style={{ fontSize: 13 }}>videocam_off</span> Ended
                             </div>
                           ) : canJoin ? (
-                            <a href={joinUrl} target={joinUrl.startsWith('http') ? "_blank" : undefined} rel="noopener noreferrer" style={{ padding: '0.35rem 0.75rem', background: 'linear-gradient(135deg,#00a572,#4edea3)', color: '#003d29', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <Link to={joinUrl} style={{ padding: '0.35rem 0.75rem', background: 'linear-gradient(135deg,#00a572,#4edea3)', color: '#003d29', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
                               <span className="material-symbols-outlined" style={{ fontSize: 13 }}>videocam</span> Join
-                            </a>
+                            </Link>
                           ) : (
                             <div style={{ fontSize: '0.65rem', color: '#4edea3', fontWeight: 600 }}>
                               📅 {new Date(r.scheduledTime).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
