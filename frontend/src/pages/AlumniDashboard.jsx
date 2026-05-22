@@ -57,7 +57,7 @@ function StudentDetailModal({ request, onClose, onAccept }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(6px)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-      <div style={{ background: '#171f33', borderRadius: 20, width: '100%', maxWidth: 560, border: '1px solid rgba(195,192,255,0.15)', boxShadow: '0 40px 80px rgba(0,0,0,0.6)', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div style={{ background: '#171f33', borderRadius: 20, width: '100%', maxWidth: 560, border: '1px solid rgba(195,192,255,0.15)', boxShadow: '0 40px 80px rgba(0,0,0,0.6)', height: '90vh', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
         {/* Header */}
         <div style={{ padding: '1.5rem 1.5rem 1rem', borderBottom: '1px solid rgba(70,69,85,0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexShrink: 0 }}>
@@ -78,7 +78,7 @@ function StudentDetailModal({ request, onClose, onAccept }) {
             <p style={{ fontSize: '0.875rem', color: '#c7c4d8' }}>{request.studentName} has been notified. Click "Book Slot" to schedule the interview.</p>
           </div>
         ) : (
-          <div style={{ overflowY: 'auto', flex: 1 }}>
+          <div style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
             {/* Student basic info */}
             <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(70,69,85,0.1)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: '1rem' }}>
@@ -1114,15 +1114,27 @@ export default function AlumniDashboard() {
   // Profile dropdown
   const [showProfile, setShowProfile] = useState(false);
   const [editProfile, setEditProfile] = useState(false);
-  const [savedProfile] = useState(() => {
+  const savedProfile = (() => {
     try { return JSON.parse(localStorage.getItem('alumnex_profile') || '{}'); } catch { return {}; }
-  });
+  })();
   const [profileForm, setProfileForm] = useState({
-    username: savedProfile.username || user?.name || '',
-    email:    savedProfile.email    || '',
-    domain:   savedProfile.domain   || savedProfile.department || '',
+    username: savedProfile.name || savedProfile.username || user?.name || '',
+    email:    savedProfile.email    || user?.email || '',
+    domain:   savedProfile.domain   || savedProfile.department || user?.department || '',
     experience: savedProfile.experience || '',
   });
+
+  useEffect(() => {
+    const latestProfile = (() => {
+      try { return JSON.parse(localStorage.getItem('alumnex_profile') || '{}'); } catch { return {}; }
+    })();
+    setProfileForm({
+      username: latestProfile.name || latestProfile.username || user?.name || '',
+      email:    latestProfile.email    || user?.email || '',
+      domain:   latestProfile.domain   || latestProfile.department || user?.department || '',
+      experience: latestProfile.experience || '',
+    });
+  }, [editProfile, localRefresh, user]);
 
   // Notifications panel
   const [showNotifs, setShowNotifs] = useState(false);
@@ -1301,10 +1313,19 @@ export default function AlumniDashboard() {
   };
 
   const saveProfileForm = async () => {
-    const updated = { ...savedProfile, ...profileForm };
+    const updated = {
+      ...savedProfile,
+      ...profileForm,
+      name: user?.name || savedProfile.name || profileForm.username,
+      email: user?.email || savedProfile.email || profileForm.email,
+    };
     localStorage.setItem('alumnex_profile', JSON.stringify(updated));
-    const updatedUser = { ...user, name: profileForm.username || user?.name };
-    login(updatedUser, localStorage.getItem('alumnex_token'));
+    localStorage.setItem('alumniconnect_profile', JSON.stringify(updated));
+    const updatedUser = {
+      ...user,
+      name: user?.name || profileForm.username
+    };
+    login(updatedUser, localStorage.getItem('alumnex_token') || localStorage.getItem('alumniconnect_token'));
     emitRealtimeSync({ type: 'profile_updated' });
     // Persist to DB so profile syncs across devices
     if (user?.id && !user.id.startsWith('alm-') && !user.id.startsWith('stu-')) {
@@ -1995,7 +2016,7 @@ export default function AlumniDashboard() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                     {r.status === 'pending' && (
                       <>
-                        <button onClick={() => setViewingStudentProfile(r)} style={{ padding: '0.4rem 0.875rem', background: 'rgba(79,70,229,0.2)', color: '#c3c0ff', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', border: 'none', cursor: 'pointer' }}>
+                        <button onClick={() => setViewingRequest(r)} style={{ padding: '0.4rem 0.875rem', background: 'rgba(79,70,229,0.2)', color: '#c3c0ff', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', border: 'none', cursor: 'pointer' }}>
                           Accept
                         </button>
                         <button onClick={() => handleDeclineRequest(r.id)} style={{ padding: '0.4rem 0.75rem', background: '#222a3d', color: '#c7c4d8', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, border: 'none', cursor: 'pointer' }}>
@@ -2393,7 +2414,19 @@ export default function AlumniDashboard() {
                                 value={profileForm[field.key]}
                                 onChange={e => setProfileForm(f => ({ ...f, [field.key]: e.target.value }))}
                                 placeholder={field.placeholder}
-                                style={{ width: '100%', background: '#222a3d', border: '1px solid rgba(70,69,85,0.4)', borderRadius: 8, padding: '0.55rem 0.75rem', color: '#dae2fd', fontSize: '0.8rem', outline: 'none', boxSizing: 'border-box' }}
+                                disabled={field.key === 'username' || field.key === 'email'}
+                                style={{
+                                  width: '100%',
+                                  background: '#222a3d',
+                                  border: '1px solid rgba(70,69,85,0.4)',
+                                  borderRadius: 8,
+                                  padding: '0.55rem 0.75rem',
+                                  color: '#dae2fd',
+                                  fontSize: '0.8rem',
+                                  outline: 'none',
+                                  boxSizing: 'border-box',
+                                  ...((field.key === 'username' || field.key === 'email') ? { opacity: 0.65, cursor: 'not-allowed' } : {})
+                                }}
                               />
                             </div>
                           ))}

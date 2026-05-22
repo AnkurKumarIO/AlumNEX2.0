@@ -133,8 +133,8 @@ export default function SettingsPage({ role }) {
     resumeUrl:  savedProfile.resumeUrl  || '',
     // Alumni-specific fields
     company:      savedProfile.company      || '',
-    currentTitle: savedProfile.currentTitle || savedProfile.title || '',
-    passOutYear:  savedProfile.passOutYear  || '',
+    currentTitle: savedProfile.currentTitle || savedProfile.jobTitle || savedProfile.title || '',
+    passOutYear:  savedProfile.passOutYear  || savedProfile.batchYear || '',
     experience:   savedProfile.experience   || '',
     domain:       savedProfile.domain       || '',
     // Student setup fields
@@ -149,15 +149,22 @@ export default function SettingsPage({ role }) {
   // Sync state if user loads later
   useEffect(() => {
     if (user) {
-      setProfile(p => ({
-        ...p,
-        name: user.name || p.name,
-        email: user.email || p.email,
-        department: user.department || p.department,
-        college: user.profile_data?.college || p.college,
-        year: user.profile_data?.year || p.year,
-        rollNo: user.profile_data?.rollNo || user.profile_data?.studentId || p.rollNo,
-      }));
+      setProfile(p => {
+        const profileData = user.profile_data || {};
+        return {
+          ...p,
+          name: user.name || p.name,
+          email: user.email || p.email,
+          department: user.department || p.department,
+          college: profileData.college || p.college,
+          year: profileData.year || p.year,
+          rollNo: profileData.rollNo || profileData.studentId || p.rollNo,
+          // Alumni-specific fields
+          company: profileData.company || p.company,
+          currentTitle: profileData.currentTitle || profileData.jobTitle || profileData.title || p.currentTitle,
+          passOutYear: profileData.passOutYear || profileData.batchYear || p.passOutYear,
+        };
+      });
     }
   }, [user]);
 
@@ -209,6 +216,10 @@ export default function SettingsPage({ role }) {
       college: user?.profile_data?.college || savedProfile.college || profile.college,
       year: user?.profile_data?.year || savedProfile.year || profile.year,
       rollNo: user?.profile_data?.rollNo || user?.profile_data?.studentId || savedProfile.rollNo || savedProfile.studentId || profile.rollNo,
+      // For alumni:
+      company: user?.profile_data?.company || savedProfile.company || profile.company,
+      currentTitle: user?.profile_data?.currentTitle || user?.profile_data?.jobTitle || savedProfile.currentTitle || savedProfile.title || profile.currentTitle,
+      passOutYear: user?.profile_data?.passOutYear || user?.profile_data?.batchYear || savedProfile.passOutYear || profile.passOutYear,
     };
     const updated = { ...mergedProfileData, photoPreview };
     localStorage.setItem('alumnex_profile', JSON.stringify(updated));
@@ -288,7 +299,15 @@ export default function SettingsPage({ role }) {
         {/* ── EDIT PROFILE ── */}
         {activeSection === 'profile' && (
           <div style={{ background: '#131b2e', borderRadius: 16, padding: '2rem', border: '1px solid rgba(70,69,85,0.15)' }}>
-            <h3 style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: '1.75rem' }}>Edit Profile</h3>
+            <h3 style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: '1.25rem' }}>Edit Profile</h3>
+
+            {/* Locked fields notice */}
+            <div style={{ background: 'rgba(195,192,255,0.03)', border: '1px solid rgba(195,192,255,0.15)', borderRadius: 12, padding: '1rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+              <span className="material-symbols-outlined" style={{ color: '#c3c0ff', fontSize: 18 }}>lock</span>
+              <div style={{ fontSize: '0.78rem', color: '#c7c4d8', lineHeight: 1.5 }}>
+                Verified profile details (such as <strong style={{ color: '#dae2fd' }}>Name, Email, Department, Company, Title, and Batch Year</strong>) are managed by your institution's placement office and cannot be changed here. Contact your coordinator if you need to update them.
+              </div>
+            </div>
 
             {/* Profile Photo */}
             <div style={{ marginBottom: '1.75rem', display: 'flex', alignItems: 'center', gap: 20 }}>
@@ -322,21 +341,19 @@ export default function SettingsPage({ role }) {
                 <label style={lbl}>Full Name</label>
                 <input
                   value={profile.name}
-                  onChange={e => setProfile(p => ({ ...p, name: e.target.value }))}
                   placeholder="Your name"
-                  disabled={!isAlumni}
-                  style={{ ...inp, ...(!isAlumni ? { opacity: 0.65, cursor: 'not-allowed' } : {}) }}
+                  disabled
+                  style={{ ...inp, opacity: 0.65, cursor: 'not-allowed' }}
                 />
               </div>
               <div>
                 <label style={lbl}>Email</label>
                 <input
                   value={profile.email}
-                  onChange={e => setProfile(p => ({ ...p, email: e.target.value }))}
                   placeholder="your@email.com"
                   type="email"
-                  disabled={!isAlumni}
-                  style={{ ...inp, ...(!isAlumni ? { opacity: 0.65, cursor: 'not-allowed' } : {}) }}
+                  disabled
+                  style={{ ...inp, opacity: 0.65, cursor: 'not-allowed' }}
                 />
               </div>
               <div>
@@ -352,10 +369,9 @@ export default function SettingsPage({ role }) {
                 <label style={lbl}>Department / Branch</label>
                 <input
                   value={profile.department}
-                  onChange={e => setProfile(p => ({ ...p, department: e.target.value }))}
                   placeholder="e.g. Computer Science"
-                  disabled={!isAlumni}
-                  style={{ ...inp, ...(!isAlumni ? { opacity: 0.65, cursor: 'not-allowed' } : {}) }}
+                  disabled
+                  style={{ ...inp, opacity: 0.65, cursor: 'not-allowed' }}
                 />
               </div>
             </div>
@@ -365,11 +381,21 @@ export default function SettingsPage({ role }) {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                 <div>
                   <label style={lbl}>Current Position / Title</label>
-                  <input value={profile.currentTitle} onChange={e => setProfile(p => ({ ...p, currentTitle: e.target.value }))} placeholder="e.g. Senior Software Engineer" style={inp} />
+                  <input
+                    value={profile.currentTitle}
+                    placeholder="e.g. Senior Software Engineer"
+                    disabled
+                    style={{ ...inp, opacity: 0.65, cursor: 'not-allowed' }}
+                  />
                 </div>
                 <div>
                   <label style={lbl}>Company / Organization</label>
-                  <input value={profile.company} onChange={e => setProfile(p => ({ ...p, company: e.target.value }))} placeholder="e.g. Google" style={inp} />
+                  <input
+                    value={profile.company}
+                    placeholder="e.g. Google"
+                    disabled
+                    style={{ ...inp, opacity: 0.65, cursor: 'not-allowed' }}
+                  />
                 </div>
                 <div>
                   <label style={lbl}>Domain / Expertise</label>
@@ -381,7 +407,15 @@ export default function SettingsPage({ role }) {
                 </div>
                 <div>
                   <label style={lbl}>Pass-out Year (Batch)</label>
-                  <input type="number" min="1990" max="2030" value={profile.passOutYear} onChange={e => setProfile(p => ({ ...p, passOutYear: e.target.value }))} placeholder="e.g. 2018" style={inp} />
+                  <input
+                    type="number"
+                    min="1990"
+                    max="2030"
+                    value={profile.passOutYear}
+                    disabled
+                    placeholder="e.g. 2018"
+                    style={{ ...inp, opacity: 0.65, cursor: 'not-allowed' }}
+                  />
                 </div>
                 <div>
                   <label style={lbl}>College / University</label>

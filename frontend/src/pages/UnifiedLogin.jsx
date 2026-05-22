@@ -92,6 +92,7 @@ export default function UnifiedLogin() {
       const existingP2 = JSON.parse(localStorage.getItem('alumniconnect_profile') || 'null');
       const alreadyComplete = existingP1?.profileComplete || existingP2?.profileComplete || false;
 
+      const isUserAlumni = dbUser.role === 'ALUMNI';
       const fullProfile = {
         ...profileData,
         profileComplete: dbUser.profileComplete || profileData.profileComplete || alreadyComplete || false,
@@ -101,6 +102,11 @@ export default function UnifiedLogin() {
         college: profileData.college || '',
         year: profileData.year || '',
         rollNo: profileData.rollNo || profileData.studentId || '',
+        ...(isUserAlumni ? {
+          company: profileData.company || '',
+          currentTitle: profileData.currentTitle || profileData.jobTitle || profileData.title || '',
+          passOutYear: profileData.passOutYear || profileData.batchYear || '',
+        } : {})
       };
       localStorage.setItem('alumnex_profile', JSON.stringify(fullProfile));
       localStorage.setItem('alumniconnect_profile', JSON.stringify(fullProfile));
@@ -173,6 +179,30 @@ export default function UnifiedLogin() {
               department: dbUser.department,
               profile_data: profileData,
             };
+
+            const existingP1 = JSON.parse(localStorage.getItem('alumnex_profile') || 'null');
+            const existingP2 = JSON.parse(localStorage.getItem('alumniconnect_profile') || 'null');
+            const alreadyComplete = existingP1?.profileComplete || existingP2?.profileComplete || false;
+
+            const isUserAlumni = dbUser.role === 'ALUMNI';
+            const fullProfile = {
+              ...profileData,
+              profileComplete: dbUser.profileComplete || profileData.profileComplete || alreadyComplete || false,
+              name: dbUser.name,
+              email: dbUser.email,
+              department: dbUser.department,
+              college: profileData.college || '',
+              year: profileData.year || '',
+              rollNo: profileData.rollNo || profileData.studentId || '',
+              ...(isUserAlumni ? {
+                company: profileData.company || '',
+                currentTitle: profileData.currentTitle || profileData.jobTitle || profileData.title || '',
+                passOutYear: profileData.passOutYear || profileData.batchYear || '',
+              } : {})
+            };
+            localStorage.setItem('alumnex_profile', JSON.stringify(fullProfile));
+            localStorage.setItem('alumniconnect_profile', JSON.stringify(fullProfile));
+
             login(userData, authData.session?.access_token || `token-${Date.now()}`);
             if (dbUser.role === "STUDENT" && !isProfileComplete()) {
               navigate("/profile-setup");
@@ -225,8 +255,29 @@ export default function UnifiedLogin() {
         
         const data = await regRes.json();
         if (regRes.ok && data.user) {
-          login(data.user, data.token);
-          if (data.user.role === "STUDENT" && !localStorage.getItem("alumnex_profile") && !localStorage.getItem("alumniconnect_profile")) {
+          const dbUser = data.user;
+          const profileData = dbUser.profile_data || {};
+          const isUserAlumni = dbUser.role === 'ALUMNI';
+          const fullProfile = {
+            ...profileData,
+            profileComplete: dbUser.profileComplete || profileData.profileComplete || false,
+            name: dbUser.name,
+            email: dbUser.email,
+            department: dbUser.department,
+            college: profileData.college || '',
+            year: profileData.year || '',
+            rollNo: profileData.rollNo || profileData.studentId || '',
+            ...(isUserAlumni ? {
+              company: profileData.company || '',
+              currentTitle: profileData.currentTitle || profileData.jobTitle || profileData.title || '',
+              passOutYear: profileData.passOutYear || profileData.batchYear || '',
+            } : {})
+          };
+          localStorage.setItem('alumnex_profile', JSON.stringify(fullProfile));
+          localStorage.setItem('alumniconnect_profile', JSON.stringify(fullProfile));
+
+          login(dbUser, data.token);
+          if (dbUser.role === "STUDENT" && !isProfileComplete()) {
              navigate("/profile-setup");
           } else {
              navigate("/dashboard");
