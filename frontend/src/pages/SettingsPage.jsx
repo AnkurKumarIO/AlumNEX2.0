@@ -11,6 +11,31 @@ const NOTIF_ITEMS = [
   { key: 'platform_updates',  label: 'Platform Updates',   desc: 'New features and announcements' },
 ];
 
+function TagInput({ tags, onChange, placeholder }) {
+  const [val, setVal] = useState('');
+  const add = () => {
+    const t = val.trim();
+    if (t && !tags.includes(t)) onChange([...tags, t]);
+    setVal('');
+  };
+  return (
+    <div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+        {tags.map(t => (
+          <span key={t} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '0.2rem 0.6rem', background: 'rgba(195,192,255,0.12)', border: '1px solid rgba(195,192,255,0.2)', borderRadius: 999, fontSize: '0.75rem', color: '#c3c0ff' }}>
+            {t}
+            <button onClick={() => onChange(tags.filter(x => x !== t))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c3c0ff', padding: 0, lineHeight: 1, fontSize: 14 }}>×</button>
+          </span>
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <input value={val} onChange={e => setVal(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); add(); } }} placeholder={placeholder} style={{ flex: 1, background: '#222a3d', border: '1px solid rgba(70,69,85,0.4)', borderRadius: 10, padding: '0.65rem 0.875rem', color: '#dae2fd', fontSize: '0.875rem', outline: 'none' }} />
+        <button onClick={add} style={{ padding: '0.65rem 1rem', background: 'rgba(195,192,255,0.1)', border: '1px solid rgba(195,192,255,0.2)', borderRadius: 10, color: '#c3c0ff', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>Add</button>
+      </div>
+    </div>
+  );
+}
+
 export default function SettingsPage({ role }) {
   const { user, login } = useContext(AuthContext);
   const resumeInputRef = useRef(null);
@@ -111,6 +136,13 @@ export default function SettingsPage({ role }) {
     passOutYear:  savedProfile.passOutYear  || '',
     experience:   savedProfile.experience   || '',
     domain:       savedProfile.domain       || '',
+    // Student setup fields
+    projects:           savedProfile.projects           || [{ title: '', desc: '', stack: '', link: '' }],
+    targetRoles:        savedProfile.targetRoles        || [],
+    preferredCompanies: savedProfile.preferredCompanies || [],
+    openTo:             savedProfile.openTo             || [],
+    gradMonth:          savedProfile.gradMonth          || '',
+    gradYear:           savedProfile.gradYear           || '',
   });
 
   const [notifs, setNotifs] = useState({
@@ -180,10 +212,10 @@ export default function SettingsPage({ role }) {
     { id: 'account',       icon: 'manage_accounts', label: 'Account'      },
   ];
 
-  // Account items — no export for alumni
+  // Account items — no delete for students
   const accountItems = [
     { icon: 'key', label: 'Change Password', desc: 'Update your login password', color: '#c3c0ff', action: () => setShowPwModal(true) },
-    { icon: 'delete_forever', label: 'Delete Account', desc: 'Permanently remove your account and data', color: '#ffb4ab', action: () => setShowDeleteModal(true) },
+    ...(isAlumni ? [{ icon: 'delete_forever', label: 'Delete Account', desc: 'Permanently remove your account and data', color: '#ffb4ab', action: () => setShowDeleteModal(true) }] : []),
   ];
 
   return (
@@ -312,6 +344,19 @@ export default function SettingsPage({ role }) {
                   <label style={lbl}>CGPA</label>
                   <input type="number" min="0" max="10" step="0.1" value={profile.cgpa} onChange={e => setProfile(p => ({ ...p, cgpa: e.target.value }))} placeholder="e.g. 8.5" style={inp} />
                 </div>
+                <div>
+                  <label style={lbl}>Expected Graduation</label>
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <select value={profile.gradMonth} onChange={e => setProfile(p => ({ ...p, gradMonth: e.target.value }))} style={{ ...inp, flex: 1 }}>
+                      <option value="">Month</option>
+                      {['January','February','March','April','May','June','July','August','September','October','November','December'].map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                    <select value={profile.gradYear} onChange={e => setProfile(p => ({ ...p, gradYear: e.target.value }))} style={{ ...inp, flex: 1 }}>
+                      <option value="">Year</option>
+                      {[2025,2026,2027,2028,2029,2030].map(y => <option key={y} value={y}>{y}</option>)}
+                    </select>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -368,6 +413,71 @@ export default function SettingsPage({ role }) {
                 {profile.resumeName && <div style={{ marginTop: 8, fontSize: '0.78rem', color: '#c7c4d8' }}>Current: {profile.resumeName}</div>}
                 <input ref={resumeInputRef} type="file" accept="application/pdf,.pdf" onChange={handleResumeUpload} style={{ display: 'none' }} />
               </div>
+            )}
+
+            {!isAlumni && (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+                  <div>
+                    <label style={lbl}>Target Roles</label>
+                    <TagInput tags={profile.targetRoles} onChange={v => setProfile(p => ({ ...p, targetRoles: v }))} placeholder="e.g. Software Engineer, Data Scientist..." />
+                  </div>
+                  <div>
+                    <label style={lbl}>Preferred Companies <span style={{ opacity: 0.5, fontWeight: 400, textTransform: 'none' }}>(optional)</span></label>
+                    <TagInput tags={profile.preferredCompanies} onChange={v => setProfile(p => ({ ...p, preferredCompanies: v }))} placeholder="e.g. Google, Stripe, Startup..." />
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label style={lbl}>Open To</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                    {['Full-time', 'Internship', 'Remote', 'Hybrid', 'On-site'].map(opt => (
+                      <label key={opt} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '0.5rem 1rem', background: profile.openTo.includes(opt) ? 'rgba(195,192,255,0.12)' : '#222a3d', border: `1px solid ${profile.openTo.includes(opt) ? 'rgba(195,192,255,0.3)' : 'rgba(70,69,85,0.3)'}`, borderRadius: 10, fontSize: '0.8rem', color: profile.openTo.includes(opt) ? '#c3c0ff' : '#c7c4d8', transition: 'all 0.2s' }}>
+                        <input type="checkbox" checked={profile.openTo.includes(opt)} onChange={e => setProfile(p => ({ ...p, openTo: e.target.checked ? [...profile.openTo, opt] : profile.openTo.filter(x => x !== opt) }))} style={{ display: 'none' }} />
+                        {profile.openTo.includes(opt) && <span className="material-symbols-outlined" style={{ fontSize: 14, color: '#c3c0ff' }}>check</span>}
+                        {opt}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label style={lbl}>Projects <span style={{ opacity: 0.5, fontWeight: 400, textTransform: 'none' }}>(up to 3, optional)</span></label>
+                  {profile.projects.map((p, i) => (
+                    <div key={i} style={{ background: '#171f33', borderRadius: 12, padding: '1rem', marginBottom: '0.75rem', border: '1px solid rgba(70,69,85,0.2)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#c3c0ff', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Project {i + 1}</span>
+                        {profile.projects.length > 1 && (
+                          <button onClick={() => setProfile(prev => ({ ...prev, projects: prev.projects.filter((_, j) => j !== i) }))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ffb4ab', fontSize: '0.7rem' }}>Remove</button>
+                        )}
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                        <div>
+                          <label style={{ ...lbl, fontSize: '0.65rem', marginBottom: 4 }}>Project Title</label>
+                          <input value={p.title} onChange={e => { const updated = [...profile.projects]; updated[i] = { ...updated[i], title: e.target.value }; setProfile(prev => ({ ...prev, projects: updated })); }} placeholder="e.g. E-Commerce Platform" style={inp} />
+                        </div>
+                        <div>
+                          <label style={{ ...lbl, fontSize: '0.65rem', marginBottom: 4 }}>Tech Stack</label>
+                          <input value={p.stack} onChange={e => { const updated = [...profile.projects]; updated[i] = { ...updated[i], stack: e.target.value }; setProfile(prev => ({ ...prev, projects: updated })); }} placeholder="React, Node.js, MongoDB" style={inp} />
+                        </div>
+                        <div style={{ gridColumn: 'span 2' }}>
+                          <label style={{ ...lbl, fontSize: '0.65rem', marginBottom: 4 }}>Description</label>
+                          <input value={p.desc} onChange={e => { const updated = [...profile.projects]; updated[i] = { ...updated[i], desc: e.target.value }; setProfile(prev => ({ ...prev, projects: updated })); }} placeholder="What does it do?" style={inp} />
+                        </div>
+                        <div style={{ gridColumn: 'span 2' }}>
+                          <label style={{ ...lbl, fontSize: '0.65rem', marginBottom: 4 }}>GitHub Link</label>
+                          <input value={p.link} onChange={e => { const updated = [...profile.projects]; updated[i] = { ...updated[i], link: e.target.value }; setProfile(prev => ({ ...prev, projects: updated })); }} placeholder="https://github.com/..." style={inp} />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {profile.projects.length < 3 && (
+                    <button onClick={() => setProfile(prev => ({ ...prev, projects: [...prev.projects, { title: '', desc: '', stack: '', link: '' }] }))} style={{ padding: '0.5rem 1rem', background: 'transparent', border: '1px dashed rgba(195,192,255,0.3)', borderRadius: 10, color: '#c3c0ff', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', width: '100%' }}>
+                      + Add Another Project
+                    </button>
+                  )}
+                </div>
+              </>
             )}
 
             <button onClick={saveProfile} style={{ padding: '0.75rem 2rem', background: 'linear-gradient(135deg,#4f46e5,#c3c0ff)', color: '#1d00a5', border: 'none', borderRadius: 12, fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer' }}>

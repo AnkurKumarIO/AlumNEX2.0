@@ -116,6 +116,7 @@ const NAV_ITEMS = [
   { icon: 'group',       label: 'Directory',           tab: 'directory' },
   { icon: 'history',     label: 'Session History',     tab: 'analytics' },
   { icon: 'chat_bubble', label: 'Messages',            tab: 'messages' },
+  { icon: 'person',      label: 'My Profile',          tab: 'profile_view' },
   { icon: 'settings',    label: 'Settings',            tab: 'settings' },
 ];
 
@@ -367,6 +368,260 @@ export default function Dashboard() {
               })}
             </div>
           )}
+        </div>
+      );
+    }
+    if (activeTab === 'settings') return <SettingsPage role="STUDENT" />;
+    if (activeTab === 'profile_view') {
+      const projects = profileData.projects || [];
+      const validProjects = projects.filter(p => p && p.title);
+      const targetRoles = profileData.targetRoles || [];
+      const preferredCompanies = profileData.preferredCompanies || [];
+      const openTo = profileData.openTo || [];
+      const skills = profileData.skills || [];
+
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          {/* Header Card */}
+          <div style={{ ...glass, display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: '2rem', alignItems: 'center', justifyContent: 'space-between', background: 'linear-gradient(135deg, rgba(23,31,51,0.8) 0%, rgba(15,23,42,0.8) 100%)', border: '1px solid rgba(195,192,255,0.1)' }}>
+            <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ width: 80, height: 80, borderRadius: '50%', background: profileData?.photoPreview ? 'transparent' : 'linear-gradient(135deg,#4f46e5,#c3c0ff)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '2rem', color: '#1d00a5', flexShrink: 0, border: '3px solid rgba(195,192,255,0.2)' }}>
+                {profileData?.photoPreview ? (
+                  <img src={profileData.photoPreview} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  (profileData.name || user?.name || 'S').charAt(0).toUpperCase()
+                )}
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                  <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#fff', margin: 0 }}>{profileData.name || user?.name || 'Student'}</h1>
+                  <span style={{ padding: '0.25rem 0.75rem', borderRadius: 20, fontSize: '0.7rem', fontWeight: 700, background: 'rgba(195,192,255,0.1)', color: '#c3c0ff', border: '1px solid rgba(195,192,255,0.2)' }}>
+                    Student Profile
+                  </span>
+                </div>
+                <p style={{ fontSize: '0.95rem', color: '#c7c4d8', margin: '0.5rem 0 0 0' }}>
+                  {profileData.department || profileData.branch || 'Department not set'} {profileData.year ? `• Year ${profileData.year}` : ''}
+                </p>
+                <p style={{ fontSize: '0.85rem', color: 'rgba(199,196,216,0.6)', margin: '0.25rem 0 0 0' }}>
+                  {profileData.college || 'College not set'}
+                </p>
+              </div>
+            </div>
+            <button onClick={() => setActiveTab('settings')} style={{ ...btnPrimary, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.65rem 1.25rem', borderRadius: 10 }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>
+              Edit Profile
+            </button>
+          </div>
+
+          {/* Two Column Layout */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem' }}>
+            
+            {/* Left Column */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+              
+              {/* Academics & Status */}
+              <div style={glass}>
+                <h3 style={{ ...label, display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.75rem', marginBottom: '1.25rem' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#c3c0ff' }}>school</span>
+                  Academics & Status
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+                  <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: 12, border: '1px solid rgba(195,192,255,0.05)' }}>
+                    <div style={{ fontSize: '0.7rem', color: '#c7c4d8', opacity: 0.6, marginBottom: 4 }}>CGPA</div>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#4edea3' }}>
+                      {profileData.cgpa ? `${profileData.cgpa} / 10.0` : 'Not Set'}
+                    </div>
+                  </div>
+                  <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: 12, border: '1px solid rgba(195,192,255,0.05)' }}>
+                    <div style={{ fontSize: '0.7rem', color: '#c7c4d8', opacity: 0.6, marginBottom: 4 }}>Graduation</div>
+                    <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#fff', paddingTop: 3 }}>
+                      {profileData.gradMonth && profileData.gradYear ? `${profileData.gradMonth} ${profileData.gradYear}` : 'Not Set'}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ fontSize: '0.7rem', color: '#c7c4d8', opacity: 0.6, marginBottom: 8, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Open To</div>
+                {openTo.length > 0 ? (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {openTo.map((status, idx) => (
+                      <span key={idx} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0.35rem 0.75rem', borderRadius: 8, fontSize: '0.75rem', fontWeight: 600, background: 'rgba(78,222,163,0.1)', color: '#4edea3', border: '1px solid rgba(78,222,163,0.2)' }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>check</span>
+                        {status}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '0.85rem', color: '#c7c4d8', fontStyle: 'italic' }}>No preferences specified</div>
+                )}
+              </div>
+
+              {/* Skills */}
+              <div style={glass}>
+                <h3 style={{ ...label, display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.75rem', marginBottom: '1.25rem' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#c3c0ff' }}>psychology</span>
+                  Skills & Expertise
+                </h3>
+                {skills.length > 0 ? (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {skills.map((skill, idx) => (
+                      <span key={idx} style={{ padding: '0.4rem 0.8rem', borderRadius: 8, fontSize: '0.75rem', fontWeight: 600, background: 'rgba(195,192,255,0.06)', color: '#c3c0ff', border: '1px solid rgba(195,192,255,0.1)' }}>
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '0.85rem', color: '#c7c4d8', fontStyle: 'italic' }}>No skills added yet</div>
+                )}
+              </div>
+
+              {/* Resume & Web Links */}
+              <div style={glass}>
+                <h3 style={{ ...label, display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.75rem', marginBottom: '1.25rem' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#c3c0ff' }}>description</span>
+                  Documents & Links
+                </h3>
+                
+                {/* Resume section */}
+                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: 12, border: '1px solid rgba(195,192,255,0.05)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 24, color: '#ffb95f' }}>article</span>
+                    <div>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fff' }}>Resume</div>
+                      <div style={{ fontSize: '0.65rem', color: '#c7c4d8', opacity: 0.6 }}>
+                        {profileData.resumeName || 'No resume uploaded'}
+                      </div>
+                    </div>
+                  </div>
+                  {profileData.resumeUrl && (
+                    <a href={profileData.resumeUrl} download={profileData.resumeName || 'resume.pdf'} style={{ ...btnOutline, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0.4rem 0.8rem' }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 14 }}>download</span>
+                      Download
+                    </a>
+                  )}
+                </div>
+
+                {/* Social Links */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {profileData.linkedin && (
+                    <a href={profileData.linkedin} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0.75rem 1rem', borderRadius: 10, background: 'rgba(10,102,194,0.1)', border: '1px solid rgba(10,102,194,0.2)', color: '#0a66c2', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 600 }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 18 }}>link</span>
+                      LinkedIn Profile
+                    </a>
+                  )}
+                  {profileData.github && (
+                    <a href={profileData.github} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0.75rem 1rem', borderRadius: 10, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#fff', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 600 }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 18 }}>code</span>
+                      GitHub Repository
+                    </a>
+                  )}
+                  {profileData.portfolio && (
+                    <a href={profileData.portfolio} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0.75rem 1rem', borderRadius: 10, background: 'rgba(195,192,255,0.05)', border: '1px solid rgba(195,192,255,0.1)', color: '#c3c0ff', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 600 }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 18 }}>language</span>
+                      Portfolio Website
+                    </a>
+                  )}
+                  {!profileData.linkedin && !profileData.github && !profileData.portfolio && (
+                    <div style={{ fontSize: '0.85rem', color: '#c7c4d8', fontStyle: 'italic', textAlign: 'center', padding: '0.5rem' }}>
+                      No links added
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+              
+              {/* Bio */}
+              <div style={glass}>
+                <h3 style={{ ...label, display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.75rem', marginBottom: '1rem' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#c3c0ff' }}>person</span>
+                  About Me
+                </h3>
+                <p style={{ fontSize: '0.9rem', color: '#dae2fd', lineHeight: 1.6, margin: 0, whiteSpace: 'pre-line' }}>
+                  {profileData.bio || 'Tell mentors about yourself by updating your Bio in settings.'}
+                </p>
+              </div>
+
+              {/* Career Goals */}
+              <div style={glass}>
+                <h3 style={{ ...label, display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.75rem', marginBottom: '1.25rem' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#c3c0ff' }}>explore</span>
+                  Career Goals
+                </h3>
+
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <div style={{ fontSize: '0.7rem', color: '#c7c4d8', opacity: 0.6, marginBottom: 8, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Target Roles</div>
+                  {targetRoles.length > 0 ? (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      {targetRoles.map((role, idx) => (
+                        <span key={idx} style={{ padding: '0.35rem 0.75rem', borderRadius: 8, fontSize: '0.75rem', fontWeight: 600, background: 'rgba(195,192,255,0.06)', color: '#c3c0ff', border: '1px solid rgba(195,192,255,0.1)' }}>
+                          {role}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: '0.85rem', color: '#c7c4d8', fontStyle: 'italic' }}>No target roles added</div>
+                  )}
+                </div>
+
+                <div>
+                  <div style={{ fontSize: '0.7rem', color: '#c7c4d8', opacity: 0.6, marginBottom: 8, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Preferred Companies</div>
+                  {preferredCompanies.length > 0 ? (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      {preferredCompanies.map((company, idx) => (
+                        <span key={idx} style={{ padding: '0.35rem 0.75rem', borderRadius: 8, fontSize: '0.75rem', fontWeight: 600, background: 'rgba(78,222,163,0.06)', color: '#4edea3', border: '1px solid rgba(78,222,163,0.1)' }}>
+                          {company}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: '0.85rem', color: '#c7c4d8', fontStyle: 'italic' }}>No preferred companies added</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Projects */}
+              <div style={glass}>
+                <h3 style={{ ...label, display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.75rem', marginBottom: '1.25rem' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#c3c0ff' }}>folder</span>
+                  Projects
+                </h3>
+                {validProjects.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    {validProjects.map((project, idx) => (
+                      <div key={idx} style={{ background: 'rgba(255,255,255,0.02)', padding: '1.25rem', borderRadius: 12, border: '1px solid rgba(195,192,255,0.05)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 6 }}>
+                          <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#fff', margin: 0 }}>{project.title}</h4>
+                          {project.link && (
+                            <a href={project.link} target="_blank" rel="noopener noreferrer" style={{ color: '#c3c0ff', display: 'inline-flex', alignItems: 'center', textDecoration: 'none', transition: 'color 0.2s' }}>
+                              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>open_in_new</span>
+                            </a>
+                          )}
+                        </div>
+                        <p style={{ fontSize: '0.8rem', color: '#c7c4d8', lineHeight: 1.5, margin: '0 0 10px 0' }}>{project.desc}</p>
+                        {project.stack && (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                            {project.stack.split(',').map((tech, tIdx) => (
+                              <span key={tIdx} style={{ padding: '0.2rem 0.5rem', borderRadius: 4, fontSize: '0.65rem', fontWeight: 600, background: 'rgba(195,192,255,0.05)', color: '#c3c0ff' }}>
+                                {tech.trim()}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '0.85rem', color: '#c7c4d8', fontStyle: 'italic', textAlign: 'center', padding: '1rem' }}>
+                    No projects added yet. Edit profile to showcase your projects.
+                  </div>
+                )}
+              </div>
+
+            </div>
+
+          </div>
         </div>
       );
     }
@@ -727,8 +982,8 @@ export default function Dashboard() {
 
                   {/* Actions */}
                   <div style={{ padding: '0.75rem 1rem', borderTop: '1px solid rgba(70,69,85,0.15)', display: 'flex', gap: 8 }}>
-                    <button onClick={() => { setShowProfile(false); setActiveTab('settings'); }} style={{ flex: 1, padding: '0.5rem', background: 'rgba(195,192,255,0.1)', border: '1px solid rgba(195,192,255,0.2)', borderRadius: 8, color: '#c3c0ff', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>
-                      Edit Profile
+                    <button onClick={() => { setShowProfile(false); setActiveTab('profile_view'); }} style={{ flex: 1, padding: '0.5rem', background: 'rgba(195,192,255,0.1)', border: '1px solid rgba(195,192,255,0.2)', borderRadius: 8, color: '#c3c0ff', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>
+                      View Profile
                     </button>
                     <button onClick={() => setShowLogoutConfirm(true)} style={{ flex: 1, padding: '0.5rem', background: 'rgba(255,180,171,0.08)', border: '1px solid rgba(255,180,171,0.2)', borderRadius: 8, color: '#ffb4ab', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>
                       Sign Out

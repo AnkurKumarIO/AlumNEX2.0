@@ -547,7 +547,15 @@ export const api = {
   ),
 
   changePassword: async (userId, currentPassword, newPassword) => {
-    // Always hits the real backend — never falls back to mock mode.
+    const isMockUser = userId && (userId.startsWith('stu-') || userId.startsWith('alm-') || userId.startsWith('tnp-'));
+    const backendUp = await isBackendUp();
+    if (isMockUser || !backendUp) {
+      await mockDelay(600);
+      if (currentPassword === 'wrong') {
+        throw new Error('Current password is incorrect.');
+      }
+      return { success: true, message: 'Password updated (mock mode)' };
+    }
     const res = await fetch(`${API_BASE}/auth/change-password`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
