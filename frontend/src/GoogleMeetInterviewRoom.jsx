@@ -102,13 +102,54 @@ export default function GoogleMeetInterviewRoom() {
     setSubmitting(true);
     try {
       const authUser = JSON.parse(localStorage.getItem('alumnex_user') || '{}');
+      const myRealId = authUser.id || user?.id || '';
+
+      // Look up the request record to get real student/alumni UUIDs and names
+      // Try localStorage first (fast), then fall back to what we know
+      let studentId = '';
+      let alumniId = '';
+      let studentName = '';
+      let alumniName = '';
+      let topic = 'Mock Interview';
+
+      try {
+        const allRequests = JSON.parse(localStorage.getItem('alumnex_interview_requests') || '[]');
+        // Match by roomId (exact URL) or by request_id suffix pattern
+        const req = allRequests.find(r =>
+          r.roomId === roomId ||
+          r.id === roomId ||
+          (r.roomId && roomId && r.roomId.includes(roomId)) ||
+          (r.id && roomId && roomId.includes(r.id.slice(-8)))
+        );
+        if (req) {
+          studentId   = req.studentId   || req.student_id   || '';
+          alumniId    = req.alumniId    || req.alumni_id    || '';
+          studentName = req.studentName || '';
+          alumniName  = req.alumniName  || '';
+          topic       = req.topic       || 'Mock Interview';
+        }
+      } catch {}
+
+      // Fill in what we know from auth context if lookup failed
+      if (myRole === 'STUDENT') {
+        if (!studentId) studentId = myRealId;
+        if (!studentName) studentName = myId;
+        if (!alumniId) alumniId = peerName;   // best effort
+        if (!alumniName) alumniName = peerName;
+      } else {
+        if (!alumniId) alumniId = myRealId;
+        if (!alumniName) alumniName = myId;
+        if (!studentId) studentId = peerName; // best effort
+        if (!studentName) studentName = peerName;
+      }
+
       await api.submitFeedback({
         roomId,
-        studentId: myRole === 'STUDENT' ? (authUser.id || user?.id) : (peerName || 'unknown'),
-        alumniId: myRole === 'ALUMNI' ? (authUser.id || user?.id) : (peerName || 'unknown'),
-        studentName: myRole === 'STUDENT' ? myId : peerName,
-        alumniName: myRole === 'ALUMNI' ? myId : peerName,
-        topic: 'Mock Interview',
+        studentId,
+        alumniId,
+        studentName,
+        alumniName,
+        topic,
         meetLink,
         role: myRole,
         rating,
@@ -156,11 +197,18 @@ export default function GoogleMeetInterviewRoom() {
             <p style={{ color:'#c7c4d8', marginTop:8, lineHeight:1.6 }}>
               Session with <strong style={{ color:'#c3c0ff' }}>{peerName}</strong> — {fmt(elapsed)} elapsed
             </p>
+            {myRole === 'ALUMNI' && (
+              <p style={{ color:'#ffb95f', fontSize:'0.8rem', marginTop:6, fontWeight:600 }}>
+                Rate the student's performance — this will appear in their session history.
+              </p>
+            )}
           </div>
 
           {/* Star Rating */}
           <div style={{ background:'#131b2e', borderRadius:16, padding:'2rem', marginBottom:'1rem', border:'1px solid rgba(70,69,85,0.2)', textAlign:'center' }}>
-            <div style={{ fontSize:'0.65rem', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.1em', color:'#c7c4d8', marginBottom:'1rem' }}>Rate this session</div>
+            <div style={{ fontSize:'0.65rem', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.1em', color:'#c7c4d8', marginBottom:'1rem' }}>
+              {myRole === 'ALUMNI' ? 'Rate the student' : 'Rate this session'}
+            </div>
             <div style={{ display:'flex', justifyContent:'center', gap:8, marginBottom:'1.5rem' }}>
               {[1,2,3,4,5].map(s => (
                 <button key={s} onClick={() => setRating(s)} onMouseEnter={() => setHoverRating(s)} onMouseLeave={() => setHoverRating(0)}
@@ -178,7 +226,7 @@ export default function GoogleMeetInterviewRoom() {
                 Feedback Message <span style={{ opacity:0.5, fontWeight:400, textTransform:'none' }}>(optional)</span>
               </label>
               <textarea value={feedbackMsg} onChange={e => setFeedbackMsg(e.target.value)}
-                placeholder="Share your thoughts about the session..."
+                placeholder={myRole === 'ALUMNI' ? "Share feedback on the student's performance, communication, technical skills..." : "Share your thoughts about the session..."}
                 rows={3}
                 style={{ width:'100%', background:'#222a3d', border:'1px solid rgba(70,69,85,0.4)', borderRadius:10, padding:'0.75rem', color:'#dae2fd', fontSize:'0.875rem', outline:'none', boxSizing:'border-box', resize:'none', fontFamily:'Inter,sans-serif' }} />
             </div>

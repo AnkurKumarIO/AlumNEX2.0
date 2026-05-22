@@ -973,9 +973,11 @@ export default function AlumniDashboard() {
     }
   };
 
-  const handleSlotBooked = (requestId, scheduledTime) => {
-    // roomId MUST match bookSlot formula exactly
-    const roomId = `room-${requestId.replace(/[^a-z0-9]/gi, '').slice(-16).toLowerCase()}`;
+  const handleSlotBooked = async (requestId, scheduledTime) => {
+    // bookSlot now returns the request with the real roomId (Google Meet URL or fallback)
+    // stored by the backend. Use that instead of recomputing a plain string.
+    const result = await bookSlot(requestId, scheduledTime);
+    const roomId = result?.roomId || `room-${requestId.replace(/[^a-z0-9]/gi, '').slice(-16).toLowerCase()}`;
     setLiveRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: 'slot_booked', scheduledTime, roomId } : r));
     const formatted = formatScheduledTime(scheduledTime);
     const req = liveRequests.find(r => r.id === requestId);
@@ -990,12 +992,11 @@ export default function AlumniDashboard() {
   };
 
   // ── Instant Meet — start right now, notify student ────────────────────────
-  const handleInstantMeet = (req) => {
+  const handleInstantMeet = async (req) => {
     const now = new Date().toISOString();
-    // roomId MUST match bookSlot formula exactly — no 'instant-' prefix
-    const roomId = `room-${req.id.replace(/[^a-z0-9]/gi, '').slice(-16).toLowerCase()}`;
-    // bookSlot updates DB (status, roomId, scheduledTime) and creates Supabase notification
-    bookSlot(req.id, now);
+    // bookSlot returns the request with the real roomId from the backend
+    const result = await bookSlot(req.id, now);
+    const roomId = result?.roomId || `room-${req.id.replace(/[^a-z0-9]/gi, '').slice(-16).toLowerCase()}`;
     setLiveRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'slot_booked', scheduledTime: now, roomId } : r));
     // Also push local notification so it works even without Supabase Realtime
     try {
@@ -1017,8 +1018,16 @@ export default function AlumniDashboard() {
         localStorage.setItem(NOTIF_KEY, JSON.stringify(all));
       }
     } catch {}
-    // Navigate alumni to the room
-    navigate(`/interview/${roomId}?name=${encodeURIComponent(user?.name || 'Alumni')}`);
+    // Navigate alumni to the room — use the real meet URL if it's a Google Meet link,
+    // otherwise use the internal interview route
+    const destination = roomId.startsWith('http')
+      ? roomId
+      : `/interview/${roomId}?name=${encodeURIComponent(user?.name || 'Alumni')}`;
+    if (roomId.startsWith('http')) {
+      window.open(destination, '_blank', 'noopener,noreferrer');
+    } else {
+      navigate(destination);
+    }
   };
 
   const handleRescheduled = (requestId, newScheduledTime) => {
