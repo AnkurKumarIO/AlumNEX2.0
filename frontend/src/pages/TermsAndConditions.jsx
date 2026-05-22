@@ -74,29 +74,6 @@ export default function TermsAndConditions() {
   return (
     <div style={{ background: '#0b1326', color: '#dae2fd', fontFamily: 'Inter, sans-serif', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
 
-      {/* Navbar */}
-      <nav style={{
-        background: 'rgba(11,19,38,0.9)', backdropFilter: 'blur(20px)',
-        borderBottom: '1px solid rgba(70,69,85,0.2)', padding: '0 2rem',
-        height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        position: 'sticky', top: 0, zIndex: 100,
-      }}>
-        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
-          <AlumNexLogo size={28} />
-          <span style={{ fontSize: '1.05rem', fontWeight: 800, color: '#fff' }}>
-            Alum<span style={{ color: '#a855f7' }}>NEX</span>
-          </span>
-        </Link>
-        <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
-          <Link to="/privacy" style={{ fontSize: '0.8rem', color: '#c7c4d8', textDecoration: 'none' }}>Privacy Policy</Link>
-          <Link to="/login" style={{
-            fontSize: '0.8rem', fontWeight: 600, color: '#4edea3',
-            padding: '0.4rem 1rem', border: '1px solid rgba(78,222,163,0.25)',
-            borderRadius: 8, textDecoration: 'none',
-          }}>Sign In</Link>
-        </div>
-      </nav>
-
       {/* Hero Banner */}
       <div style={{
         background: 'linear-gradient(135deg, rgba(78,222,163,0.1) 0%, rgba(79,70,229,0.08) 50%, rgba(11,19,38,0) 100%)',

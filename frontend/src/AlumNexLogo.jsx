@@ -1,44 +1,50 @@
-// AlumNex Logo Component — SVG recreation of the brand logo
-// Usage: <AlumNexLogo size={32} /> or <AlumNexLogo size={40} showText />
+// AlumNex Logo Component — Vite Asset Import with Cache Busting
+// Usage: <AlumNexLogo size="md" /> or <AlumNexLogo size="lg" />
 
-export default function AlumNexLogo({ size = 32, showText = false, textSize = '1rem' }) {
+import { useMemo } from 'react';
+import logoImage from "./assets/alumnex-logo.jpeg";
+
+export default function AlumNexLogo({ size = 'md', className = '' }) {
+  // Cache busting: Add timestamp to force fresh image load
+  const logoSrc = useMemo(() => {
+    return `${logoImage}?v=${new Date().getTime()}`;
+  }, []);
+
+  // Dynamic size mapping with pixel values (ORIGINAL SIZES)
+  const sizeMap = {
+    xs: 32,      // 2rem (32px) - Navbar (ORIGINAL)
+    sm: 36,      // 2.25rem (36px) - Small sidebar
+    md: 40,      // 2.5rem (40px) - Footer (ORIGINAL)
+    lg: 48,      // 3rem (48px) - Medium headers
+    xl: 56,      // 3.5rem (56px) - Large headers
+    '2xl': 80,   // 5rem (80px) - Hero sections
+    '3xl': 96,   // 6rem (96px) - Extra large hero
+    '4xl': 112,  // 7rem (112px) - Maximum hero
+  };
+
+  // Get the appropriate size in pixels
+  const heightPx = sizeMap[size] || sizeMap.md;
+
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: showText ? 10 : 0 }}>
-      {/* Geometric diamond/play icon */}
-      <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="an-grad1" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#f5e9ff" />
-            <stop offset="50%" stopColor="#c084fc" />
-            <stop offset="100%" stopColor="#7c3aed" />
-          </linearGradient>
-          <linearGradient id="an-grad2" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#d8b4fe" />
-            <stop offset="100%" stopColor="#8b5cf6" />
-          </linearGradient>
-          <linearGradient id="an-grad3" x1="0%" y1="100%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#8b5cf6" />
-            <stop offset="100%" stopColor="#c084fc" />
-          </linearGradient>
-        </defs>
-        {/* Outer rotated square/diamond */}
-        <path d="M50 8 L88 35 L80 78 L20 78 L12 35 Z" fill="url(#an-grad1)" opacity="0.85" />
-        {/* Inner play triangle */}
-        <path d="M38 32 L72 50 L38 68 Z" fill="url(#an-grad2)" />
-        {/* Small inner triangle */}
-        <path d="M44 42 L60 50 L44 58 Z" fill="url(#an-grad3)" opacity="0.9" />
-        {/* Top accent shard */}
-        <path d="M50 8 L62 22 L50 18 Z" fill="#e9d5ff" opacity="0.8" />
-        {/* Left accent shard */}
-        <path d="M12 35 L24 28 L20 42 Z" fill="#a855f7" opacity="0.7" />
-      </svg>
-
-      {showText && (
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 0 }}>
-          <span style={{ fontSize: textSize, fontWeight: 700, color: '#f5e9ff', letterSpacing: '-0.02em', fontFamily: 'Inter, sans-serif' }}>Alum</span>
-          <span style={{ fontSize: textSize, fontWeight: 900, color: '#a855f7', letterSpacing: '-0.02em', fontFamily: 'Inter, sans-serif' }}>NEX</span>
-        </div>
-      )}
-    </div>
+    <img 
+      src={logoSrc}
+      alt="AlumNEX Intelligence Platform" 
+      className={`${className}`}
+      style={{
+        display: 'block',
+        height: `${heightPx}px`,
+        width: 'auto',
+        maxWidth: '100%',
+        objectFit: 'contain'
+      }}
+      onError={(e) => {
+        console.error('AlumNEX logo failed to load');
+        console.error('Expected path:', logoImage);
+        e.target.style.display = 'none';
+      }}
+      onLoad={() => {
+        console.log('✅ AlumNEX logo loaded successfully from:', logoImage);
+      }}
+    />
   );
 }

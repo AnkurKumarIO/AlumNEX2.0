@@ -2155,12 +2155,9 @@ export default function AlumniDashboard() {
       {sidebarOpen && <div className="sidebar-backdrop" onClick={() => setSidebarOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 45 }} />}
 
       <aside style={{ width: 256, minHeight: '100vh', position: 'fixed', left: sidebarOpen ? 0 : -256, top: 0, background: '#131b2e', display: 'flex', flexDirection: 'column', padding: '1.5rem', zIndex: 50, transition: 'left 0.3s ease' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '2rem' }}>
-          <AlumNexLogo size={32} />
-          <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 900, fontSize: '1rem', color: '#f5e9ff', letterSpacing: '-0.02em' }}>Alum<span style={{ color: '#a855f7' }}>NEX</span></div>
-            <div style={{ fontSize: '0.55rem', color: '#c7c4d8', letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: 2 }}>Alumni Portal</div>
-          </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: '2rem' }}>
+          <AlumNexLogo size="md" />
+          <div style={{ fontSize: '0.55rem', color: '#c7c4d8', letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: 4 }}>Alumni Portal</div>
           <button 
             onClick={() => setSidebarOpen(false)} 
             title="Collapse Sidebar"

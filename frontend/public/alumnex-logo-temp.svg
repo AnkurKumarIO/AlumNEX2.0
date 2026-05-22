@@ -1,0 +1,19 @@
+<svg width="200" height="50" viewBox="0 0 200 50" xmlns="http://www.w3.org/2000/svg">
+  <!-- Dark navy background -->
+  <rect width="200" height="50" fill="#0a1628" rx="4"/>
+  
+  <!-- Purple triangular play button icon -->
+  <g transform="translate(15, 10)">
+    <!-- 3D effect - shadow layer -->
+    <path d="M 5 2 L 25 15 L 5 28 Z" fill="#4a1d7a" opacity="0.6"/>
+    <!-- Main triangle -->
+    <path d="M 3 0 L 27 15 L 3 30 Z" fill="#7c3aed"/>
+    <!-- Highlight for 3D effect -->
+    <path d="M 3 0 L 15 7.5 L 3 15 Z" fill="#a78bfa" opacity="0.5"/>
+  </g>
+  
+  <!-- AlumNEX text -->
+  <text x="50" y="32" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#ffffff">
+    AlumNEX
+  </text>
+</svg>

@@ -1,0 +1,26 @@
+╔════════════════════════════════════════════════════════════════╗
+║                   SAVE YOUR LOGO HERE                          ║
+╚════════════════════════════════════════════════════════════════╝
+
+📍 LOCATION: This folder (frontend/public/)
+
+📄 FILENAME: alumnex-logo.png
+
+📋 INSTRUCTIONS:
+   1. Take your logo image (the one with the purple 3D triangle)
+   2. Save it as "alumnex-logo.png" (lowercase, no spaces)
+   3. Place it in THIS folder (frontend/public/)
+   4. Delete this instruction file (optional)
+
+✅ CORRECT PATH:
+   frontend/public/alumnex-logo.png
+
+❌ WRONG PATHS:
+   frontend/alumnex-logo.png          (missing /public/)
+   frontend/public/AlumNex-Logo.png   (wrong capitalization)
+   frontend/public/logo.png           (wrong filename)
+
+🎯 RESULT:
+   Once saved, your logo will appear across all pages automatically!
+
+═══════════════════════════════════════════════════════════════════

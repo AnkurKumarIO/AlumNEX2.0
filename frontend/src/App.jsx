@@ -51,13 +51,25 @@ function ProfileSetupGuard() {
 function PublicNavbar() {
   const { user } = useContext(AuthContext);
   const isInterview = window.location.pathname.startsWith('/interview');
-  if (user || isInterview) return null;
+  const isLegalPage = ['/privacy', '/terms', '/contact'].includes(window.location.pathname);
+  
+  // Show navbar on legal pages even if not authenticated
+  if (user && !isLegalPage) return null;
+  if (isInterview) return null;
+  
   return (
     <nav className="navbar">
       <Link to="/" className="navbar-brand" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
-        <AlumNexLogo size={28} showText textSize="1.1rem" />
+        <AlumNexLogo size="xs" />
       </Link>
       <div className="navbar-links">
+        {isLegalPage && (
+          <>
+            <Link to="/privacy">Privacy</Link>
+            <Link to="/terms">Terms</Link>
+            <Link to="/contact">Contact</Link>
+          </>
+        )}
         <Link to="/login">Sign In</Link>
       </div>
     </nav>

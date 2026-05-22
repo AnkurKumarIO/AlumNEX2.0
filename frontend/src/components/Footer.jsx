@@ -27,26 +27,15 @@ export default function Footer() {
         }}>
           {/* Brand */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <AlumNexLogo size={28} />
-            <div>
-              <div style={{
-                fontSize: '1.1rem',
-                fontWeight: 800,
-                color: '#fff',
-                letterSpacing: '-0.02em',
-              }}>
-                Alum<span style={{ color: '#a855f7' }}>NEX</span>
-              </div>
-              <div style={{
-                fontSize: '0.65rem',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: '0.15em',
-                color: '#c7c4d8',
-                marginTop: 2,
-              }}>
-                Intelligence Platform
-              </div>
+            <AlumNexLogo size="md" />
+            <div style={{
+              fontSize: '0.65rem',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.15em',
+              color: '#c7c4d8',
+            }}>
+              Intelligence Platform
             </div>
           </div>
 
