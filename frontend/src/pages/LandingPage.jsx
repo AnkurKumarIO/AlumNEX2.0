@@ -3,10 +3,11 @@ import { Link } from 'react-router-dom';
 
 import AlumNexLogo from '../AlumNexLogo';
 import RoleCards from '../components/RoleCards';
+import Footer from '../components/Footer';
 
 export default function LandingPage() {
   return (
-    <div style={{ background: '#0b1326', color: '#dae2fd', fontFamily: 'Inter, sans-serif', minHeight: '100vh' }}>
+    <div style={{ background: '#0b1326', color: '#dae2fd', fontFamily: 'Inter, sans-serif', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* Hero */}
       <main style={{ maxWidth: 1200, margin: '0 auto', padding: '8rem 2rem 6rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <section style={{ textAlign: 'center', marginBottom: '5rem', maxWidth: 900 }}>
@@ -66,21 +67,7 @@ export default function LandingPage() {
       </main>
 
       {/* Footer */}
-      <footer style={{ padding: '3rem 2rem', borderTop: '1px solid rgba(70,69,85,0.2)', background: '#0b1326', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <AlumNexLogo size={22} />
-            <span style={{ fontSize: '0.875rem', fontWeight: 700, color: '#f5e9ff' }}>Alum<span style={{ color: '#a855f7' }}>NEX</span></span>
-          </div>
-          <p style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#c7c4d8', opacity: 0.8 }}>© 2026 AlumNex. The Intelligence Platform.</p>
-          <p style={{ fontSize: '0.65rem', color: '#c7c4d8', opacity: 0.6 }}>Developed by <strong style={{ color: '#c3c0ff', opacity: 1 }}>The Tesseract</strong></p>
-        </div>
-        <div style={{ display: 'flex', gap: '2rem' }}>
-          {['Privacy','Terms','API','Contact'].map(l => (
-            <a key={l} href="#" style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#c7c4d8', textDecoration: 'none' }}>{l}</a>
-          ))}
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

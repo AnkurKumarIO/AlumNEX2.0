@@ -14,6 +14,8 @@ import AlumniDashboard from './pages/AlumniDashboard';
 import TNPDashboard from './pages/TNPDashboard';
 import InterviewRoom from './pages/InterviewRoom';
 import ResumeAnalyzer from './pages/ResumeAnalyzer';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsAndConditions from './pages/TermsAndConditions';
 
 function DashboardRouter() {
   const { user } = useContext(AuthContext);
@@ -60,6 +62,8 @@ function App() {
           <Route path="/dashboard"              element={<DashboardRouter />} />
           <Route path="/interview/:roomId"      element={<InterviewRoom />} />
           <Route path="/resume-analyzer"        element={<ResumeAnalyzer />} />
+          <Route path="/privacy"                element={<PrivacyPolicy />} />
+          <Route path="/terms"                  element={<TermsAndConditions />} />
           {/* Self-registration removed — accounts created by TNP bulk upload */}
           <Route path="/student/register"       element={<Navigate to="/login" replace />} />
           <Route path="/auth/student/register"  element={<Navigate to="/login" replace />} />
