@@ -237,6 +237,7 @@ function BookSlotModal({ request, onClose, onBooked }) {
   const [ampm, setAmpm]       = useState('AM');
   const [timeError, setTimeError] = useState('');
   const [step, setStep] = useState('calendar');
+  const [booking, setBooking] = useState(false);
 
   const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const DAYS   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -257,15 +258,17 @@ function BookSlotModal({ request, onClose, onBooked }) {
     return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
   };
 
-  const handleBook = () => {
+  const handleBook = async () => {
     const h = parseInt(timeHH, 10);
     const m = parseInt(timeMM, 10);
     if (isNaN(h) || h < 1 || h > 12) { setTimeError('Hour must be 1-12'); return; }
     if (isNaN(m) || m < 0 || m > 59) { setTimeError('Minutes must be 00-59'); return; }
     setTimeError('');
+    setBooking(true);
     const time24 = to24h();
     const scheduledTime = new Date(`${viewYear}-${String(viewMonth+1).padStart(2,'0')}-${String(selectedDate).padStart(2,'0')}T${time24}`).toISOString();
-    bookSlot(request.id, scheduledTime);
+    await bookSlot(request.id, scheduledTime);
+    setBooking(false);
     setStep('done');
     setTimeout(() => { onBooked(scheduledTime); onClose(); }, 1800);
   };
@@ -363,9 +366,12 @@ function BookSlotModal({ request, onClose, onBooked }) {
                     <div style={{ fontWeight: 700, color: '#dae2fd', fontSize: '0.9rem' }}>{formattedSelected} at {displayTime()}</div>
                     <div style={{ fontSize: '0.72rem', color: '#c7c4d8', marginTop: 3 }}>A notification will be sent to {request.studentName}</div>
                   </div>
-                  <button onClick={handleBook} style={{ width: '100%', padding: '0.875rem', background: 'linear-gradient(135deg,#00a572,#4edea3)', color: '#003d29', border: 'none', borderRadius: 12, fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>event_available</span>
-                    Confirm & Notify Student
+                  <button onClick={handleBook} disabled={booking} style={{ width: '100%', padding: '0.875rem', background: booking ? '#2d3449' : 'linear-gradient(135deg,#00a572,#4edea3)', color: booking ? '#c7c4d8' : '#003d29', border: 'none', borderRadius: 12, fontWeight: 700, fontSize: '0.875rem', cursor: booking ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                    {booking ? (
+                      <><div style={{ width: 16, height: 16, border: '2px solid rgba(199,196,216,0.3)', borderTop: '2px solid #c7c4d8', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> Creating Meet Link...</>
+                    ) : (
+                      <><span className="material-symbols-outlined" style={{ fontSize: 18 }}>event_available</span> Confirm & Notify Student</>
+                    )}
                   </button>
                 </>
               )}
