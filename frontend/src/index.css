@@ -685,3 +685,10 @@ a:hover { color: var(--accent-primary); }
   .navbar-links { gap: 0.25rem; }
   .dashboard-header { flex-direction: column; gap: 1rem; align-items: flex-start; }
 }
+
+@media (min-width: 992px) {
+  .sidebar-backdrop {
+    display: none !important;
+  }
+}
+

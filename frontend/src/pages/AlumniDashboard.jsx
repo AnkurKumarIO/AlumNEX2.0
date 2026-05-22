@@ -1744,7 +1744,7 @@ export default function AlumniDashboard() {
 
       {/* â”€â”€ SIDEBAR â”€â”€ */}
       {/* Sidebar overlay */}
-      {sidebarOpen && <div onClick={() => setSidebarOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 45 }} />}
+      {sidebarOpen && <div className="sidebar-backdrop" onClick={() => setSidebarOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 45 }} />}
 
       <aside style={{ width: 256, minHeight: '100vh', position: 'fixed', left: sidebarOpen ? 0 : -256, top: 0, background: '#131b2e', display: 'flex', flexDirection: 'column', padding: '1.5rem', zIndex: 50, transition: 'left 0.3s ease' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '2rem' }}>
@@ -1966,7 +1966,7 @@ export default function AlumniDashboard() {
           </div>
         </header>
 
-        <section style={{ marginTop: 64, padding: '2.5rem', display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+        <section style={{ marginTop: 64, padding: '2.5rem', display: 'flex', flexDirection: 'column', gap: '2.5rem', maxWidth: '1280px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
           {globalSearch.trim() ? renderSearchResults(globalSearch.trim()) : renderContent()}
         </section>
       </main>

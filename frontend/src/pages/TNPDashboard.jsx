@@ -217,7 +217,7 @@ export default function TNPDashboard() {
       )}
 
       {/* ── Sidebar ── */}
-      {sidebarOpen && <div onClick={() => setSidebarOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 45 }} />}
+      {sidebarOpen && <div className="sidebar-backdrop" onClick={() => setSidebarOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 45 }} />}
       <aside style={{ width: 240, minHeight: '100vh', position: 'fixed', left: sidebarOpen ? 0 : -240, top: 0, background: '#131b2e', display: 'flex', flexDirection: 'column', padding: '1.5rem', zIndex: 50, transition: 'left 0.3s ease' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '2rem' }}>
           <AlumNexLogo size={32} />
@@ -341,7 +341,7 @@ export default function TNPDashboard() {
         </header>
 
         {/* Content */}
-        <section style={{ marginTop: 64, padding: '2rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+        <section style={{ marginTop: 64, padding: '2rem', display: 'flex', flexDirection: 'column', gap: '2rem', maxWidth: '1280px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
           {activeTab !== 'home' ? renderContent() : <HomeDashboard stats={stats} setActiveTab={setActiveTab} />}
         </section>
       </main>

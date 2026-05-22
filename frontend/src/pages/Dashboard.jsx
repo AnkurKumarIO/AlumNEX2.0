@@ -491,7 +491,7 @@ export default function Dashboard() {
           onCancel={() => setShowLogoutConfirm(false)}
         />
       )}
-      {sidebarOpen && <div onClick={() => setSidebarOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 45 }} />}
+      {sidebarOpen && <div className="sidebar-backdrop" onClick={() => setSidebarOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 45 }} />}
       <aside style={{ width: 256, minHeight: '100vh', position: 'fixed', left: sidebarOpen ? 0 : -256, top: 0, background: '#131b2e', display: 'flex', flexDirection: 'column', padding: '1rem', zIndex: 50, transition: 'left 0.3s ease' }}>
         <div style={{ padding: '1.5rem 1rem 1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -730,7 +730,7 @@ export default function Dashboard() {
           </div>
         </header>
 
-        <section style={{ marginTop: 64, padding: '2rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+        <section style={{ marginTop: 64, padding: '2rem', display: 'flex', flexDirection: 'column', gap: '2rem', maxWidth: '1280px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
           {renderContent()}
         </section>
 
