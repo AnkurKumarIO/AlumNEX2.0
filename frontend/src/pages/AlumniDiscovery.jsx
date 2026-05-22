@@ -75,8 +75,10 @@ function BookModal({ alumni, studentName, onClose, onSent }) {
   const [topic, setTopic] = useState(TOPICS[0]);
   const [message, setMessage] = useState('');
   const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
 
-  const handleSend = () => {
+  const handleSend = async () => {
+    setSending(true);
     const authUser = JSON.parse(localStorage.getItem('alumnex_user') || localStorage.getItem('alumniconnect_user') || '{}');
     // Always attach the student's saved profile so alumni can see it immediately
     const studentProfile = (() => {
@@ -85,16 +87,21 @@ function BookModal({ alumni, studentName, onClose, onSent }) {
         return raw ? JSON.parse(raw) : null;
       } catch { return null; }
     })();
-    sendRequest({
-      studentName,
-      studentId: authUser.id || studentName,
-      alumniName: alumni.name,
-      alumniId: alumni.id,
-      alumniRole: alumni.role,
-      topic,
-      message,
-      studentProfile,
-    });
+    try {
+      await sendRequest({
+        studentName,
+        studentId: authUser.id || studentName,
+        alumniName: alumni.name,
+        alumniId: alumni.id,
+        alumniRole: alumni.role,
+        topic,
+        message,
+        studentProfile,
+      });
+    } catch (e) {
+      console.error('sendRequest failed:', e);
+    }
+    setSending(false);
     setSent(true);
     setTimeout(() => { onSent(); onClose(); }, 1800);
   };
@@ -141,8 +148,12 @@ function BookModal({ alumni, studentName, onClose, onSent }) {
             </div>
             <div style={{ display: 'flex', gap: 10, marginTop: '1.5rem' }}>
               <button onClick={onClose} style={{ flex: 1, padding: '0.75rem', background: '#222a3d', color: '#c7c4d8', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleSend} style={{ flex: 2, padding: '0.75rem', background: 'linear-gradient(135deg,#4f46e5,#c3c0ff)', color: '#1d00a5', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>send</span> Send Request
+              <button onClick={handleSend} disabled={sending} style={{ flex: 2, padding: '0.75rem', background: sending ? '#2d3449' : 'linear-gradient(135deg,#4f46e5,#c3c0ff)', color: sending ? '#c7c4d8' : '#1d00a5', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: '0.75rem', cursor: sending ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                {sending ? (
+                  <><div style={{ width: 14, height: 14, border: '2px solid rgba(199,196,216,0.3)', borderTop: '2px solid #c7c4d8', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> Sending...</>
+                ) : (
+                  <><span className="material-symbols-outlined" style={{ fontSize: 16 }}>send</span> Send Request</>
+                )}
               </button>
             </div>
           </>
@@ -426,9 +437,16 @@ export default function AlumniDiscovery({ searchQuery = '' }) {
                 </div>
               </div>
               <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <div style={{ fontSize: '0.55rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: a.scoreColor, marginBottom: 2 }}>Impact</div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 900, color: a.scoreColor }}>{a.score}</div>
-                {a.avgRating && <div style={{ fontSize: '0.55rem', color: '#c7c4d8', marginTop: 2 }}>{'★'.repeat(Math.round(a.avgRating))} ({a.totalSessions})</div>}
+                <div style={{ fontSize: '0.55rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#ffb95f', marginBottom: 2 }}>Avg Rating</div>
+                {a.avgRating ? (
+                  <>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#ffb95f', lineHeight: 1 }}>{Number(a.avgRating).toFixed(1)}</div>
+                    <div style={{ fontSize: '0.6rem', color: '#ffb95f', marginTop: 2 }}>{'★'.repeat(Math.round(a.avgRating))}{'☆'.repeat(5 - Math.round(a.avgRating))}</div>
+                    <div style={{ fontSize: '0.55rem', color: '#c7c4d8', marginTop: 1 }}>{a.totalSessions} session{a.totalSessions !== 1 ? 's' : ''}</div>
+                  </>
+                ) : (
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#c7c4d8', marginTop: 4 }}>New</div>
+                )}
               </div>
             </div>
             <p style={{ fontSize: '0.8rem', color: '#c7c4d8', lineHeight: 1.6, marginBottom: '1rem' }}>{a.bio}</p>
@@ -438,7 +456,7 @@ export default function AlumniDiscovery({ searchQuery = '' }) {
               </div>
             )}
             <div style={{ height: 4, background: '#2d3449', borderRadius: 999, overflow: 'hidden', marginBottom: '1rem' }}>
-              <div style={{ height: '100%', width: `${a.score}%`, background: `linear-gradient(90deg,#4f46e5,${a.scoreColor})`, borderRadius: 999 }} />
+              <div style={{ height: '100%', width: a.avgRating ? `${(a.avgRating / 5) * 100}%` : '40%', background: a.avgRating ? 'linear-gradient(90deg,#e07b00,#ffb95f)' : 'linear-gradient(90deg,#4f46e5,#c3c0ff)', borderRadius: 999 }} />
             </div>
             <BookButton alumni={a} studentName={studentName} userId={user?.id} onBook={() => setBookingAlumni(a)} />
           </div>

@@ -28,7 +28,9 @@ export function AuthProvider({ children }) {
     setToken(null);
     localStorage.removeItem('alumnex_user');
     localStorage.removeItem('alumnex_token');
-    localStorage.removeItem('alumnex_profile');
+    // NOTE: Do NOT remove alumnex_profile or alumniconnect_profile on logout.
+    // These are preserved so the user does not need to re-fill profile on re-login.
+    // Only remove session/auth keys.
   };
 
   useEffect(() => {

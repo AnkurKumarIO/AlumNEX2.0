@@ -288,64 +288,65 @@ export async function bookSlot(requestId, scheduledTime) {
   const requests = loadLocal();
   const idx = requests.findIndex(r => r.id === requestId);
   if (idx === -1) return null;
-  const req = requests[idx];
 
-  const authUser = JSON.parse(localStorage.getItem('alumnex_user') || '{}');
-  const alumniId = authUser.role === 'ALUMNI' ? authUser.id : req.alumni_id;
-
-  // Generate deterministic room ID for AlumNEX internal routing (chat, signaling)
-  const deterministicRoomId = `room-${requestId.slice(-8)}`;
-
-  // Use backend to generate the link (will handle Google Meet if connected)
-  // We don't wait for it to block the status update if it's slow,
-  // but we should try to get it to store in room_id if possible.
-  let meetLink = null;
-  try {
-    const result = await api.createMeetLink(
-      requestId, 
-      `Interview: ${req.studentName} & ${req.alumniName}`,
-      alumniId,
-      scheduledTime
-    );
-    if (result?.success && result.meetLink) {
-      meetLink = result.meetLink;
-    }
-  } catch (e) {
-    console.warn('bookSlot Meet API call failed:', e.message);
-  }
-
-  const finalRoomId = meetLink || deterministicRoomId;
+  // Let the backend handle Google Meet link creation (it has the alumni's token).
+  // We pass a placeholder; the backend replaces it with the real meet URL.
+  const placeholderRoomId = `room-${requestId.slice(-8)}`;
 
   try {
-    await api.updateRequest(requestId, { status: 'SLOT_BOOKED', scheduledTime, roomId: finalRoomId });
+    const result = await api.updateRequest(requestId, {
+      status: 'SLOT_BOOKED',
+      scheduledTime,
+      roomId: placeholderRoomId,
+    });
+    // Use the room_id the backend actually stored (may be a Google Meet URL)
+    const finalRoomId = result?.room_id || result?.roomId || placeholderRoomId;
+
+    requests[idx] = { ...requests[idx], status: 'slot_booked', scheduledTime, roomId: finalRoomId };
+    saveLocal(requests);
+
+    const formatted = new Date(scheduledTime).toLocaleString('en-US', {
+      weekday: 'long', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
+    });
+    const isInstant = Math.abs(new Date(scheduledTime).getTime() - Date.now()) < 60000;
+    pushLocalNotif({
+      studentName: requests[idx].studentName,
+      type:        isInstant ? 'live' : 'slot_booked',
+      title:       isInstant ? '🔴 Interview is Live Now!' : 'Interview Slot Confirmed! 📅',
+      message:     isInstant
+        ? 'Your mock interview is starting now. Click Join to enter the room.'
+        : `Your interview is scheduled for ${formatted}.`,
+      requestId,
+      roomId: finalRoomId,
+    });
+    return requests[idx];
   } catch (e) {
     console.warn('bookSlot Backend error, trying Supabase:', e.message);
     try {
-      await dbUpdateRequest(requestId, { status: 'SLOT_BOOKED', scheduledTime, roomId: finalRoomId });
+      await dbUpdateRequest(requestId, { status: 'SLOT_BOOKED', scheduledTime, roomId: placeholderRoomId });
     } catch (dbErr) {
       console.warn('bookSlot Supabase error:', dbErr.message);
     }
+
+    requests[idx] = { ...requests[idx], status: 'slot_booked', scheduledTime, roomId: placeholderRoomId };
+    saveLocal(requests);
+
+    const formatted = new Date(scheduledTime).toLocaleString('en-US', {
+      weekday: 'long', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
+    });
+    const isInstant = Math.abs(new Date(scheduledTime).getTime() - Date.now()) < 60000;
+    pushLocalNotif({
+      studentName: requests[idx].studentName,
+      type:        isInstant ? 'live' : 'slot_booked',
+      title:       isInstant ? '🔴 Interview is Live Now!' : 'Interview Slot Confirmed! 📅',
+      message:     isInstant
+        ? 'Your mock interview is starting now. Click Join to enter the room.'
+        : `Your interview is scheduled for ${formatted}.`,
+      requestId,
+      roomId: placeholderRoomId,
+    });
+    return requests[idx];
   }
-
-  requests[idx] = { ...requests[idx], status: 'slot_booked', scheduledTime, roomId: finalRoomId };
-  saveLocal(requests);
-
-  const formatted = new Date(scheduledTime).toLocaleString('en-US', {
-    weekday: 'long', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
-  });
-
-  const isInstant = Math.abs(new Date(scheduledTime).getTime() - Date.now()) < 60000;
-  pushLocalNotif({
-    studentName: requests[idx].studentName,
-    type:        isInstant ? 'live' : 'slot_booked',
-    title:       isInstant ? '🔴 Interview is Live Now!' : 'Interview Slot Confirmed! 📅',
-    message:     isInstant
-      ? 'Your mock interview is starting now. Click Join to enter the room.'
-      : `Your interview is scheduled for ${formatted}.`,
-    requestId,
-    roomId: finalRoomId,
-  });
-  return requests[idx];
 }
 
 // ── Reschedule (alumni) ───────────────────────────────────────────────────────

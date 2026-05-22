@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { updateUserProfile } from '../lib/db';
@@ -6,7 +6,6 @@ import { emitRealtimeSync } from '../lib/realtimeSync';
 
 const STEPS = ['Personal Info', 'Skills & Academics', 'Resume & Projects', 'Career Goals', 'Review'];
 const DEPTS = ['Computer Science', 'Information Technology', 'Electronics & Communication', 'Mechanical Engineering', 'Civil Engineering', 'Electrical Engineering', 'MBA', 'Other'];
-const ROLES = ['Software Engineer', 'Frontend Developer', 'Backend Developer', 'Full Stack Developer', 'Data Scientist', 'ML Engineer', 'Product Manager', 'UI/UX Designer', 'DevOps Engineer', 'Business Analyst'];
 
 function TagInput({ tags, onChange, placeholder }) {
   const [val, setVal] = useState('');
@@ -35,15 +34,28 @@ function TagInput({ tags, onChange, placeholder }) {
 
 export default function ProfileSetup() {
   const navigate = useNavigate();
-  const { login } = useContext(AuthContext);
+  const { user, login } = useContext(AuthContext);
   const [step, setStep] = useState(0);
   const [photoPreview, setPhotoPreview] = useState(null);
+  const [photoFile, setPhotoFile] = useState(null);
   const [profile, setProfile] = useState({
     bio: '', linkedin: '', github: '', portfolio: '',
     department: '', skills: [], cgpa: '',
     resumeName: '', resumeUrl: '', projects: [{ title: '', desc: '', stack: '', link: '' }],
     targetRoles: [], preferredCompanies: [], openTo: [], gradMonth: '', gradYear: '',
   });
+
+  // ── Guard: if profile is already complete, go straight to dashboard ──────────
+  useEffect(() => {
+    try {
+      const p1 = JSON.parse(localStorage.getItem('alumnex_profile') || 'null');
+      const p2 = JSON.parse(localStorage.getItem('alumniconnect_profile') || 'null');
+      const saved = p1 || p2;
+      if (saved && (saved.profileComplete === true || saved.department || (saved.skills && saved.skills.length > 0))) {
+        navigate('/dashboard', { replace: true });
+      }
+    } catch {}
+  }, []);
 
   const set = (key, val) => setProfile(p => ({ ...p, [key]: val }));
 
@@ -71,15 +83,52 @@ export default function ProfileSetup() {
   const lbl = { fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c7c4d8', display: 'block', marginBottom: 6 };
   const section = { display: 'flex', flexDirection: 'column', gap: '1.25rem' };
 
+  const handlePhotoChange = (e) => {
+    const f = e.target.files[0];
+    if (f) {
+      setPhotoFile(f);
+      setPhotoPreview(URL.createObjectURL(f));
+    }
+    e.target.value = '';
+  };
+
+  const handleRemovePhoto = () => {
+    setPhotoPreview(null);
+    setPhotoFile(null);
+  };
+
   const steps = [
     // Step 0 — Personal Info
     <div style={section}>
       <div style={{ textAlign: 'center', marginBottom: '0.5rem' }}>
-        <div onClick={() => document.getElementById('photo-input').click()} style={{ width: 96, height: 96, borderRadius: '50%', background: photoPreview ? 'transparent' : 'linear-gradient(135deg,#4f46e5,#c3c0ff)', margin: '0 auto 1rem', cursor: 'pointer', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '3px solid rgba(195,192,255,0.3)' }}>
-          {photoPreview ? <img src={photoPreview} alt="profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span className="material-symbols-outlined" style={{ color: '#1d00a5', fontSize: 36 }}>add_a_photo</span>}
+        <div style={{ position: 'relative', width: 96, height: 96, margin: '0 auto 0.75rem' }}>
+          <div
+            onClick={() => document.getElementById('photo-input').click()}
+            style={{ width: 96, height: 96, borderRadius: '50%', background: photoPreview ? 'transparent' : 'linear-gradient(135deg,#4f46e5,#c3c0ff)', cursor: 'pointer', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '3px solid rgba(195,192,255,0.3)' }}
+          >
+            {photoPreview
+              ? <img src={photoPreview} alt="profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : <span className="material-symbols-outlined" style={{ color: '#1d00a5', fontSize: 36 }}>add_a_photo</span>}
+          </div>
+          {/* Change / Remove overlay buttons */}
+          {photoPreview && (
+            <div style={{ position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 4, whiteSpace: 'nowrap' }}>
+              <button
+                onClick={() => document.getElementById('photo-input').click()}
+                style={{ padding: '0.15rem 0.5rem', fontSize: '0.6rem', fontWeight: 700, background: 'rgba(195,192,255,0.15)', border: '1px solid rgba(195,192,255,0.3)', borderRadius: 6, color: '#c3c0ff', cursor: 'pointer' }}
+              >Change</button>
+              <button
+                onClick={handleRemovePhoto}
+                style={{ padding: '0.15rem 0.5rem', fontSize: '0.6rem', fontWeight: 700, background: 'rgba(255,180,171,0.12)', border: '1px solid rgba(255,180,171,0.3)', borderRadius: 6, color: '#ffb4ab', cursor: 'pointer' }}
+              >Remove</button>
+            </div>
+          )}
         </div>
-        <input id="photo-input" type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files[0]; if (f) setPhotoPreview(URL.createObjectURL(f)); }} />
-        <p style={{ fontSize: '0.75rem', color: '#c7c4d8' }}>Click to upload profile photo</p>
+        <input id="photo-input" type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoChange} />
+        <p style={{ fontSize: '0.75rem', color: '#c7c4d8', marginTop: photoPreview ? 14 : 0 }}>
+          {photoPreview ? 'Profile photo set' : 'Click to upload profile photo'}{' '}
+          <span style={{ opacity: 0.55 }}>(optional)</span>
+        </p>
       </div>
       <div>
         <label style={lbl}>About / Bio</label>
@@ -115,12 +164,27 @@ export default function ProfileSetup() {
     // Step 2 — Resume & Projects
     <div style={section}>
       <div>
-        <label style={lbl}>Resume (PDF)</label>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button onClick={() => document.getElementById('resume-input').click()} style={{ padding: '0.65rem 1.25rem', background: 'rgba(195,192,255,0.1)', border: '1px solid rgba(195,192,255,0.2)', borderRadius: 10, color: '#c3c0ff', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>upload_file</span> Upload Resume
+        <label style={lbl}>
+          Resume (PDF){' '}
+          <span style={{ opacity: 0.5, fontWeight: 400, textTransform: 'none' }}>(optional)</span>
+        </label>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <button
+            onClick={() => document.getElementById('resume-input').click()}
+            style={{ padding: '0.65rem 1.25rem', background: 'rgba(195,192,255,0.1)', border: '1px solid rgba(195,192,255,0.2)', borderRadius: 10, color: '#c3c0ff', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>upload_file</span>
+            {profile.resumeName ? 'Change Resume' : 'Upload Resume'}
           </button>
-          {profile.resumeName && <span style={{ fontSize: '0.8rem', color: '#4edea3' }}>✓ {profile.resumeName}</span>}
+          {profile.resumeName && (
+            <>
+              <span style={{ fontSize: '0.8rem', color: '#4edea3' }}>✓ {profile.resumeName}</span>
+              <button
+                onClick={() => { set('resumeName', ''); set('resumeUrl', ''); }}
+                style={{ padding: '0.4rem 0.75rem', background: 'rgba(255,180,171,0.1)', border: '1px solid rgba(255,180,171,0.25)', borderRadius: 8, color: '#ffb4ab', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
+              >Remove</button>
+            </>
+          )}
         </div>
         <input
           id="resume-input"
@@ -134,11 +198,12 @@ export default function ProfileSetup() {
             const reader = new FileReader();
             reader.onload = () => set('resumeUrl', reader.result);
             reader.readAsDataURL(file);
+            e.target.value = '';
           }}
         />
       </div>
       <div>
-        <label style={lbl}>Projects <span style={{ opacity: 0.5, fontWeight: 400, textTransform: 'none' }}>(up to 3)</span></label>
+        <label style={lbl}>Projects <span style={{ opacity: 0.5, fontWeight: 400, textTransform: 'none' }}>(up to 3, optional)</span></label>
         {profile.projects.map((p, i) => (
           <div key={i} style={{ background: '#131b2e', borderRadius: 12, padding: '1rem', marginBottom: '0.75rem', border: '1px solid rgba(70,69,85,0.2)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
@@ -168,7 +233,7 @@ export default function ProfileSetup() {
         <TagInput tags={profile.targetRoles} onChange={v => set('targetRoles', v)} placeholder="e.g. Software Engineer, Data Scientist..." />
       </div>
       <div>
-        <label style={lbl}>Preferred Companies</label>
+        <label style={lbl}>Preferred Companies <span style={{ opacity: 0.5, fontWeight: 400, textTransform: 'none' }}>(optional)</span></label>
         <TagInput tags={profile.preferredCompanies} onChange={v => set('preferredCompanies', v)} placeholder="e.g. Google, Stripe, Startup..." />
       </div>
       <div>
@@ -200,12 +265,18 @@ export default function ProfileSetup() {
 
     // Step 4 — Review
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      {/* Photo preview in review */}
+      {photoPreview && (
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}>
+          <img src={photoPreview} alt="Profile" style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', border: '3px solid rgba(195,192,255,0.3)' }} />
+        </div>
+      )}
       {[
         { label: 'Bio', val: profile.bio || '—' },
         { label: 'Department', val: profile.department || '—' },
         { label: 'CGPA', val: profile.cgpa || '—' },
         { label: 'Skills', val: profile.skills.length ? profile.skills.join(', ') : '—' },
-        { label: 'Resume', val: profile.resumeName || '—' },
+        { label: 'Resume', val: profile.resumeName || 'Not uploaded (optional)' },
         { label: 'Projects', val: profile.projects.filter(p => p.title).map(p => p.title).join(', ') || '—' },
         { label: 'Target Roles', val: profile.targetRoles.length ? profile.targetRoles.join(', ') : '—' },
         { label: 'Open To', val: profile.openTo.length ? profile.openTo.join(', ') : '—' },
@@ -225,10 +296,10 @@ export default function ProfileSetup() {
     localStorage.setItem('alumnex_profile', JSON.stringify(fullProfile));
     localStorage.setItem('alumniconnect_profile', JSON.stringify(fullProfile));
 
-    const userId = pending.id;
+    const userId = pending.id || user?.id;
     const profilePayload = {
       ...profile,
-      name:            pending.name,
+      name:            pending.name || user?.name,
       college:         pending.college || profile.college,
       year:            pending.year    || profile.year,
       profileComplete: true,
@@ -244,7 +315,7 @@ export default function ProfileSetup() {
 
     const userData = {
       id:              userId || `stu-${Date.now()}`,
-      name:            pending.name || 'Student',
+      name:            pending.name || user?.name || 'Student',
       role:            'STUDENT',
       department:      profile.department || pending.department,
       profileComplete: true,
@@ -256,8 +327,8 @@ export default function ProfileSetup() {
     localStorage.setItem('alumniconnect_pending_profile', JSON.stringify(updatedPending));
     emitRealtimeSync({ type: 'tnp_notifications_updated' });
 
-    login(userData, `token-${Date.now()}`);
-    navigate('/dashboard');
+    login(userData, localStorage.getItem('alumnex_token') || `token-${Date.now()}`);
+    navigate('/dashboard', { replace: true });
   };
 
   return (
@@ -305,7 +376,10 @@ export default function ProfileSetup() {
         {/* Navigation */}
         <div style={{ display: 'flex', gap: 12 }}>
           {step > 0 && (
-            <button onClick={() => setStep(s => s - 1)} style={{ flex: 1, padding: '0.875rem', background: '#222a3d', color: '#c7c4d8', border: 'none', borderRadius: 12, fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer' }}>
+            <button
+              onClick={() => setStep(s => s - 1)}
+              style={{ flex: 1, padding: '0.875rem', background: '#222a3d', color: '#c7c4d8', border: 'none', borderRadius: 12, fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer' }}
+            >
               ← Back
             </button>
           )}

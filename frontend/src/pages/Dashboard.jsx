@@ -25,21 +25,28 @@ function MentorBookModal({ mentor, studentName, studentProfile, onClose, onSent 
   const [topic, setTopic] = useState(TOPICS[0]);
   const [message, setMessage] = useState('');
   const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
 
   if (!mentor) return null;
 
-  const handleSend = () => {
+  const handleSend = async () => {
+    setSending(true);
     const authUser = JSON.parse(localStorage.getItem('alumnex_user') || localStorage.getItem('alumniconnect_user') || '{}');
-    sendRequest({
-      studentName,
-      studentId: authUser.id || studentName,
-      alumniName: mentor.name,
-      alumniId:   mentor.id,
-      alumniRole: `${mentor.title} • ${mentor.company}`,
-      topic,
-      message,
-      studentProfile: studentProfile || null,
-    });
+    try {
+      await sendRequest({
+        studentName,
+        studentId: authUser.id || studentName,
+        alumniName: mentor.name,
+        alumniId:   mentor.id,
+        alumniRole: `${mentor.title} • ${mentor.company}`,
+        topic,
+        message,
+        studentProfile: studentProfile || null,
+      });
+    } catch (e) {
+      console.error('sendRequest failed:', e);
+    }
+    setSending(false);
     setSent(true);
     setTimeout(() => { onSent(); onClose(); }, 1800);
   };
@@ -89,8 +96,12 @@ function MentorBookModal({ mentor, studentName, studentProfile, onClose, onSent 
             </div>
             <div style={{ display: 'flex', gap: 10, marginTop: '1.5rem' }}>
               <button onClick={onClose} style={{ flex: 1, padding: '0.75rem', background: '#222a3d', color: '#c7c4d8', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleSend} style={{ flex: 2, padding: '0.75rem', background: 'linear-gradient(135deg,#4f46e5,#c3c0ff)', color: '#1d00a5', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>send</span> Send Request
+              <button onClick={handleSend} disabled={sending} style={{ flex: 2, padding: '0.75rem', background: sending ? '#2d3449' : 'linear-gradient(135deg,#4f46e5,#c3c0ff)', color: sending ? '#c7c4d8' : '#1d00a5', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: '0.75rem', cursor: sending ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                {sending ? (
+                  <><div style={{ width: 14, height: 14, border: '2px solid rgba(199,196,216,0.3)', borderTop: '2px solid #c7c4d8', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> Sending...</>
+                ) : (
+                  <><span className="material-symbols-outlined" style={{ fontSize: 16 }}>send</span> Send Request</>
+                )}
               </button>
             </div>
           </>
@@ -468,23 +479,6 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-
-          {/* Recommended Mentor CTA — clean button, no profile preview */}
-          <div style={{ background: 'linear-gradient(135deg,rgba(79,70,229,0.12),rgba(11,19,38,0.9))', borderRadius: 16, padding: '1.5rem 2rem', border: '1px solid rgba(195,192,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              <div style={{ width: 48, height: 48, borderRadius: 14, background: 'linear-gradient(135deg,#4f46e5,#c3c0ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <span className="material-symbols-outlined" style={{ color: '#1d00a5', fontSize: 24, fontVariationSettings: "'FILL' 1" }}>psychology</span>
-              </div>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: '1rem', color: '#dae2fd', marginBottom: 3 }}>Recommended Mentor</div>
-                <div style={{ fontSize: '0.8rem', color: '#c7c4d8' }}>Get matched with a top alumni mentor for your mock interview</div>
-              </div>
-            </div>
-            <button onClick={() => setShowMentorBook(true)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.65rem 1.5rem', background: 'linear-gradient(135deg,#4f46e5,#c3c0ff)', color: '#1d00a5', border: 'none', borderRadius: 12, fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', flexShrink: 0, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>person_search</span>
-              View Mentor
-            </button>
-          </div>
         </div>
       </>
     );
@@ -508,7 +502,7 @@ export default function Dashboard() {
           onCancel={() => setShowLogoutConfirm(false)}
         />
       )}
-      {sidebarOpen && <div onClick={() => setSidebarOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 45 }} />}
+      {sidebarOpen && <div className="sidebar-backdrop" onClick={() => setSidebarOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 45 }} />}
       <aside style={{ width: 256, minHeight: '100vh', position: 'fixed', left: sidebarOpen ? 0 : -256, top: 0, background: '#131b2e', display: 'flex', flexDirection: 'column', padding: '1rem', zIndex: 50, transition: 'left 0.3s ease' }}>
         <div style={{ padding: '1.5rem 1rem 1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -533,11 +527,6 @@ export default function Dashboard() {
           })}
         </nav>
         <div style={{ marginTop: 'auto' }}>
-          <div style={{ background: 'linear-gradient(135deg,#4f46e5,#c3c0ff)', borderRadius: 12, padding: '1rem', marginBottom: '1rem' }}>
-            <div style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#1d00a5', fontWeight: 700, marginBottom: 4 }}>Elite Access</div>
-            <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#1d00a5', marginBottom: 12, lineHeight: 1.4 }}>Unlock AI Mentorship</div>
-            <button onClick={() => setActiveTab('premium')} style={{ width: '100%', padding: '0.4rem', background: '#060e20', color: '#c3c0ff', fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', border: 'none', borderRadius: 8, cursor: 'pointer' }}>Upgrade to Pro</button>
-          </div>
           <div style={{ borderTop: '1px solid rgba(70,69,85,0.3)', paddingTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: 4 }}>
             <button onClick={() => setShowLogoutConfirm(true)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0.5rem 1rem', color: '#c7c4d8', fontSize: '0.875rem', background: 'none', border: 'none', cursor: 'pointer', width: '100%', textAlign: 'left' }}>
               <span className="material-symbols-outlined" style={{ fontSize: 18 }}>logout</span> Logout
@@ -662,8 +651,10 @@ export default function Dashboard() {
 
             {/* Profile avatar button */}
             <div style={{ position: 'relative' }}>
-              <button onClick={() => setShowProfile(p => !p)} style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#4f46e5,#c3c0ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.85rem', color: '#1d00a5', border: showProfile ? '2px solid #c3c0ff' : '2px solid transparent', cursor: 'pointer', transition: 'border 0.2s' }}>
-                {firstName ? firstName[0] : '?'}
+              <button onClick={() => setShowProfile(p => !p)} style={{ width: 36, height: 36, borderRadius: '50%', background: profileData?.photoPreview ? 'transparent' : 'linear-gradient(135deg,#4f46e5,#c3c0ff)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.85rem', color: '#1d00a5', border: showProfile ? '2px solid #c3c0ff' : '2px solid transparent', cursor: 'pointer', transition: 'border 0.2s', padding: 0 }}>
+                {profileData?.photoPreview
+                  ? <img src={profileData.photoPreview} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : (firstName ? firstName[0] : '?')}
               </button>
 
               {/* Profile dropdown */}
@@ -675,7 +666,11 @@ export default function Dashboard() {
                   {/* Header */}
                   <div style={{ padding: '1.25rem', background: 'linear-gradient(135deg,rgba(79,70,229,0.2),rgba(11,19,38,0.8))', borderBottom: '1px solid rgba(70,69,85,0.2)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'linear-gradient(135deg,#4f46e5,#c3c0ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '1.1rem', color: '#1d00a5', flexShrink: 0 }}>{firstName ? firstName[0] : '?'}</div>
+                      <div style={{ width: 48, height: 48, borderRadius: '50%', background: profileData?.photoPreview ? 'transparent' : 'linear-gradient(135deg,#4f46e5,#c3c0ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '1.1rem', color: '#1d00a5', flexShrink: 0, overflow: 'hidden' }}>
+                        {profileData?.photoPreview
+                          ? <img src={profileData.photoPreview} alt="profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          : (firstName ? firstName[0] : '?')}
+                      </div>
                       <div>
                         <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#dae2fd' }}>{user?.name || 'Student'}</div>
                         <div style={{ fontSize: '0.7rem', color: '#c7c4d8', marginTop: 2 }}>{savedProfile?.department || user?.department || 'Student'}</div>
@@ -746,7 +741,7 @@ export default function Dashboard() {
           </div>
         </header>
 
-        <section style={{ marginTop: 64, padding: '2rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+        <section style={{ marginTop: 64, padding: '2rem', display: 'flex', flexDirection: 'column', gap: '2rem', maxWidth: '1280px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
           {renderContent()}
         </section>
 

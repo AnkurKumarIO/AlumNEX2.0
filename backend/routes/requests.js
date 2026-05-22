@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../lib/prisma');
+const { createGoogleMeetLink, generateJitsiFallback } = require('../services/googleMeetService');
 
 // GET /requests?alumniId=&studentId=
 router.get('/', async (req, res) => {
@@ -111,8 +112,61 @@ router.patch('/:id', async (req, res) => {
     const updates = { status };
     if (scheduledTime) {
       updates.scheduled_time = new Date(scheduledTime);
-      // Use provided roomId (can be a Google Meet URL) or generate a deterministic one
-      updates.room_id = roomId || `room-${id.slice(-8)}`;
+
+      // If a real meet URL was already provided by the client, use it.
+      // Otherwise generate one now on the backend using the alumni's Google token.
+      if (roomId && roomId.startsWith('http')) {
+        updates.room_id = roomId;
+      } else {
+        // Look up the alumni's Google refresh token to create a real Meet link
+        const requestRecord = await prisma.interviewRequest.findUnique({
+          where: { request_id: id },
+          include: { alumni: { select: { google_refresh_token: true, name: true } } },
+        });
+
+        let meetLink = null;
+
+        if (requestRecord?.alumni?.google_refresh_token) {
+          try {
+            const endTime = new Date(new Date(scheduledTime).getTime() + 60 * 60 * 1000).toISOString();
+            meetLink = await createGoogleMeetLink(
+              requestRecord.alumni.google_refresh_token,
+              id,
+              `AlumNEX Interview — ${requestRecord.alumni.name || 'Alumni'}`,
+              scheduledTime,
+              endTime
+            );
+            console.log(`[Requests] Created Google Meet for slot booking (alumni token): ${meetLink}`);
+          } catch (err) {
+            console.error(`[Requests] Google Meet creation failed for alumni token:`, err.message);
+          }
+        }
+
+        // Try platform-wide token as fallback
+        if (!meetLink && process.env.GOOGLE_REFRESH_TOKEN) {
+          try {
+            const endTime = new Date(new Date(scheduledTime).getTime() + 60 * 60 * 1000).toISOString();
+            meetLink = await createGoogleMeetLink(
+              process.env.GOOGLE_REFRESH_TOKEN,
+              id,
+              `AlumNEX Interview`,
+              scheduledTime,
+              endTime
+            );
+            console.log(`[Requests] Created Google Meet using platform token: ${meetLink}`);
+          } catch (err) {
+            console.error(`[Requests] Platform Google Meet creation failed:`, err.message);
+          }
+        }
+
+        // Last resort: Jitsi
+        if (!meetLink) {
+          meetLink = generateJitsiFallback(id);
+          console.log(`[Requests] Using Jitsi fallback for room ${id}: ${meetLink}`);
+        }
+
+        updates.room_id = meetLink;
+      }
     }
 
     const request = await prisma.interviewRequest.update({
@@ -137,13 +191,15 @@ router.patch('/:id', async (req, res) => {
       const formatted = new Date(scheduledTime).toLocaleString('en-US', {
         weekday: 'long', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
       });
-      
+      const meetLinkStored = request.room_id || '';
+      const meetInfo = meetLinkStored.startsWith('http') ? ` Join: ${meetLinkStored}` : '';
+
       // Notify student of confirmed slot
       notificationsToCreate.push({
         user_id: request.student_id,
         type: 'SLOT_BOOKED',
         title: 'Interview Slot Confirmed! 📅',
-        message: `Your interview with ${request.alumni?.name || 'the alumni'} is scheduled for ${formatted}.`,
+        message: `Your interview with ${request.alumni?.name || 'the alumni'} is scheduled for ${formatted}.${meetInfo}`,
         request_id: id,
       });
 
@@ -152,7 +208,7 @@ router.patch('/:id', async (req, res) => {
         user_id: request.alumni_id,
         type: 'SLOT_BOOKED_ALUMNI',
         title: 'Interview Slot Confirmed! 📅',
-        message: `Your interview with ${request.student?.name || 'the student'} is scheduled for ${formatted}.`,
+        message: `Your interview with ${request.student?.name || 'the student'} is scheduled for ${formatted}.${meetInfo}`,
         request_id: id,
       });
     } else if (status === 'DECLINED') {

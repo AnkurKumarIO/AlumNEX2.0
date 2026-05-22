@@ -237,6 +237,7 @@ function BookSlotModal({ request, onClose, onBooked }) {
   const [ampm, setAmpm]       = useState('AM');
   const [timeError, setTimeError] = useState('');
   const [step, setStep] = useState('calendar');
+  const [booking, setBooking] = useState(false);
 
   const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const DAYS   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -257,15 +258,17 @@ function BookSlotModal({ request, onClose, onBooked }) {
     return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
   };
 
-  const handleBook = () => {
+  const handleBook = async () => {
     const h = parseInt(timeHH, 10);
     const m = parseInt(timeMM, 10);
     if (isNaN(h) || h < 1 || h > 12) { setTimeError('Hour must be 1-12'); return; }
     if (isNaN(m) || m < 0 || m > 59) { setTimeError('Minutes must be 00-59'); return; }
     setTimeError('');
+    setBooking(true);
     const time24 = to24h();
     const scheduledTime = new Date(`${viewYear}-${String(viewMonth+1).padStart(2,'0')}-${String(selectedDate).padStart(2,'0')}T${time24}`).toISOString();
-    bookSlot(request.id, scheduledTime);
+    await bookSlot(request.id, scheduledTime);
+    setBooking(false);
     setStep('done');
     setTimeout(() => { onBooked(scheduledTime); onClose(); }, 1800);
   };
@@ -363,9 +366,12 @@ function BookSlotModal({ request, onClose, onBooked }) {
                     <div style={{ fontWeight: 700, color: '#dae2fd', fontSize: '0.9rem' }}>{formattedSelected} at {displayTime()}</div>
                     <div style={{ fontSize: '0.72rem', color: '#c7c4d8', marginTop: 3 }}>A notification will be sent to {request.studentName}</div>
                   </div>
-                  <button onClick={handleBook} style={{ width: '100%', padding: '0.875rem', background: 'linear-gradient(135deg,#00a572,#4edea3)', color: '#003d29', border: 'none', borderRadius: 12, fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>event_available</span>
-                    Confirm & Notify Student
+                  <button onClick={handleBook} disabled={booking} style={{ width: '100%', padding: '0.875rem', background: booking ? '#2d3449' : 'linear-gradient(135deg,#00a572,#4edea3)', color: booking ? '#c7c4d8' : '#003d29', border: 'none', borderRadius: 12, fontWeight: 700, fontSize: '0.875rem', cursor: booking ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                    {booking ? (
+                      <><div style={{ width: 16, height: 16, border: '2px solid rgba(199,196,216,0.3)', borderTop: '2px solid #c7c4d8', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> Creating Meet Link...</>
+                    ) : (
+                      <><span className="material-symbols-outlined" style={{ fontSize: 18 }}>event_available</span> Confirm & Notify Student</>
+                    )}
                   </button>
                 </>
               )}
@@ -967,9 +973,11 @@ export default function AlumniDashboard() {
     }
   };
 
-  const handleSlotBooked = (requestId, scheduledTime) => {
-    // roomId MUST match bookSlot formula exactly
-    const roomId = `room-${requestId.replace(/[^a-z0-9]/gi, '').slice(-16).toLowerCase()}`;
+  const handleSlotBooked = async (requestId, scheduledTime) => {
+    // bookSlot now returns the request with the real roomId (Google Meet URL or fallback)
+    // stored by the backend. Use that instead of recomputing a plain string.
+    const result = await bookSlot(requestId, scheduledTime);
+    const roomId = result?.roomId || `room-${requestId.replace(/[^a-z0-9]/gi, '').slice(-16).toLowerCase()}`;
     setLiveRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: 'slot_booked', scheduledTime, roomId } : r));
     const formatted = formatScheduledTime(scheduledTime);
     const req = liveRequests.find(r => r.id === requestId);
@@ -984,12 +992,11 @@ export default function AlumniDashboard() {
   };
 
   // ── Instant Meet — start right now, notify student ────────────────────────
-  const handleInstantMeet = (req) => {
+  const handleInstantMeet = async (req) => {
     const now = new Date().toISOString();
-    // roomId MUST match bookSlot formula exactly — no 'instant-' prefix
-    const roomId = `room-${req.id.replace(/[^a-z0-9]/gi, '').slice(-16).toLowerCase()}`;
-    // bookSlot updates DB (status, roomId, scheduledTime) and creates Supabase notification
-    bookSlot(req.id, now);
+    // bookSlot returns the request with the real roomId from the backend
+    const result = await bookSlot(req.id, now);
+    const roomId = result?.roomId || `room-${req.id.replace(/[^a-z0-9]/gi, '').slice(-16).toLowerCase()}`;
     setLiveRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'slot_booked', scheduledTime: now, roomId } : r));
     // Also push local notification so it works even without Supabase Realtime
     try {
@@ -1011,8 +1018,16 @@ export default function AlumniDashboard() {
         localStorage.setItem(NOTIF_KEY, JSON.stringify(all));
       }
     } catch {}
-    // Navigate alumni to the room
-    navigate(`/interview/${roomId}?name=${encodeURIComponent(user?.name || 'Alumni')}`);
+    // Navigate alumni to the room — use the real meet URL if it's a Google Meet link,
+    // otherwise use the internal interview route
+    const destination = roomId.startsWith('http')
+      ? roomId
+      : `/interview/${roomId}?name=${encodeURIComponent(user?.name || 'Alumni')}`;
+    if (roomId.startsWith('http')) {
+      window.open(destination, '_blank', 'noopener,noreferrer');
+    } else {
+      navigate(destination);
+    }
   };
 
   const handleRescheduled = (requestId, newScheduledTime) => {
@@ -1738,7 +1753,7 @@ export default function AlumniDashboard() {
 
       {/* â”€â”€ SIDEBAR â”€â”€ */}
       {/* Sidebar overlay */}
-      {sidebarOpen && <div onClick={() => setSidebarOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 45 }} />}
+      {sidebarOpen && <div className="sidebar-backdrop" onClick={() => setSidebarOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 45 }} />}
 
       <aside style={{ width: 256, minHeight: '100vh', position: 'fixed', left: sidebarOpen ? 0 : -256, top: 0, background: '#131b2e', display: 'flex', flexDirection: 'column', padding: '1.5rem', zIndex: 50, transition: 'left 0.3s ease' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '2rem' }}>
@@ -1960,7 +1975,7 @@ export default function AlumniDashboard() {
           </div>
         </header>
 
-        <section style={{ marginTop: 64, padding: '2.5rem', display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+        <section style={{ marginTop: 64, padding: '2.5rem', display: 'flex', flexDirection: 'column', gap: '2.5rem', maxWidth: '1280px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
           {globalSearch.trim() ? renderSearchResults(globalSearch.trim()) : renderContent()}
         </section>
       </main>

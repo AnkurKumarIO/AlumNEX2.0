@@ -31,6 +31,22 @@ function LandingGuard() {
   return <LandingPage />;
 }
 
+function ProfileSetupGuard() {
+  const { user } = useContext(AuthContext);
+  // Must be logged in to reach profile setup
+  if (!user) return <Navigate to="/login" replace />;
+  // If profile is already complete, skip to dashboard
+  try {
+    const p1 = JSON.parse(localStorage.getItem('alumnex_profile') || 'null');
+    const p2 = JSON.parse(localStorage.getItem('alumniconnect_profile') || 'null');
+    const saved = p1 || p2;
+    if (saved && (saved.profileComplete === true || saved.department || (saved.skills && saved.skills.length > 0))) {
+      return <Navigate to="/dashboard" replace />;
+    }
+  } catch {}
+  return <ProfileSetup />;
+}
+
 function PublicNavbar() {
   const { user } = useContext(AuthContext);
   const isInterview = window.location.pathname.startsWith('/interview');
@@ -58,7 +74,7 @@ function App() {
           <Route path="/student/login"          element={<StudentLogin />} />
           <Route path="/alumni/login"           element={<AlumniLogin />} />
           <Route path="/tnp/login"              element={<TNPLogin />} />
-          <Route path="/profile-setup"          element={<ProfileSetup />} />
+          <Route path="/profile-setup"          element={<ProfileSetupGuard />} />
           <Route path="/dashboard"              element={<DashboardRouter />} />
           <Route path="/interview/:roomId"      element={<InterviewRoom />} />
           <Route path="/resume-analyzer"        element={<ResumeAnalyzer />} />
