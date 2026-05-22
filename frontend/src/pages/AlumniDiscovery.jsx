@@ -48,7 +48,7 @@ function toDisplay(u, ratingsMap = {}) {
     experience: yrs ? `${yrs} yr${yrs !== 1 ? 's' : ''}` : '',
     expRange,
     domain,
-    bio: p.bio || '',
+    bio: p.bio || u.bio || '',
     tags: skills.slice(0, 5),
     linkedin: p.linkedin || '',
     github: p.github || '',

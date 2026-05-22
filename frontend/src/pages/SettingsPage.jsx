@@ -496,7 +496,11 @@ export default function SettingsPage({ role }) {
                 <div key={item.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.25rem', background: '#171f33', borderRadius: 12, border: `1px solid ${notifs[item.key] ? 'rgba(195,192,255,0.15)' : 'rgba(70,69,85,0.15)'}`, transition: 'border-color 0.2s' }}>
                   <div>
                     <div style={{ fontWeight: 600, fontSize: '0.875rem', marginBottom: 3 }}>{item.label}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#c7c4d8' }}>{item.desc}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#c7c4d8' }}>
+                      {item.key === 'interview_requests'
+                        ? (isAlumni ? 'When a student sends you a booking request' : 'When an alumni updates your interview request status')
+                        : item.desc}
+                    </div>
                   </div>
                   <div onClick={() => setNotifs(n => ({ ...n, [item.key]: !n[item.key] }))}
                     style={{ width: 44, height: 24, borderRadius: 999, background: notifs[item.key] ? 'linear-gradient(135deg,#4f46e5,#c3c0ff)' : '#2d3449', cursor: 'pointer', position: 'relative', transition: 'background 0.3s', flexShrink: 0 }}>

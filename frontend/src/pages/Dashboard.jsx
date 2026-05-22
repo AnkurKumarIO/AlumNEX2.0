@@ -134,6 +134,7 @@ export default function Dashboard() {
   const [recommendedMentor, setRecommendedMentor] = useState(null);
   const [profileData, setProfileData] = useState({});
   const [aiProfileStrength, setAiProfileStrength] = useState(null);
+  const [dbFeedback, setDbFeedback] = useState([]);
 
   const hasRealUserId = !!user?.id;
 
@@ -201,6 +202,9 @@ export default function Dashboard() {
     }).catch(() => {});
 
     if (user?.id) {
+      api.getUserFeedback(user.id).then(data => {
+        if (Array.isArray(data)) setDbFeedback(data);
+      }).catch(() => {});
       getUserById(user.id).then(u => {
         // profile_data from Supabase may be a raw JSON string — always parse it
         let rawPd = u?.profile_data;
@@ -965,7 +969,6 @@ export default function Dashboard() {
                     {[
                       { icon: 'school', label: 'Year', val: savedProfile.year || '—' },
                       { icon: 'grade', label: 'CGPA', val: savedProfile.cgpa || '—' },
-                      { icon: 'code', label: 'Skills', val: savedProfile.skills?.length ? savedProfile.skills.slice(0,3).join(', ') + (savedProfile.skills.length > 3 ? '...' : '') : '—' },
                     ].map(item => (
                       <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0.5rem 0', borderBottom: '1px solid rgba(70,69,85,0.1)' }}>
                         <span className="material-symbols-outlined" style={{ fontSize: 16, color: '#c3c0ff' }}>{item.icon}</span>
@@ -979,7 +982,19 @@ export default function Dashboard() {
                     {/* Interview Ratings from Alumni */}
                     {(() => {
                       const profileRatings = JSON.parse(localStorage.getItem('alumnex_candidate_ratings') || '{}');
-                      const myRatings = profileRatings[user?.name] || [];
+                      const localRatings = (profileRatings[user?.name] || []).map(r => ({
+                        rating: r.rating,
+                        feedback: r.feedback,
+                        by: r.by || 'Alumni'
+                      }));
+                      const dbRatingsMapped = dbFeedback
+                        .filter(s => s.alumni_rating != null && s.alumni_rating > 0)
+                        .map(s => ({
+                          rating: s.alumni_rating,
+                          feedback: s.alumni_feedback,
+                          by: s.alumni_name || 'Alumni'
+                        }));
+                      const myRatings = [...dbRatingsMapped, ...localRatings];
                       if (myRatings.length === 0) return null;
                       const avg = (myRatings.reduce((s, r) => s + r.rating, 0) / myRatings.length).toFixed(1);
                       return (
