@@ -38,12 +38,60 @@ export default function ProfileSetup() {
   const [step, setStep] = useState(0);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [photoFile, setPhotoFile] = useState(null);
-  const [profile, setProfile] = useState({
-    bio: '', linkedin: '', github: '', portfolio: '',
-    department: '', skills: [], cgpa: '',
-    resumeName: '', resumeUrl: '', projects: [{ title: '', desc: '', stack: '', link: '' }],
-    targetRoles: [], preferredCompanies: [], openTo: [], gradMonth: '', gradYear: '',
+  const [profile, setProfile] = useState(() => {
+    const pending = JSON.parse(localStorage.getItem('alumnex_pending_profile') || localStorage.getItem('alumniconnect_pending_profile') || '{}');
+    const getFieldVal = (key) => {
+      if (pending[key]) return pending[key];
+      if (user?.profile_data && user.profile_data[key]) return user.profile_data[key];
+      if (user && user[key]) return user[key];
+      if (key === 'rollNo') {
+        if (pending.studentId) return pending.studentId;
+        if (user?.profile_data?.studentId) return user.profile_data.studentId;
+      }
+      return '';
+    };
+
+    return {
+      bio: '', linkedin: '', github: '', portfolio: '',
+      department: getFieldVal('department'),
+      skills: [], cgpa: '',
+      resumeName: '', resumeUrl: '', projects: [{ title: '', desc: '', stack: '', link: '' }],
+      targetRoles: [], preferredCompanies: [], openTo: [], gradMonth: '', gradYear: '',
+      name: getFieldVal('name'),
+      email: getFieldVal('email'),
+      rollNo: getFieldVal('rollNo'),
+      college: getFieldVal('college'),
+      year: getFieldVal('year'),
+    };
   });
+
+  // Sync state if user loads later
+  useEffect(() => {
+    if (user) {
+      setProfile(p => {
+        const pending = JSON.parse(localStorage.getItem('alumnex_pending_profile') || localStorage.getItem('alumniconnect_pending_profile') || '{}');
+        const getFieldVal = (key) => {
+          if (pending[key]) return pending[key];
+          if (user?.profile_data && user.profile_data[key]) return user.profile_data[key];
+          if (user && user[key]) return user[key];
+          if (key === 'rollNo') {
+            if (pending.studentId) return pending.studentId;
+            if (user?.profile_data?.studentId) return user.profile_data.studentId;
+          }
+          return '';
+        };
+        return {
+          ...p,
+          department: p.department || getFieldVal('department'),
+          name: p.name || getFieldVal('name'),
+          email: p.email || getFieldVal('email'),
+          rollNo: p.rollNo || getFieldVal('rollNo'),
+          college: p.college || getFieldVal('college'),
+          year: p.year || getFieldVal('year'),
+        };
+      });
+    }
+  }, [user]);
 
   // ── Guard: if profile is already complete, go straight to dashboard ──────────
   useEffect(() => {
@@ -51,7 +99,7 @@ export default function ProfileSetup() {
       const p1 = JSON.parse(localStorage.getItem('alumnex_profile') || 'null');
       const p2 = JSON.parse(localStorage.getItem('alumniconnect_profile') || 'null');
       const saved = p1 || p2;
-      if (saved && (saved.profileComplete === true || saved.department || (saved.skills && saved.skills.length > 0))) {
+      if (saved && (saved.profileComplete === true || (saved.skills && saved.skills.length > 0))) {
         navigate('/dashboard', { replace: true });
       }
     } catch {}
@@ -66,7 +114,6 @@ export default function ProfileSetup() {
       !!profile.bio.trim(),
       !!profile.linkedin.trim(),
       !!profile.github.trim(),
-      !!profile.department,
       profile.skills.length > 0,
       !!profile.cgpa,
       !!profile.resumeName,
@@ -144,13 +191,6 @@ export default function ProfileSetup() {
 
     // Step 1 — Skills & Academics
     <div style={section}>
-      <div>
-        <label style={lbl}>Department</label>
-        <select value={profile.department} onChange={e => set('department', e.target.value)} style={inp}>
-          <option value="">Select your department</option>
-          {DEPTS.map(d => <option key={d} value={d}>{d}</option>)}
-        </select>
-      </div>
       <div>
         <label style={lbl}>Current CGPA</label>
         <input type="number" min="0" max="10" step="0.1" value={profile.cgpa} onChange={e => set('cgpa', e.target.value)} placeholder="e.g. 8.5" style={{ ...inp, width: 160 }} />
@@ -292,16 +332,49 @@ export default function ProfileSetup() {
 
   const handleComplete = async () => {
     const pending = JSON.parse(localStorage.getItem('alumnex_pending_profile') || localStorage.getItem('alumniconnect_pending_profile') || '{}');
-    const fullProfile = { ...pending, ...profile, photoPreview, profileComplete: true };
+    
+    const getFieldVal = (key) => {
+      if (pending[key]) return pending[key];
+      if (user?.profile_data && user.profile_data[key]) return user.profile_data[key];
+      if (user && user[key]) return user[key];
+      if (key === 'rollNo') {
+        if (pending.studentId) return pending.studentId;
+        if (user?.profile_data?.studentId) return user.profile_data.studentId;
+      }
+      return profile[key] || '';
+    };
+
+    const finalName = getFieldVal('name');
+    const finalEmail = getFieldVal('email');
+    const finalRollNo = getFieldVal('rollNo');
+    const finalDepartment = getFieldVal('department');
+    const finalCollege = getFieldVal('college');
+    const finalYear = getFieldVal('year');
+
+    const fullProfile = {
+      ...pending,
+      ...profile,
+      name: finalName,
+      email: finalEmail,
+      rollNo: finalRollNo,
+      department: finalDepartment,
+      college: finalCollege,
+      year: finalYear,
+      photoPreview,
+      profileComplete: true,
+    };
     localStorage.setItem('alumnex_profile', JSON.stringify(fullProfile));
     localStorage.setItem('alumniconnect_profile', JSON.stringify(fullProfile));
 
     const userId = pending.id || user?.id;
     const profilePayload = {
       ...profile,
-      name:            pending.name || user?.name,
-      college:         pending.college || profile.college,
-      year:            pending.year    || profile.year,
+      name: finalName,
+      email: finalEmail,
+      rollNo: finalRollNo,
+      department: finalDepartment,
+      college: finalCollege,
+      year: finalYear,
       profileComplete: true,
       profileCompletedAt: new Date().toISOString(),
     };
@@ -315,14 +388,23 @@ export default function ProfileSetup() {
 
     const userData = {
       id:              userId || `stu-${Date.now()}`,
-      name:            pending.name || user?.name || 'Student',
+      name:            finalName || 'Student',
       role:            'STUDENT',
-      department:      profile.department || pending.department,
+      department:      finalDepartment,
       profileComplete: true,
     };
 
     // Update pending profile to mark as complete
-    const updatedPending = { ...pending, profileComplete: true };
+    const updatedPending = {
+      ...pending,
+      name: finalName,
+      email: finalEmail,
+      rollNo: finalRollNo,
+      department: finalDepartment,
+      college: finalCollege,
+      year: finalYear,
+      profileComplete: true,
+    };
     localStorage.setItem('alumnex_pending_profile', JSON.stringify(updatedPending));
     localStorage.setItem('alumniconnect_pending_profile', JSON.stringify(updatedPending));
     emitRealtimeSync({ type: 'tnp_notifications_updated' });

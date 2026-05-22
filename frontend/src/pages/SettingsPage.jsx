@@ -126,8 +126,9 @@ export default function SettingsPage({ role }) {
     portfolio:  savedProfile.portfolio  || '',
     skills:     savedProfile.skills     || [],
     cgpa:       savedProfile.cgpa       || '',
-    college:    savedProfile.college    || '',
-    year:       savedProfile.year       || '',
+    college:    user?.profile_data?.college || savedProfile.college    || '',
+    year:       user?.profile_data?.year    || savedProfile.year       || '',
+    rollNo:     user?.profile_data?.rollNo  || user?.profile_data?.studentId || savedProfile.rollNo || savedProfile.studentId || '',
     resumeName: savedProfile.resumeName || '',
     resumeUrl:  savedProfile.resumeUrl  || '',
     // Alumni-specific fields
@@ -144,6 +145,21 @@ export default function SettingsPage({ role }) {
     gradMonth:          savedProfile.gradMonth          || '',
     gradYear:           savedProfile.gradYear           || '',
   });
+
+  // Sync state if user loads later
+  useEffect(() => {
+    if (user) {
+      setProfile(p => ({
+        ...p,
+        name: user.name || p.name,
+        email: user.email || p.email,
+        department: user.department || p.department,
+        college: user.profile_data?.college || p.college,
+        year: user.profile_data?.year || p.year,
+        rollNo: user.profile_data?.rollNo || user.profile_data?.studentId || p.rollNo,
+      }));
+    }
+  }, [user]);
 
   const [notifs, setNotifs] = useState({
     interview_requests: savedNotifs.interview_requests ?? true,
@@ -184,11 +200,29 @@ export default function SettingsPage({ role }) {
   };
 
   const saveProfile = async () => {
-    const updated = { ...savedProfile, ...profile, photoPreview };
+    const mergedProfileData = {
+      ...savedProfile,
+      ...profile,
+      name: user?.name || savedProfile.name || profile.name,
+      email: user?.email || savedProfile.email || profile.email,
+      department: user?.department || savedProfile.department || profile.department,
+      college: user?.profile_data?.college || savedProfile.college || profile.college,
+      year: user?.profile_data?.year || savedProfile.year || profile.year,
+      rollNo: user?.profile_data?.rollNo || user?.profile_data?.studentId || savedProfile.rollNo || savedProfile.studentId || profile.rollNo,
+    };
+    const updated = { ...mergedProfileData, photoPreview };
     localStorage.setItem('alumnex_profile', JSON.stringify(updated));
     localStorage.setItem('alumniconnect_profile', JSON.stringify(updated));
     emitRealtimeSync({ type: 'profile_updated' });
-    const updatedUser = { ...user, name: profile.name, department: profile.department };
+    const updatedUser = { 
+      ...user, 
+      name: mergedProfileData.name, 
+      department: mergedProfileData.department,
+      profile_data: {
+        ...(user?.profile_data || {}),
+        ...mergedProfileData,
+      }
+    };
     login(updatedUser, localStorage.getItem('alumnex_token'));
     // Save to DB — try backend API first (Prisma), fall back to Supabase direct
     if (user?.id && !user.id.startsWith('stu-') && !user.id.startsWith('alm-')) {
@@ -196,7 +230,7 @@ export default function SettingsPage({ role }) {
         await api.saveProfile(user.id, updated);
       } catch (err) {
         console.warn('Profile save via API failed, trying Supabase direct:', err.message);
-        await updateUserProfile(user.id, { ...profile, photoPreview }).catch(e => console.warn('Profile save:', e.message));
+        await updateUserProfile(user.id, { ...mergedProfileData, photoPreview }).catch(e => console.warn('Profile save:', e.message));
       }
     }
     flashSaved();
@@ -286,19 +320,43 @@ export default function SettingsPage({ role }) {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
               <div>
                 <label style={lbl}>Full Name</label>
-                <input value={profile.name} onChange={e => setProfile(p => ({ ...p, name: e.target.value }))} placeholder="Your name" style={inp} />
+                <input
+                  value={profile.name}
+                  onChange={e => setProfile(p => ({ ...p, name: e.target.value }))}
+                  placeholder="Your name"
+                  disabled={!isAlumni}
+                  style={{ ...inp, ...(!isAlumni ? { opacity: 0.65, cursor: 'not-allowed' } : {}) }}
+                />
               </div>
               <div>
                 <label style={lbl}>Email</label>
-                <input value={profile.email} onChange={e => setProfile(p => ({ ...p, email: e.target.value }))} placeholder="your@email.com" type="email" style={inp} />
+                <input
+                  value={profile.email}
+                  onChange={e => setProfile(p => ({ ...p, email: e.target.value }))}
+                  placeholder="your@email.com"
+                  type="email"
+                  disabled={!isAlumni}
+                  style={{ ...inp, ...(!isAlumni ? { opacity: 0.65, cursor: 'not-allowed' } : {}) }}
+                />
               </div>
               <div>
                 <label style={lbl}>Phone Number</label>
-                <input value={profile.phone} onChange={e => setProfile(p => ({ ...p, phone: e.target.value }))} placeholder="+91 XXXXX XXXXX" style={inp} />
+                <input
+                  value={profile.phone}
+                  onChange={e => setProfile(p => ({ ...p, phone: e.target.value }))}
+                  placeholder="+91 XXXXX XXXXX"
+                  style={inp}
+                />
               </div>
               <div>
                 <label style={lbl}>Department / Branch</label>
-                <input value={profile.department} onChange={e => setProfile(p => ({ ...p, department: e.target.value }))} placeholder="e.g. Computer Science" style={inp} />
+                <input
+                  value={profile.department}
+                  onChange={e => setProfile(p => ({ ...p, department: e.target.value }))}
+                  placeholder="e.g. Computer Science"
+                  disabled={!isAlumni}
+                  style={{ ...inp, ...(!isAlumni ? { opacity: 0.65, cursor: 'not-allowed' } : {}) }}
+                />
               </div>
             </div>
 
@@ -337,14 +395,34 @@ export default function SettingsPage({ role }) {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                 <div>
                   <label style={lbl}>College / University</label>
-                  <input value={profile.college} onChange={e => setProfile(p => ({ ...p, college: e.target.value }))} placeholder="e.g. IIT Bombay" style={inp} />
+                  <input
+                    value={profile.college}
+                    onChange={e => setProfile(p => ({ ...p, college: e.target.value }))}
+                    placeholder="e.g. IIT Bombay"
+                    disabled
+                    style={{ ...inp, opacity: 0.65, cursor: 'not-allowed' }}
+                  />
                 </div>
                 <div>
                   <label style={lbl}>Year of Study</label>
-                  <select value={profile.year} onChange={e => setProfile(p => ({ ...p, year: e.target.value }))} style={inp}>
+                  <select
+                    value={profile.year}
+                    onChange={e => setProfile(p => ({ ...p, year: e.target.value }))}
+                    disabled
+                    style={{ ...inp, opacity: 0.65, cursor: 'not-allowed' }}
+                  >
                     <option value="">Select year</option>
                     {['1st Year','2nd Year','3rd Year','4th Year','Postgraduate'].map(y => <option key={y} value={y}>{y}</option>)}
                   </select>
+                </div>
+                <div>
+                  <label style={lbl}>Roll Number / Student ID</label>
+                  <input
+                    value={profile.rollNo}
+                    placeholder="Roll Number"
+                    disabled
+                    style={{ ...inp, opacity: 0.65, cursor: 'not-allowed' }}
+                  />
                 </div>
                 <div>
                   <label style={lbl}>CGPA</label>

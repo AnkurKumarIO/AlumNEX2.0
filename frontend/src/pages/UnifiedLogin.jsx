@@ -33,11 +33,10 @@ function isProfileComplete() {
     const p1 = JSON.parse(localStorage.getItem('alumnex_profile') || 'null');
     const p2 = JSON.parse(localStorage.getItem('alumniconnect_profile') || 'null');
     const profile = p1 || p2;
-    // Profile is complete if the flag is set OR if significant data exists
     if (!profile) return false;
     if (profile.profileComplete === true) return true;
-    // Fallback: treat as complete if department or skills are filled
-    if (profile.department || (profile.skills && profile.skills.length > 0)) return true;
+    // Fallback: treat as complete if skills are filled (since skills are not filled by CSV)
+    if (profile.skills && profile.skills.length > 0) return true;
     return false;
   } catch { return false; }
 }
@@ -80,16 +79,30 @@ export default function UnifiedLogin() {
     }
 
     if (apiSuccess && apiResult) {
-      login(apiResult.user, apiResult.token);
+      const dbUser = apiResult.user;
+      const profileData = dbUser.profile_data || {};
+      const fullProfile = {
+        ...profileData,
+        name: dbUser.name,
+        email: dbUser.email,
+        department: dbUser.department,
+        college: profileData.college || '',
+        year: profileData.year || '',
+        rollNo: profileData.rollNo || profileData.studentId || '',
+      };
+      localStorage.setItem('alumnex_profile', JSON.stringify(fullProfile));
+      localStorage.setItem('alumniconnect_profile', JSON.stringify(fullProfile));
+
+      login(dbUser, apiResult.token);
       // Try to sign in on the Supabase client directly to establish session
       try {
-        const email = apiResult.user.email;
+        const email = dbUser.email;
         if (email) {
           await supabase.auth.signInWithPassword({ email, password: password.trim() });
         }
       } catch {}
       // Redirect logic
-      if (apiResult.user.role === "STUDENT" && !isProfileComplete()) {
+      if (dbUser.role === "STUDENT" && !isProfileComplete()) {
         navigate("/profile-setup");
       } else {
         navigate("/dashboard");
