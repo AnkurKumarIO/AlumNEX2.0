@@ -58,7 +58,7 @@ const tocItems = [
   { id: 'acceptable-use',   label: 'Acceptable Use' },
   { id: 'restricted',       label: 'Restricted Access' },
   { id: 'user-content',     label: 'User-Generated Content' },
-  { id: 'ai-disclaimer',    label: 'AI Features Disclaimer' },
+  { id: 'features-disclaimer', label: 'Features Disclaimer' },
   { id: 'third-party',      label: 'Third-Party Services' },
   { id: 'liability',        label: 'Limitation of Liability' },
   { id: 'indemnification',  label: 'Indemnification' },
@@ -176,10 +176,10 @@ export default function TermsAndConditions() {
           {/* Platform Description */}
           <Section id="platform-desc" icon="hub" title="Platform Description">
             <P>
-              AlumNEX is an AI-powered intelligence platform designed to bridge the gap between campus and career. The platform provides the following core services:
+              AlumNEX is an intelligence platform designed to bridge the gap between campus and career. The platform provides the following core services:
             </P>
             <Ul items={[
-              'AI-powered mock interview sessions with real-time feedback',
+              'Mock interview sessions with real-time feedback',
               'Alumni mentorship matching and booking system',
               'Resume analysis and career pathway recommendations',
               'Student progress analytics and performance tracking',
@@ -218,14 +218,14 @@ export default function TermsAndConditions() {
           <Section id="ip" icon="copyright" title="Intellectual Property">
             <SubHeading>AlumNEX Ownership</SubHeading>
             <P>
-              The AlumNEX name, logo, brand identity, platform design, user interface, source code, AI models, algorithms, and all original content published on the platform are the exclusive intellectual property of <Highlight>AlumNEX and The Tesseract</Highlight>. All rights are reserved.
+              The AlumNEX name, logo, brand identity, platform design, user interface, source code, models, algorithms, and all original content published on the platform are the exclusive intellectual property of <Highlight>AlumNEX and The Tesseract</Highlight>. All rights are reserved.
             </P>
             <P>This includes, but is not limited to:</P>
             <Ul items={[
               'The "AlumNEX" name and wordmark',
               'The AlumNEX logo and all visual brand assets',
               'The platform\'s UI/UX design, layout, and visual elements',
-              'Proprietary AI prompts, models, and interview evaluation systems',
+              'Proprietary prompts, models, and interview evaluation systems',
               'All written content, documentation, and marketing materials',
               'The codebase, APIs, and technical architecture of the platform',
             ]} />
@@ -277,7 +277,7 @@ export default function TermsAndConditions() {
             <SubHeading>Academic & Professional Integrity</SubHeading>
             <Ul items={[
               'Misrepresenting your academic qualifications, graduation status, or employment history',
-              'Using AI-generated interview responses to deceive evaluators',
+              'Using generated interview responses to deceive evaluators',
               'Sharing confidential interview questions or session content without consent',
             ]} />
 
@@ -342,28 +342,28 @@ export default function TermsAndConditions() {
             </P>
           </Section>
 
-          {/* AI Disclaimer */}
-          <Section id="ai-disclaimer" icon="smart_toy" title="AI Features Disclaimer">
+          {/* Features Disclaimer */}
+          <Section id="features-disclaimer" icon="smart_toy" title="Features Disclaimer">
             <P>
-              AlumNEX uses artificial intelligence and large language models (LLMs) to power features including mock interview feedback, resume analysis, career recommendations, and profile summaries.
+              AlumNEX uses large language models (LLMs) to power features including mock interview feedback, resume analysis, career recommendations, and profile summaries.
             </P>
             <WarningBox>
-              AI-generated content is provided for informational and educational purposes only. It does not constitute professional career advice, legal advice, or any form of guaranteed outcome.
+              Generated content is provided for informational and educational purposes only. It does not constitute professional career advice, legal advice, or any form of guaranteed outcome.
             </WarningBox>
             <P>You acknowledge and agree that:</P>
             <Ul items={[
-              'AI-generated feedback may contain errors, inaccuracies, or biases',
+              'Generated feedback may contain errors, inaccuracies, or biases',
               'Interview scores and assessments are indicative, not definitive evaluations',
               'Career pathway recommendations are suggestions, not guarantees of employment',
               'Resume analysis results should be reviewed critically and not followed blindly',
-              'AlumNEX is not responsible for decisions made based on AI-generated content',
+              'AlumNEX is not responsible for decisions made based on generated content',
             ]} />
           </Section>
 
           {/* Third Party */}
           <Section id="third-party" icon="open_in_new" title="Third-Party Services">
             <P>
-              AlumNEX integrates with third-party services including Google (OAuth and Meet), Supabase, and AI providers. Your use of these integrations is subject to the respective third-party terms of service and privacy policies.
+              AlumNEX integrates with third-party services including Google (OAuth and Meet), Supabase, and LLM providers. Your use of these integrations is subject to the respective third-party terms of service and privacy policies.
             </P>
             <P>
               AlumNEX is not responsible for the availability, accuracy, or conduct of third-party services. Links to external websites or services do not constitute endorsement by AlumNEX.
@@ -388,7 +388,7 @@ export default function TermsAndConditions() {
             <P>AlumNEX does not warrant that:</P>
             <Ul items={[
               'The platform will be available at all times or free from errors',
-              'AI-generated content will be accurate, complete, or suitable for your needs',
+              'Generated content will be accurate, complete, or suitable for your needs',
               'The platform will meet your specific requirements or expectations',
               'Any defects or errors will be corrected within a specific timeframe',
               'The platform is free from viruses or other harmful components',
@@ -403,7 +403,7 @@ export default function TermsAndConditions() {
               'Loss of data or corruption of data',
               'Damage to reputation or goodwill',
               'Cost of substitute services',
-              'Any damages arising from reliance on AI-generated content',
+              'Any damages arising from reliance on generated content',
             ]} />
             <P>
               In no event shall AlumNEX's total liability to you exceed the amount you have paid to AlumNEX in the twelve (12) months preceding the claim, or INR 1,000 (whichever is greater).

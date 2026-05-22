@@ -7,8 +7,8 @@ const CARDS = [
     iconColor: '#c3c0ff',
     bgIcon: 'school',
     title: 'I am a Student',
-    desc: 'Accelerate your career with AI-matched mentors, personalized internship insights, and real-world alumni journeys.',
-    checks: ['AI Mentor Matching', 'Resume Intelligence'],
+    desc: 'Accelerate your career with smart-matched mentors, personalized internship insights, and real-world alumni journeys.',
+    checks: ['Smart Mentor Matching', 'Resume Intelligence'],
     btnLabel: 'STUDENT LOGIN',
     btnTo: '/login',
     glowColor: '99, 179, 237',
@@ -176,7 +176,7 @@ export default function RoleCards() {
             </span>
           </h2>
           <p style={{ fontSize: '1rem', color: '#c7c4d8', lineHeight: 1.7, maxWidth: 580, margin: '0 auto', opacity: 0.85 }}>
-            AlumNex connects students, alumni, and administrators through AI-powered career pathways, mock interviews, and mentorship.
+            AlumNex connects students, alumni, and administrators through career pathways, mock interviews, and mentorship.
           </p>
         </div>
 

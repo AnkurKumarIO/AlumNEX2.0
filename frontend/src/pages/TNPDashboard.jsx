@@ -545,11 +545,11 @@ function HomeDashboard({ stats, setActiveTab }) {
             ))}
           </div>
 
-          {/* AI insight card */}
+          {/* Insight card */}
           <div style={{ background: '#2d3449', borderRadius: 20, padding: '1.5rem', borderLeft: '3px solid #c3c0ff', position: 'relative', overflow: 'hidden' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#c3c0ff', marginBottom: 10 }}>
               <span className="material-symbols-outlined" style={{ fontSize: 18, fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
-              <span style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>AI Insight</span>
+              <span style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Insight</span>
             </div>
             <h4 style={{ fontWeight: 700, marginBottom: 8, fontSize: '0.95rem' }}>High Demand Detected</h4>
             <p style={{ fontSize: '0.78rem', color: '#c7c4d8', lineHeight: 1.6 }}>

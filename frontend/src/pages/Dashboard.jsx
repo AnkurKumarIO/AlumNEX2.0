@@ -326,8 +326,8 @@ export default function Dashboard() {
                             if (n.type === 'live' && joinRoomId) {
                               return (
                                 <a href={joinUrl} target={joinUrl.startsWith('http') ? "_blank" : undefined} rel="noopener noreferrer"
-                                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.5rem 1.25rem', background: 'linear-gradient(135deg,#ff4444,#ff6b6b)', color: '#fff', borderRadius: 10, fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none', animation: 'pulse 1.5s ease-in-out infinite' }}>
-                                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>videocam</span> Join Now — Live
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.35rem 0.75rem', background: 'linear-gradient(135deg,#ff4444,#ff6b6b)', color: '#fff', borderRadius: 8, fontSize: '0.72rem', fontWeight: 700, textDecoration: 'none', width: 'fit-content', animation: 'pulse 1.5s ease-in-out infinite' }}>
+                                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>videocam</span> Join Now
                                 </a>
                               );
                             }
@@ -336,8 +336,8 @@ export default function Dashboard() {
                               return (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                                   <a href={joinUrl} target={joinUrl.startsWith('http') ? "_blank" : undefined} rel="noopener noreferrer"
-                                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.5rem 1.25rem', background: 'linear-gradient(135deg,#00a572,#4edea3)', color: '#003d29', borderRadius: 10, fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none' }}>
-                                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>videocam</span> Join Now
+                                    style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.35rem 0.75rem', background: 'linear-gradient(135deg,#00a572,#4edea3)', color: '#003d29', borderRadius: 8, fontSize: '0.72rem', fontWeight: 700, textDecoration: 'none', width: 'fit-content' }}>
+                                    <span className="material-symbols-outlined" style={{ fontSize: 14 }}>videocam</span> Join Now
                                   </a>
                                   {isGoogleMeet && (
                                     <div style={{ fontSize: '0.68rem', color: 'rgba(199,196,216,0.6)', display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -360,8 +360,8 @@ export default function Dashboard() {
                             if (joinRoomId) {
                               return (
                                 <a href={`/interview/${joinRoomId}?name=${encodeURIComponent(user?.name || 'Student')}`}
-                                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.5rem 1.25rem', background: 'linear-gradient(135deg,#ff4444,#ff6b6b)', color: '#fff', borderRadius: 10, fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none' }}>
-                                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>videocam</span> Join Now
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.35rem 0.75rem', background: 'linear-gradient(135deg,#ff4444,#ff6b6b)', color: '#fff', borderRadius: 8, fontSize: '0.72rem', fontWeight: 700, textDecoration: 'none', width: 'fit-content' }}>
+                                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>videocam</span> Join Now
                                 </a>
                               );
                             }
@@ -720,7 +720,7 @@ export default function Dashboard() {
                   <span className="material-symbols-outlined" style={{ fontSize: 12, color: '#c3c0ff', fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
                   <span style={{ fontSize: '0.6rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c3c0ff' }}>New Intelligence</span>
                 </div>
-                <h3 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '0.75rem' }}>AI Resume Optimizer</h3>
+                <h3 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '0.75rem' }}>Resume Optimizer</h3>
                 <p style={{ fontSize: '0.875rem', color: '#c7c4d8', lineHeight: 1.7, maxWidth: 400, marginBottom: '1.25rem' }}>
                   Our neural network analyzes your resume against 5,000+ top-tier tech job descriptions.
                 </p>

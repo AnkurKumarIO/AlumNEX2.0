@@ -27,7 +27,7 @@ const DEMO = {
     { domain: 'Backend / Node',   sessions: 241, pct: 73 },
     { domain: 'Data Structures',  sessions: 198, pct: 60 },
     { domain: 'Behavioural',      sessions: 167, pct: 51 },
-    { domain: 'AI / ML',          sessions: 134, pct: 41 },
+    { domain: 'ML / Data Science',  sessions: 134, pct: 41 },
   ],
   top_mentors: [
     { id: 'd1', name: 'Priya Sharma',  company: 'Google',    sessions: 48, rating: 4.9, domain: 'System Design' },

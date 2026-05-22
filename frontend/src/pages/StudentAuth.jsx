@@ -38,7 +38,7 @@ export default function StudentAuth() {
       <div className="card auth-card" style={{ padding: '2.5rem' }}>
         <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🎓</div>
         <h2>Student Verification</h2>
-        <p className="auth-subtitle">Upload your college ID for AI-powered OCR verification</p>
+        <p className="auth-subtitle">Upload your college ID for OCR verification</p>
 
         {status && (
           <div className={`status-message ${status.type === 'success' ? 'status-success' : 'status-error'}`}>

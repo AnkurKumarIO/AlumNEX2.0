@@ -151,7 +151,7 @@ export default function PrivacyPolicy() {
           {/* Overview */}
           <Section id="overview" icon="info" title="Overview">
             <P>
-              AlumNEX ("we", "us", or "our") is an AI-powered intelligence platform that connects students, alumni, and Training & Placement (TNP) coordinators. This Privacy Policy applies to all users of the AlumNEX website and platform, including general visitors, registered students, alumni members, and TNP administrators.
+              AlumNEX ("we", "us", or "our") is an intelligence platform that connects students, alumni, and Training & Placement (TNP) coordinators. This Privacy Policy applies to all users of the AlumNEX website and platform, including general visitors, registered students, alumni members, and TNP administrators.
             </P>
             <P>
               By accessing or using AlumNEX, you agree to the collection and use of information as described in this policy. If you do not agree, please discontinue use of the platform.
@@ -188,7 +188,7 @@ export default function PrivacyPolicy() {
               'CGPA or academic performance indicators (optional)',
               'Skills, career goals, and professional links (LinkedIn, GitHub, Portfolio)',
               'Resume files uploaded to the platform (stored securely)',
-              'Interview session transcripts and AI-generated feedback',
+              'Interview session transcripts and automated feedback',
               'Profile photo (if provided)',
               'Activity logs: sessions attended, requests made, progress analytics',
             ]} />
@@ -225,8 +225,8 @@ export default function PrivacyPolicy() {
             <Ul items={[
               'Providing and operating the AlumNEX platform and its features',
               'Authenticating your identity and maintaining account security',
-              'Matching students with relevant alumni mentors using AI algorithms',
-              'Generating AI-powered interview feedback, resume analysis, and career insights',
+              'Matching students with relevant alumni mentors using smart algorithms',
+              'Generating interview feedback, resume analysis, and career insights',
               'Scheduling and managing mock interview sessions',
               'Sending transactional emails (session confirmations, password resets, notifications)',
               'Improving platform performance, fixing bugs, and developing new features',
@@ -248,7 +248,7 @@ export default function PrivacyPolicy() {
             <Ul items={[
               'Supabase — database hosting and authentication infrastructure',
               'Google (OAuth) — calendar integration for alumni who opt in to Google Meet',
-              'AI/LLM providers (Gemini, Groq) — processing interview transcripts and generating feedback. Data is not retained by these providers for training purposes.',
+              'LLM providers (Gemini, Groq) — processing interview transcripts and generating feedback. Data is not retained by these providers for training purposes.',
               'Hosting and CDN providers — for serving the platform reliably',
             ]} />
 

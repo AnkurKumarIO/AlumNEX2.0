@@ -7,7 +7,7 @@ import { api } from '../api';
 const STEPS = [
   { icon: '📄', label: 'Reading document' },
   { icon: '🔍', label: 'Validating content' },
-  { icon: '🤖', label: 'AI deep analysis' },
+  { icon: '🤖', label: 'Deep analysis' },
   { icon: '✨', label: 'Generating report' },
 ];
 
@@ -42,7 +42,7 @@ function ProcessingScreen() {
         Analyzing your resume…
       </h2>
       <p style={{ fontSize: '0.875rem', color: '#9b98b8', marginBottom: '2.5rem' }}>
-        Our AI is reading every detail to give you real feedback
+        Reading every detail to give you real feedback
       </p>
 
       {/* Step pills */}
@@ -179,7 +179,7 @@ function ResultsView({ result, onReset, navigate }) {
           ← Analyze another resume
         </button>
 
-        {/* AI Status Badge */}
+        {/* Status Badge */}
         <div style={{ 
           display: 'flex', alignItems: 'center', gap: 6, 
           padding: '0.35rem 0.75rem', borderRadius: 99, 
@@ -189,7 +189,7 @@ function ResultsView({ result, onReset, navigate }) {
         }}>
           <span style={{ width: 6, height: 6, borderRadius: '50%', background: result.is_mock ? '#ff6b6b' : '#4edea3', boxShadow: `0 0 8px ${result.is_mock ? '#ff6b6b' : '#4edea3'}` }}></span>
           <span style={{ color: result.is_mock ? '#ff8a80' : '#4edea3', textTransform: 'uppercase' }}>
-            {result.is_mock ? 'Simulation Mode' : 'Live AI Verified'}
+            {result.is_mock ? 'Simulation Mode' : 'Live Verified'}
           </span>
         </div>
       </div>
@@ -453,10 +453,10 @@ export default function ResumeAnalyzer() {
             boxShadow: '0 8px 30px rgba(79,70,229,0.4)',
           }}>🤖</div>
           <h1 style={{ fontSize: '1.6rem', fontWeight: 900, letterSpacing: '-0.03em', marginBottom: 8, background: 'linear-gradient(135deg,#dae2fd,#c3c0ff)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            AI Resume Analyzer
+            Resume Analyzer
           </h1>
           <p style={{ fontSize: '0.875rem', color: '#9b98b8', lineHeight: 1.65, maxWidth: 360, margin: '0 auto' }}>
-            Upload your resume and get an honest, real-time AI analysis — score, skill gaps, target companies, and actionable fixes.
+            Upload your resume and get an honest, real-time analysis — score, skill gaps, target companies, and actionable fixes.
           </p>
         </div>
 

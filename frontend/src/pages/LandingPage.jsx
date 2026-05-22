@@ -27,7 +27,7 @@ export default function LandingPage() {
             <span style={{ color: '#4edea3' }}>Career</span>
           </h1>
           <p style={{ fontSize: '1.1rem', color: '#c7c4d8', lineHeight: 1.7, maxWidth: 640, margin: '0 auto', opacity: 0.85 }}>
-            AlumNex connects students, alumni, and administrators through AI-powered career pathways, mock interviews, and mentorship.
+            AlumNex connects students, alumni, and administrators through career pathways, mock interviews, and mentorship.
           </p>
         </section>
 
@@ -45,7 +45,7 @@ export default function LandingPage() {
               <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, #0b1326 0%, rgba(11,19,38,0.4) 40%, transparent 100%)', zIndex: 1 }} />
               <div style={{ position: 'absolute', bottom: 40, left: 40, zIndex: 2 }}>
                 <h4 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#c3c0ff', marginBottom: 8 }}>Predictive Pathways</h4>
-                <p style={{ fontSize: '0.875rem', color: '#c7c4d8', maxWidth: 480, lineHeight: 1.6 }}>Our AI analyzes thousands of career trajectories to recommend the most efficient path for students based on their specific skill sets.</p>
+                <p style={{ fontSize: '0.875rem', color: '#c7c4d8', maxWidth: 480, lineHeight: 1.6 }}>Our platform analyzes thousands of career trajectories to recommend the most efficient path for students based on their specific skill sets.</p>
               </div>
               {/* Decorative grid */}
               <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(195,192,255,0.08) 1px, transparent 0)', backgroundSize: '32px 32px' }} />
