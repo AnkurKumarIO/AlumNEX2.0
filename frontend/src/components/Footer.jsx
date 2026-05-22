@@ -85,8 +85,8 @@ export default function Footer() {
             >
               Terms &amp; Conditions
             </Link>
-            <a
-              href="#"
+            <Link
+              to="/contact"
               style={{
                 fontSize: '0.8rem',
                 fontWeight: 500,
@@ -98,7 +98,7 @@ export default function Footer() {
               onMouseOut={e => e.currentTarget.style.color = '#c7c4d8'}
             >
               Contact Us
-            </a>
+            </Link>
           </div>
         </div>
 

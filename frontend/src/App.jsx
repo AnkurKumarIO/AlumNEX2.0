@@ -16,6 +16,7 @@ import InterviewRoom from './pages/InterviewRoom';
 import ResumeAnalyzer from './pages/ResumeAnalyzer';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsAndConditions from './pages/TermsAndConditions';
+import ContactUs from './pages/ContactUs';
 
 function DashboardRouter() {
   const { user } = useContext(AuthContext);
@@ -80,6 +81,7 @@ function App() {
           <Route path="/resume-analyzer"        element={<ResumeAnalyzer />} />
           <Route path="/privacy"                element={<PrivacyPolicy />} />
           <Route path="/terms"                  element={<TermsAndConditions />} />
+          <Route path="/contact"                element={<ContactUs />} />
           {/* Self-registration removed — accounts created by TNP bulk upload */}
           <Route path="/student/register"       element={<Navigate to="/login" replace />} />
           <Route path="/auth/student/register"  element={<Navigate to="/login" replace />} />
