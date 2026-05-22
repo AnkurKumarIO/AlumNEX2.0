@@ -469,23 +469,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Recommended Mentor CTA — clean button, no profile preview */}
-          <div style={{ background: 'linear-gradient(135deg,rgba(79,70,229,0.12),rgba(11,19,38,0.9))', borderRadius: 16, padding: '1.5rem 2rem', border: '1px solid rgba(195,192,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              <div style={{ width: 48, height: 48, borderRadius: 14, background: 'linear-gradient(135deg,#4f46e5,#c3c0ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <span className="material-symbols-outlined" style={{ color: '#1d00a5', fontSize: 24, fontVariationSettings: "'FILL' 1" }}>psychology</span>
-              </div>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: '1rem', color: '#dae2fd', marginBottom: 3 }}>Recommended Mentor</div>
-                <div style={{ fontSize: '0.8rem', color: '#c7c4d8' }}>Get matched with a top alumni mentor for your mock interview</div>
-              </div>
-            </div>
-            <button onClick={() => setShowMentorBook(true)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.65rem 1.5rem', background: 'linear-gradient(135deg,#4f46e5,#c3c0ff)', color: '#1d00a5', border: 'none', borderRadius: 12, fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', flexShrink: 0, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>person_search</span>
-              View Mentor
-            </button>
-          </div>
-        </div>
+
       </>
     );
   };
@@ -533,11 +517,6 @@ export default function Dashboard() {
           })}
         </nav>
         <div style={{ marginTop: 'auto' }}>
-          <div style={{ background: 'linear-gradient(135deg,#4f46e5,#c3c0ff)', borderRadius: 12, padding: '1rem', marginBottom: '1rem' }}>
-            <div style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#1d00a5', fontWeight: 700, marginBottom: 4 }}>Elite Access</div>
-            <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#1d00a5', marginBottom: 12, lineHeight: 1.4 }}>Unlock AI Mentorship</div>
-            <button onClick={() => setActiveTab('premium')} style={{ width: '100%', padding: '0.4rem', background: '#060e20', color: '#c3c0ff', fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', border: 'none', borderRadius: 8, cursor: 'pointer' }}>Upgrade to Pro</button>
-          </div>
           <div style={{ borderTop: '1px solid rgba(70,69,85,0.3)', paddingTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: 4 }}>
             <button onClick={() => setShowLogoutConfirm(true)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0.5rem 1rem', color: '#c7c4d8', fontSize: '0.875rem', background: 'none', border: 'none', cursor: 'pointer', width: '100%', textAlign: 'left' }}>
               <span className="material-symbols-outlined" style={{ fontSize: 18 }}>logout</span> Logout

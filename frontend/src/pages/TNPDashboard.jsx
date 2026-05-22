@@ -127,6 +127,7 @@ export default function TNPDashboard() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showNotifPanel, setShowNotifPanel] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [tnpNotifs, setTnpNotifs] = useState([]);
   const [seenNotifIds, setSeenNotifIds] = useState(() => {
     try { return JSON.parse(localStorage.getItem('tnp_seen_notifs') || '[]'); } catch { return []; }
@@ -216,13 +217,17 @@ export default function TNPDashboard() {
       )}
 
       {/* ── Sidebar ── */}
-      <aside style={{ width: 240, minHeight: '100vh', position: 'fixed', left: 0, top: 0, background: '#131b2e', display: 'flex', flexDirection: 'column', padding: '1.5rem', zIndex: 50 }}>
+      {sidebarOpen && <div onClick={() => setSidebarOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 45 }} />}
+      <aside style={{ width: 240, minHeight: '100vh', position: 'fixed', left: sidebarOpen ? 0 : -240, top: 0, background: '#131b2e', display: 'flex', flexDirection: 'column', padding: '1.5rem', zIndex: 50, transition: 'left 0.3s ease' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '2rem' }}>
           <AlumNexLogo size={32} />
-          <div>
+          <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 900, fontSize: '1rem', color: '#f5e9ff', letterSpacing: '-0.02em' }}>Alum<span style={{ color: '#a855f7' }}>NEX</span></div>
             <div style={{ fontSize: '0.55rem', color: '#c7c4d8', letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: 2 }}>TNP Control</div>
           </div>
+          <button onClick={() => setSidebarOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c7c4d8', padding: 4, display: 'flex' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
+          </button>
         </div>
         <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
           {TNP_NAV.map(({ icon, label, tab }) => {
@@ -245,12 +250,19 @@ export default function TNPDashboard() {
       </aside>
 
       {/* ── Main ── */}
-      <main style={{ marginLeft: 240, flex: 1 }}>
+      <main style={{ marginLeft: sidebarOpen ? 240 : 0, flex: 1, transition: 'margin-left 0.3s ease' }}>
 
         {/* Header */}
-        <header style={{ position: 'fixed', top: 0, left: 240, right: 0, height: 64, zIndex: 40, background: 'rgba(11,19,38,0.85)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(195,192,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2rem' }}>
-          <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#c7c4d8' }}>
-            {TNP_NAV.find(n => n.tab === activeTab)?.label || 'Dashboard'}
+        <header style={{ position: 'fixed', top: 0, left: sidebarOpen ? 240 : 0, right: 0, height: 64, zIndex: 40, background: 'rgba(11,19,38,0.85)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(195,192,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2rem', transition: 'left 0.3s ease' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            {!sidebarOpen && (
+              <button onClick={() => setSidebarOpen(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c7c4d8', padding: 4, display: 'flex', alignItems: 'center', marginRight: 4 }}>
+                <span className="material-symbols-outlined" style={{ fontSize: 24 }}>menu</span>
+              </button>
+            )}
+            <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#c7c4d8' }}>
+              {TNP_NAV.find(n => n.tab === activeTab)?.label || 'Dashboard'}
+            </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
 
