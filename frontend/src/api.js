@@ -141,15 +141,22 @@ const MOCK_API = {
 // ─── Backend availability check ─────────────────────────────────────────────
 
 let _backendAvailable = null;
+let _backendCheckTime = 0;
+const BACKEND_CACHE_TTL = 30_000; // re-check every 30s
 
 async function isBackendUp() {
-  if (_backendAvailable !== null) return _backendAvailable;
+  const now = Date.now();
+  // Always re-check if cache is stale or was false (so login retries work)
+  if (_backendAvailable === true && now - _backendCheckTime < BACKEND_CACHE_TTL) {
+    return true;
+  }
   try {
-    const res = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(2000) });
+    const res = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(3000) });
     _backendAvailable = res.ok;
   } catch {
     _backendAvailable = false;
   }
+  _backendCheckTime = now;
   return _backendAvailable;
 }
 
@@ -201,7 +208,7 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
     }).then(r => r.json()),
-    async () => { await mockDelay(); return { token: MOCK_TOKEN, user: MOCK_USERS.students[0] }; }
+    async () => { await mockDelay(); return { error: 'Backend unavailable. Please try again.' }; }
   ),
 
   alumniRegister: (data) => callOrMock(
@@ -219,7 +226,7 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
     }).then(r => r.json()),
-    async () => { await mockDelay(); return { token: MOCK_TOKEN, user: MOCK_USERS.alumni[0] }; }
+    async () => { await mockDelay(); return { error: 'Backend unavailable. Please try again.' }; }
   ),
 
   resumeAnalyze: (input, userId) => callOrMock(
