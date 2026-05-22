@@ -190,8 +190,14 @@ export default function SettingsPage({ role }) {
     emitRealtimeSync({ type: 'profile_updated' });
     const updatedUser = { ...user, name: profile.name, department: profile.department };
     login(updatedUser, localStorage.getItem('alumnex_token'));
+    // Save to DB — try backend API first (Prisma), fall back to Supabase direct
     if (user?.id && !user.id.startsWith('stu-') && !user.id.startsWith('alm-')) {
-      await updateUserProfile(user.id, { ...profile, photoPreview }).catch(err => console.warn('Profile save:', err.message));
+      try {
+        await api.saveProfile(user.id, updated);
+      } catch (err) {
+        console.warn('Profile save via API failed, trying Supabase direct:', err.message);
+        await updateUserProfile(user.id, { ...profile, photoPreview }).catch(e => console.warn('Profile save:', e.message));
+      }
     }
     flashSaved();
   };

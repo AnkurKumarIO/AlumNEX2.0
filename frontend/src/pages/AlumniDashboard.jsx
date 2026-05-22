@@ -931,12 +931,20 @@ export default function AlumniDashboard() {
     localStorage.setItem('alumni_seen_notifs', JSON.stringify(allNotifications.map(n => n.id)));
   };
 
-  const saveProfileForm = () => {
+  const saveProfileForm = async () => {
     const updated = { ...savedProfile, ...profileForm };
     localStorage.setItem('alumnex_profile', JSON.stringify(updated));
-    const updatedUser = { ...user, name: profileForm.username };
+    const updatedUser = { ...user, name: profileForm.username || user?.name };
     login(updatedUser, localStorage.getItem('alumnex_token'));
     emitRealtimeSync({ type: 'profile_updated' });
+    // Persist to DB so profile syncs across devices
+    if (user?.id && !user.id.startsWith('alm-') && !user.id.startsWith('stu-')) {
+      try {
+        await api.saveProfile(user.id, updated);
+      } catch (err) {
+        console.warn('[AlumniDashboard] Profile save to DB failed:', err.message);
+      }
+    }
     setEditProfile(false);
   };
 
