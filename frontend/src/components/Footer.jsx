@@ -28,15 +28,6 @@ export default function Footer() {
           {/* Brand */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <AlumNexLogo size="md" />
-            <div style={{
-              fontSize: '0.65rem',
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              letterSpacing: '0.15em',
-              color: '#c7c4d8',
-            }}>
-              Intelligence Platform
-            </div>
           </div>
 
           {/* Links */}
