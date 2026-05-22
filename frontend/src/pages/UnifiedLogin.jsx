@@ -50,6 +50,8 @@ export default function UnifiedLogin() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const [showForgotInfo, setShowForgotInfo] = useState(false);
+
   if (user) return <Navigate to="/dashboard" replace />;
 
   const handleSubmit = async (e) => {
@@ -248,11 +250,6 @@ export default function UnifiedLogin() {
     { id: "ALUMNI",  label: "Alumni",    icon: "psychology" },
     { id: "TNP",     label: "TNP Admin", icon: "admin_panel_settings" },
   ];
-  const DEMO_HINTS = {
-    STUDENT: "Demo: alice.johnson42 / Xk7mP2qR9n",
-    ALUMNI:  "Demo: priya.sharma / Alumni@2026",
-    TNP:     "Demo: admin / tnp_secure_123",
-  };
   const inp = { width: "100%", background: "#222a3d", border: "1px solid rgba(70,69,85,0.4)", borderRadius: 10, padding: "0.75rem 0.875rem", color: "#dae2fd", fontSize: "0.875rem", outline: "none", boxSizing: "border-box", fontFamily: "Inter, sans-serif" };
 
   return (
@@ -290,24 +287,43 @@ export default function UnifiedLogin() {
                   </button>
                 </div>
               </div>
+              {/* Forgot Password */}
+              <div style={{ textAlign: 'right', marginTop: '-0.25rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowForgotInfo(v => !v)}
+                  style={{ background: 'none', border: 'none', color: '#c3c0ff', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', padding: 0, textDecoration: 'underline', textUnderlineOffset: 3 }}
+                >
+                  Forgot Password?
+                </button>
+              </div>
+
               <button type="submit" disabled={loading} style={{ width: "100%", padding: "0.875rem", background: loading ? "#2d3449" : "linear-gradient(135deg,#4f46e5,#c3c0ff)", color: loading ? "#c7c4d8" : "#1d00a5", border: "none", borderRadius: 12, fontWeight: 700, fontSize: "0.875rem", cursor: loading ? "not-allowed" : "pointer", marginTop: 4, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                 {loading ? <><div style={{ width: 16, height: 16, border: "2px solid rgba(199,196,216,0.3)", borderTop: "2px solid #c7c4d8", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />Signing in...</> : "Sign In"}
               </button>
+
+              {/* Forgot Password Info Panel */}
+              {showForgotInfo && (
+                <div style={{ background: '#131b2e', borderRadius: 12, border: '1px solid rgba(195,192,255,0.15)', padding: '1rem 1.25rem', animation: 'fadeIn 0.2s ease' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '0.625rem' }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 16, color: '#ffb95f' }}>info</span>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#ffb95f', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Account Access</span>
+                  </div>
+                  <p style={{ fontSize: '0.78rem', color: '#c7c4d8', lineHeight: 1.7, margin: 0 }}>
+                    Accounts are created by your TNP coordinator.{' '}
+                    <span style={{ color: '#ffb95f', fontWeight: 600 }}>Contact your institution admin</span>{' '}
+                    if you need access or have forgotten your credentials.
+                  </p>
+                  <p style={{ fontSize: '0.73rem', color: 'rgba(199,196,216,0.6)', lineHeight: 1.6, margin: '0.5rem 0 0 0' }}>
+                    Your username and password are provided by your college's TNP office. Please reach out to them directly for any login issues.
+                  </p>
+                </div>
+              )}
             </form>
-            <div style={{ marginTop: "1.25rem", padding: "0.75rem 1rem", background: "#131b2e", borderRadius: 10, border: "1px solid rgba(70,69,85,0.2)" }}>
-              <p style={{ fontSize: "0.72rem", color: "#c7c4d8", lineHeight: 1.6, margin: 0 }}>
-                <span className="material-symbols-outlined" style={{ fontSize: 13, color: "#ffb95f", verticalAlign: "middle", marginRight: 4 }}>info</span>
-                {DEMO_HINTS[role]}
-              </p>
-            </div>
-            <p style={{ textAlign: "center", fontSize: "0.75rem", color: "#9b98b8", marginTop: "1.25rem", lineHeight: 1.5 }}>
-              Accounts are created by your TNP coordinator.{" "}
-              <span style={{ color: "#ffb95f" }}>Contact your institution admin</span> if you need access.
-            </p>
           </div>
         </div>
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } } @keyframes fadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }`}</style>
     </div>
   );
 }

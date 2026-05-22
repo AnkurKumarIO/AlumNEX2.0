@@ -40,7 +40,8 @@ router.patch('/:id/profile', async (req, res) => {
     const {
       bio, linkedin, github, portfolio,
       department, skills, cgpa, college, year,
-      resumeName, projects, targetRoles,
+      resumeName, resumeUrl, photoPreview,
+      projects, targetRoles,
       preferredCompanies, openTo, gradMonth, gradYear,
       name, email,
     } = req.body;
@@ -48,7 +49,8 @@ router.patch('/:id/profile', async (req, res) => {
     const profileDataObj = {
       bio, linkedin, github, portfolio,
       skills, cgpa, college, year,
-      resumeName, projects, targetRoles,
+      resumeName, resumeUrl, photoPreview,
+      projects, targetRoles,
       preferredCompanies, openTo,
       gradMonth, gradYear,
       profileCompletedAt: new Date().toISOString(),
