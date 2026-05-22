@@ -136,7 +136,8 @@ export default function Dashboard() {
   const [aiProfileStrength, setAiProfileStrength] = useState(null);
   const [dbFeedback, setDbFeedback] = useState([]);
 
-  const hasRealUserId = !!user?.id;
+  const isMockUser = !user?.id || String(user.id).startsWith('stu-') || String(user.id).startsWith('alm-') || String(user.id).startsWith('tnp-');
+  const hasRealUserId = !!user?.id && !isMockUser;
 
   // ── Real-time notifications using Supabase subscriptions ──────────────────
   const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications(user?.id);
@@ -153,12 +154,15 @@ export default function Dashboard() {
     requestId: n.request_id,
     read: n.read || false,
     createdAt: n.created_at || n.createdAt,
-    roomId: n.request_id ? `room-${String(n.request_id).replace(/[^a-z0-9]/gi, '').slice(-16).toLowerCase()}` : null,
+    roomId: n.room_id || n.roomId || (n.request_id ? `room-${String(n.request_id).replace(/[^a-z0-9]/gi, '').slice(-16).toLowerCase()}` : null),
   }));
   const fallbackStudentNotifs = getStudentNotifications(user?.name || '');
   const studentNotifs = hasRealUserId
     ? dbStudentNotifs
     : [...dbStudentNotifs, ...fallbackStudentNotifs.filter(local => !dbStudentNotifs.find(db => db.requestId === local.requestId && db.type === local.type))];
+
+  // Optional: show a loading state while fetching real data to avoid "0" flicker
+  const { loading: requestsLoading } = useInterviewRequests(hasRealUserId ? user?.id : null, hasRealUserId ? user?.role : null);
 
   // Push tab to browser history so back button works within dashboard
   const isFirstRender = useRef(true);
@@ -247,7 +251,7 @@ export default function Dashboard() {
     : (profileData.skills || []).slice(0, 3);
 
   const SKILL_COLORS = ['#c3c0ff', '#4edea3', '#ffb95f'];
-  const myRequests     = hasRealUserId && syncedRequests.length > 0 ? syncedRequests : getRequestsByStudent(user?.name || '');
+  const myRequests     = hasRealUserId ? syncedRequests : getRequestsByStudent(user?.name || '');
   const pendingCount   = myRequests.filter(r => r.status === 'pending').length;
   const interviewCount = myRequests.filter(r => r.status === 'slot_booked' || r.status === 'accepted').length;
   const CIRC   = 2 * Math.PI * 70;
