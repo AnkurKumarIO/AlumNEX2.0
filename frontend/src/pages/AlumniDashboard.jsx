@@ -577,6 +577,231 @@ const NAV_ITEMS = [
   { icon: 'settings',      label: 'Settings',         tab: 'settings' },
 ];
 
+// ── Student Full Profile Modal (read-only, mirrors My Profile tab) ──────────────
+// Fetches the student's live profile_data from the DB so alumni always
+// see the latest version — resume, links, projects, bio, etc.
+function StudentFullProfileModal({ request, onClose }) {
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!request) return;
+    const load = async () => {
+      setLoading(true);
+      try {
+        // Try to fetch live profile from DB first
+        const sid = request.studentId;
+        if (sid && !String(sid).startsWith('alm-') && !String(sid).startsWith('stu-')) {
+          const dbUser = await getUserById(sid);
+          let pd = dbUser?.profile_data || {};
+          if (typeof pd === 'string') { try { pd = JSON.parse(pd); } catch { pd = {}; } }
+          if (pd && Object.keys(pd).length > 0) {
+            setProfile({ ...pd, name: pd.name || dbUser?.name || request.studentName });
+            setLoading(false);
+            return;
+          }
+        }
+        // Fallback to snapshot stored on the request
+        let snap = request.studentProfile;
+        if (typeof snap === 'string') { try { snap = JSON.parse(snap); } catch { snap = null; } }
+        setProfile(snap || { name: request.studentName });
+      } catch {
+        let snap = request.studentProfile;
+        if (typeof snap === 'string') { try { snap = JSON.parse(snap); } catch { snap = null; } }
+        setProfile(snap || { name: request.studentName });
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [request]);
+
+  if (!request) return null;
+
+  const p = profile || {};
+  const validProjects = (p.projects || []).filter(pr => pr && pr.title);
+  const resumeHref = p.resumeUrl || p.resume_url || '';
+
+  const sectionHead = (icon, text) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1rem' }}>
+      <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#c3c0ff' }}>{icon}</span>
+      <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c7c4d8' }}>{text}</span>
+    </div>
+  );
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+      <div style={{ background: '#0b1326', borderRadius: 20, width: '100%', maxWidth: 820, maxHeight: '92vh', display: 'flex', flexDirection: 'column', border: '1px solid rgba(195,192,255,0.15)', boxShadow: '0 40px 100px rgba(0,0,0,0.7)', overflow: 'hidden' }}>
+
+        {/* Header */}
+        <div style={{ padding: '1.25rem 1.5rem', background: 'linear-gradient(135deg,rgba(79,70,229,0.25),rgba(11,19,38,0.9))', borderBottom: '1px solid rgba(70,69,85,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ width: 52, height: 52, borderRadius: '50%', background: p.photoPreview ? 'transparent' : 'linear-gradient(135deg,#4f46e5,#c3c0ff)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '1.3rem', color: '#1d00a5', flexShrink: 0, border: '2px solid rgba(195,192,255,0.2)' }}>
+              {p.photoPreview ? <img src={p.photoPreview} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (p.name || request.studentName || 'S').charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <div style={{ fontSize: '0.55rem', fontWeight: 700, color: '#c3c0ff', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 3 }}>Student Profile</div>
+              <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#fff', marginBottom: 2 }}>{p.name || request.studentName}</h2>
+              <div style={{ fontSize: '0.78rem', color: '#c7c4d8' }}>
+                {[p.department || p.branch, p.year ? `Year ${p.year}` : null, p.college].filter(Boolean).join(' • ')}
+              </div>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, cursor: 'pointer', color: '#c7c4d8', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36 }}>
+            <span className="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        {/* Body */}
+        <div style={{ overflowY: 'auto', flex: 1, padding: '1.5rem' }}>
+          {loading ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 200, gap: 12, color: '#c7c4d8' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 28, opacity: 0.4, animation: 'spin 1s linear infinite' }}>progress_activity</span>
+              Loading profile...
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
+
+              {/* Left Column */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+
+                {/* Academics */}
+                <div style={{ background: 'rgba(23,31,51,0.7)', borderRadius: 14, padding: '1.25rem', border: '1px solid rgba(70,69,85,0.15)' }}>
+                  {sectionHead('school', 'Academics & Status')}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
+                    <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.875rem', borderRadius: 10, border: '1px solid rgba(195,192,255,0.05)' }}>
+                      <div style={{ fontSize: '0.65rem', color: '#c7c4d8', opacity: 0.6, marginBottom: 4 }}>CGPA</div>
+                      <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#4edea3' }}>{p.cgpa ? `${p.cgpa} / 10` : 'Not Set'}</div>
+                    </div>
+                    <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.875rem', borderRadius: 10, border: '1px solid rgba(195,192,255,0.05)' }}>
+                      <div style={{ fontSize: '0.65rem', color: '#c7c4d8', opacity: 0.6, marginBottom: 4 }}>Graduation</div>
+                      <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#fff', paddingTop: 2 }}>{p.gradMonth && p.gradYear ? `${p.gradMonth} ${p.gradYear}` : 'Not Set'}</div>
+                    </div>
+                  </div>
+                  {p.openTo?.length > 0 && (
+                    <>
+                      <div style={{ fontSize: '0.65rem', color: '#c7c4d8', opacity: 0.6, marginBottom: 6, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Open To</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                        {p.openTo.map((s, i) => <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0.3rem 0.65rem', borderRadius: 8, fontSize: '0.72rem', fontWeight: 600, background: 'rgba(78,222,163,0.1)', color: '#4edea3', border: '1px solid rgba(78,222,163,0.2)' }}><span className="material-symbols-outlined" style={{ fontSize: 12 }}>check</span>{s}</span>)}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Skills */}
+                {p.skills?.length > 0 && (
+                  <div style={{ background: 'rgba(23,31,51,0.7)', borderRadius: 14, padding: '1.25rem', border: '1px solid rgba(70,69,85,0.15)' }}>
+                    {sectionHead('psychology', 'Skills & Expertise')}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      {p.skills.map((sk, i) => <span key={i} style={{ padding: '0.35rem 0.75rem', borderRadius: 8, fontSize: '0.72rem', fontWeight: 600, background: 'rgba(195,192,255,0.06)', color: '#c3c0ff', border: '1px solid rgba(195,192,255,0.1)' }}>{sk}</span>)}
+                    </div>
+                  </div>
+                )}
+
+                {/* Resume & Links */}
+                <div style={{ background: 'rgba(23,31,51,0.7)', borderRadius: 14, padding: '1.25rem', border: '1px solid rgba(70,69,85,0.15)' }}>
+                  {sectionHead('description', 'Documents & Links')}
+                  {/* Resume */}
+                  <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.875rem', borderRadius: 10, border: '1px solid rgba(195,192,255,0.05)', marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 22, color: '#ffb95f' }}>article</span>
+                      <div>
+                        <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#fff' }}>Resume</div>
+                        <div style={{ fontSize: '0.62rem', color: '#c7c4d8', opacity: 0.6 }}>{p.resumeName || 'No resume uploaded'}</div>
+                      </div>
+                    </div>
+                    {resumeHref && (
+                      <a href={resumeHref} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0.4rem 0.875rem', background: 'rgba(78,222,163,0.1)', border: '1px solid rgba(78,222,163,0.25)', borderRadius: 8, color: '#4edea3', fontSize: '0.7rem', fontWeight: 700, textDecoration: 'none' }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>open_in_new</span> View
+                      </a>
+                    )}
+                  </div>
+                  {/* Social links */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {p.linkedin && <a href={p.linkedin.startsWith('http') ? p.linkedin : `https://${p.linkedin}`} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0.65rem 0.875rem', borderRadius: 10, background: 'rgba(10,102,194,0.1)', border: '1px solid rgba(10,102,194,0.2)', color: '#60a5fa', textDecoration: 'none', fontSize: '0.82rem', fontWeight: 600 }}><span className="material-symbols-outlined" style={{ fontSize: 18 }}>link</span>LinkedIn Profile</a>}
+                    {p.github && <a href={p.github.startsWith('http') ? p.github : `https://${p.github}`} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0.65rem 0.875rem', borderRadius: 10, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#fff', textDecoration: 'none', fontSize: '0.82rem', fontWeight: 600 }}><span className="material-symbols-outlined" style={{ fontSize: 18 }}>code</span>GitHub Repository</a>}
+                    {p.portfolio && <a href={p.portfolio.startsWith('http') ? p.portfolio : `https://${p.portfolio}`} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0.65rem 0.875rem', borderRadius: 10, background: 'rgba(195,192,255,0.05)', border: '1px solid rgba(195,192,255,0.1)', color: '#c3c0ff', textDecoration: 'none', fontSize: '0.82rem', fontWeight: 600 }}><span className="material-symbols-outlined" style={{ fontSize: 18 }}>language</span>Portfolio Website</a>}
+                    {!p.linkedin && !p.github && !p.portfolio && <div style={{ fontSize: '0.82rem', color: '#c7c4d8', fontStyle: 'italic', textAlign: 'center', padding: '0.5rem' }}>No links added</div>}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+
+                {/* Bio */}
+                <div style={{ background: 'rgba(23,31,51,0.7)', borderRadius: 14, padding: '1.25rem', border: '1px solid rgba(70,69,85,0.15)' }}>
+                  {sectionHead('person', 'About')}
+                  <p style={{ fontSize: '0.875rem', color: '#dae2fd', lineHeight: 1.7, margin: 0, whiteSpace: 'pre-line' }}>
+                    {p.bio || 'No bio provided.'}
+                  </p>
+                </div>
+
+                {/* Career Goals */}
+                {(p.targetRoles?.length > 0 || p.preferredCompanies?.length > 0) && (
+                  <div style={{ background: 'rgba(23,31,51,0.7)', borderRadius: 14, padding: '1.25rem', border: '1px solid rgba(70,69,85,0.15)' }}>
+                    {sectionHead('explore', 'Career Goals')}
+                    {p.targetRoles?.length > 0 && (
+                      <div style={{ marginBottom: '1rem' }}>
+                        <div style={{ fontSize: '0.65rem', color: '#c7c4d8', opacity: 0.6, marginBottom: 6, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Target Roles</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                          {p.targetRoles.map((r, i) => <span key={i} style={{ padding: '0.3rem 0.65rem', borderRadius: 8, fontSize: '0.72rem', fontWeight: 600, background: 'rgba(195,192,255,0.06)', color: '#c3c0ff', border: '1px solid rgba(195,192,255,0.1)' }}>{r}</span>)}
+                        </div>
+                      </div>
+                    )}
+                    {p.preferredCompanies?.length > 0 && (
+                      <div>
+                        <div style={{ fontSize: '0.65rem', color: '#c7c4d8', opacity: 0.6, marginBottom: 6, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Preferred Companies</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                          {p.preferredCompanies.map((c, i) => <span key={i} style={{ padding: '0.3rem 0.65rem', borderRadius: 8, fontSize: '0.72rem', fontWeight: 600, background: 'rgba(78,222,163,0.06)', color: '#4edea3', border: '1px solid rgba(78,222,163,0.1)' }}>{c}</span>)}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Projects */}
+                {validProjects.length > 0 && (
+                  <div style={{ background: 'rgba(23,31,51,0.7)', borderRadius: 14, padding: '1.25rem', border: '1px solid rgba(70,69,85,0.15)' }}>
+                    {sectionHead('folder', 'Projects')}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      {validProjects.map((proj, i) => (
+                        <div key={i} style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: 12, border: '1px solid rgba(195,192,255,0.05)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 6 }}>
+                            <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#fff', margin: 0 }}>{proj.title}</h4>
+                            {proj.link && <a href={proj.link} target="_blank" rel="noreferrer" style={{ color: '#c3c0ff', display: 'inline-flex', alignItems: 'center', textDecoration: 'none', flexShrink: 0 }}><span className="material-symbols-outlined" style={{ fontSize: 17 }}>open_in_new</span></a>}
+                          </div>
+                          {proj.desc && <p style={{ fontSize: '0.78rem', color: '#c7c4d8', lineHeight: 1.5, margin: '0 0 8px 0' }}>{proj.desc}</p>}
+                          {proj.stack && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                              {proj.stack.split(',').map((t, ti) => <span key={ti} style={{ padding: '0.15rem 0.45rem', borderRadius: 4, fontSize: '0.62rem', fontWeight: 600, background: 'rgba(195,192,255,0.05)', color: '#c3c0ff' }}>{t.trim()}</span>)}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Interview Request Context */}
+                {request.message && (
+                  <div style={{ background: 'rgba(23,31,51,0.7)', borderRadius: 14, padding: '1.25rem', border: '1px solid rgba(70,69,85,0.15)' }}>
+                    {sectionHead('chat_bubble', "Student's Message")}
+                    <div style={{ background: 'rgba(45,52,73,0.5)', borderLeft: '2px solid #c3c0ff', borderRadius: 8, padding: '0.75rem 1rem' }}>
+                      <p style={{ fontSize: '0.82rem', color: 'rgba(218,226,253,0.85)', fontStyle: 'italic', lineHeight: 1.6, margin: 0 }}>"{request.message}"</p>
+                    </div>
+                    <div style={{ marginTop: 8, fontSize: '0.65rem', color: 'rgba(199,196,216,0.5)' }}>Topic: <strong style={{ color: '#c3c0ff' }}>{request.topic}</strong></div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 // ── Alumni Session History ──────────────────────────────────────────────────
 function AlumniSessionHistory({ userId, userName }) {
@@ -812,6 +1037,7 @@ export default function AlumniDashboard() {
   const [showSlotModal, setShowSlotModal] = useState(false);
   const [extraSlots, setExtraSlots] = useState([]);
   const [viewingRequest, setViewingRequest] = useState(null);
+  const [viewingStudentProfile, setViewingStudentProfile] = useState(null); // request obj for full student profile modal
   const [bookingRequest, setBookingRequest] = useState(null);
   const [reschedulingRequest, setReschedulingRequest] = useState(null);
   const [liveRequests, setLiveRequests] = useState([]);
@@ -1565,7 +1791,7 @@ export default function AlumniDashboard() {
 
               {/* Actions */}
               <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                <button onClick={() => setViewingRequest(r)} style={{ padding: '0.45rem 0.875rem', background: 'rgba(79,70,229,0.2)', color: '#c3c0ff', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+                <button onClick={() => setViewingStudentProfile(r)} style={{ padding: '0.45rem 0.875rem', background: 'rgba(79,70,229,0.2)', color: '#c3c0ff', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
                   <span className="material-symbols-outlined" style={{ fontSize: 14 }}>person</span> View Profile
                 </button>
                 {r.status === 'pending' && (
@@ -1724,7 +1950,7 @@ export default function AlumniDashboard() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                     {r.status === 'pending' && (
                       <>
-                        <button onClick={() => setViewingRequest(r)} style={{ padding: '0.4rem 0.875rem', background: 'rgba(79,70,229,0.2)', color: '#c3c0ff', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', border: 'none', cursor: 'pointer' }}>
+                        <button onClick={() => setViewingStudentProfile(r)} style={{ padding: '0.4rem 0.875rem', background: 'rgba(79,70,229,0.2)', color: '#c3c0ff', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', border: 'none', cursor: 'pointer' }}>
                           Accept
                         </button>
                         <button onClick={() => handleDeclineRequest(r.id)} style={{ padding: '0.4rem 0.75rem', background: '#222a3d', color: '#c7c4d8', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, border: 'none', cursor: 'pointer' }}>
@@ -1829,6 +2055,12 @@ export default function AlumniDashboard() {
           request={viewingRequest}
           onClose={() => setViewingRequest(null)}
           onAccept={() => handleAccepted(viewingRequest.id)}
+        />
+      )}
+      {viewingStudentProfile && (
+        <StudentFullProfileModal
+          request={viewingStudentProfile}
+          onClose={() => setViewingStudentProfile(null)}
         />
       )}
       {bookingRequest && (
@@ -2017,7 +2249,14 @@ export default function AlumniDashboard() {
                   <div style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#c3c0ff' }}>{user.name || 'Alumni'}</div>
                   <div style={{ fontSize: '0.6rem', color: '#c7c4d8' }}>SENIOR MENTOR</div>
                 </div>
-                <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#4f46e5,#c3c0ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: '#1d00a5', fontSize: '0.85rem', border: showProfile ? '2px solid #c3c0ff' : '2px solid transparent', transition: 'border 0.2s' }}>{firstName[0]}</div>
+                {(() => {
+                  const lp = (() => { try { return JSON.parse(localStorage.getItem('alumnex_profile') || '{}'); } catch { return {}; } })();
+                  return (
+                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: lp.photoPreview ? 'transparent' : 'linear-gradient(135deg,#4f46e5,#c3c0ff)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: '#1d00a5', fontSize: '0.85rem', border: showProfile ? '2px solid #c3c0ff' : '2px solid transparent', transition: 'border 0.2s', flexShrink: 0 }}>
+                      {lp.photoPreview ? <img src={lp.photoPreview} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : firstName[0]}
+                    </div>
+                  );
+                })()}
               </button>
 
               {/* Profile dropdown */}
@@ -2034,7 +2273,13 @@ export default function AlumniDashboard() {
                           {/* Profile view */}
                           <div style={{ padding: '1.25rem', background: 'linear-gradient(135deg,rgba(79,70,229,0.2),rgba(11,19,38,0.8))', borderBottom: '1px solid rgba(70,69,85,0.2)' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'linear-gradient(135deg,#4f46e5,#c3c0ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '1.1rem', color: '#1d00a5', flexShrink: 0 }}>{firstName[0]}</div>
+                              {(() => {
+                                return (
+                                  <div style={{ width: 48, height: 48, borderRadius: '50%', background: liveProfile.photoPreview ? 'transparent' : 'linear-gradient(135deg,#4f46e5,#c3c0ff)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '1.1rem', color: '#1d00a5', flexShrink: 0 }}>
+                                    {liveProfile.photoPreview ? <img src={liveProfile.photoPreview} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : firstName[0]}
+                                  </div>
+                                );
+                              })()}
                               <div>
                                 <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#dae2fd' }}>{liveProfile.name || user.name || 'Alumni'}</div>
                                 <div style={{ fontSize: '0.7rem', color: '#c3c0ff', marginTop: 2 }}>{liveProfile.currentTitle || liveProfile.domain || liveProfile.department || 'Senior Mentor'}</div>
