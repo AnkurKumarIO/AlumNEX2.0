@@ -293,20 +293,21 @@ export default function UnifiedLogin() {
                   </button>
                 </div>
               </div>
-              {/* Forgot Password */}
-              <div style={{ textAlign: 'right', marginTop: '-0.25rem' }}>
-                <button
-                  type="button"
-                  onClick={() => setShowForgotInfo(v => !v)}
-                  style={{ background: 'none', border: 'none', color: '#c3c0ff', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', padding: 0, textDecoration: 'underline', textUnderlineOffset: 3 }}
-                >
-                  Forgot Password?
-                </button>
-              </div>
 
               <button type="submit" disabled={loading} style={{ width: "100%", padding: "0.875rem", background: loading ? "#2d3449" : "linear-gradient(135deg,#4f46e5,#c3c0ff)", color: loading ? "#c7c4d8" : "#1d00a5", border: "none", borderRadius: 12, fontWeight: 700, fontSize: "0.875rem", cursor: loading ? "not-allowed" : "pointer", marginTop: 4, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                 {loading ? <><div style={{ width: 16, height: 16, border: "2px solid rgba(199,196,216,0.3)", borderTop: "2px solid #c7c4d8", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />Signing in...</> : "Sign In"}
               </button>
+
+              {/* Forgot Password */}
+              <div style={{ textAlign: 'center', marginTop: '0.25rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowForgotInfo(v => !v)}
+                  style={{ background: 'none', border: 'none', color: '#c3c0ff', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', padding: 4, textDecoration: 'underline', textUnderlineOffset: 3 }}
+                >
+                  Forgot Password?
+                </button>
+              </div>
 
               {/* Forgot Password Info Panel */}
               {showForgotInfo && (

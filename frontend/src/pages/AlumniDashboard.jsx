@@ -82,7 +82,13 @@ function StudentDetailModal({ request, onClose, onAccept }) {
             {/* Student basic info */}
             <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(70,69,85,0.1)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: '1rem' }}>
-                <div style={{ width: 56, height: 56, borderRadius: 14, background: 'linear-gradient(135deg,#4f46e5,#c3c0ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', fontWeight: 700, color: '#1d00a5', flexShrink: 0 }}>{request?.studentName ? request.studentName[0] : '?'}</div>
+                <div style={{ width: 56, height: 56, borderRadius: 14, background: p.photoPreview ? 'transparent' : 'linear-gradient(135deg,#4f46e5,#c3c0ff)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', fontWeight: 700, color: '#1d00a5', flexShrink: 0, border: '1px solid rgba(195,192,255,0.15)' }}>
+                  {p.photoPreview ? (
+                    <img src={p.photoPreview} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    request?.studentName ? request.studentName[0] : '?'
+                  )}
+                </div>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: '1rem', color: '#dae2fd' }}>{p?.name || request?.studentName || 'Student'}</div>
                   {p.college && <div style={{ fontSize: '0.78rem', color: '#c7c4d8', marginTop: 2 }}>{p.college}</div>}
@@ -187,6 +193,35 @@ function StudentDetailModal({ request, onClose, onAccept }) {
                 <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c7c4d8', marginBottom: 6 }}>Student's Message</div>
                 <div style={{ background: 'rgba(45,52,73,0.5)', borderLeft: '2px solid #c3c0ff', borderRadius: 8, padding: '0.75rem 1rem' }}>
                   <p style={{ fontSize: '0.8rem', color: 'rgba(218,226,253,0.85)', fontStyle: 'italic', lineHeight: 1.6 }}>"{request.message}"</p>
+                </div>
+              </div>
+            )}
+
+            {/* Projects */}
+            {p.projects && p.projects.filter(pr => pr && pr.title).length > 0 && (
+              <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid rgba(70,69,85,0.1)' }}>
+                <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c7c4d8', marginBottom: 8 }}>Projects</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {p.projects.filter(pr => pr && pr.title).map((proj, i) => (
+                    <div key={i} style={{ background: 'rgba(255,255,255,0.02)', padding: '0.875rem', borderRadius: 10, border: '1px solid rgba(195,192,255,0.05)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                        <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fff' }}>{proj.title}</div>
+                        {proj.link && (
+                          <a href={proj.link.startsWith('http') ? proj.link : `https://${proj.link}`} target="_blank" rel="noreferrer" style={{ color: '#c3c0ff', display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>open_in_new</span>
+                          </a>
+                        )}
+                      </div>
+                      {proj.desc && <p style={{ fontSize: '0.75rem', color: '#c7c4d8', margin: '0 0 6px 0', lineHeight: 1.4 }}>{proj.desc}</p>}
+                      {proj.stack && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                          {proj.stack.split(',').map((t, ti) => (
+                            <span key={ti} style={{ padding: '0.15rem 0.4rem', borderRadius: 4, fontSize: '0.6rem', fontWeight: 600, background: 'rgba(195,192,255,0.05)', color: '#c3c0ff' }}>{t.trim()}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -1453,7 +1488,13 @@ export default function AlumniDashboard() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {matchedRequests.map(r => (
                 <div key={r.id} style={{ background: '#131b2e', borderRadius: 14, padding: '1rem 1.25rem', border: '1px solid rgba(70,69,85,0.15)', display: 'flex', alignItems: 'center', gap: 14 }}>
-                  <div style={{ width: 44, height: 44, borderRadius: 10, background: 'linear-gradient(135deg,#222a3d,#2d3449)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', fontWeight: 700, color: '#c3c0ff', flexShrink: 0 }}>{r?.studentName ? r.studentName[0] : '?'}</div>
+                  <div style={{ width: 44, height: 44, borderRadius: 10, background: r.studentProfile?.photoPreview ? 'transparent' : 'linear-gradient(135deg,#222a3d,#2d3449)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', fontWeight: 700, color: '#c3c0ff', flexShrink: 0, border: '1px solid rgba(195,192,255,0.1)' }}>
+                    {r.studentProfile?.photoPreview ? (
+                      <img src={r.studentProfile.photoPreview} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      r?.studentName ? r.studentName[0] : '?'
+                    )}
+                  </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: 2 }}>{highlight(r.studentName, q)}</div>
                     <div style={{ fontSize: '0.72rem', color: '#c7c4d8' }}>{highlight(r.topic, q)}</div>
@@ -1748,10 +1789,16 @@ export default function AlumniDashboard() {
               {/* Avatar */}
               <div 
                 onClick={() => setViewingRequest(r)}
-                style={{ width: 52, height: 52, borderRadius: 12, background: 'linear-gradient(135deg,#222a3d,#2d3449)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem', fontWeight: 700, color: '#c3c0ff', flexShrink: 0, cursor: 'pointer', transition: 'all 0.2s', border: '2px solid transparent' }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = '#c3c0ff'; e.currentTarget.style.background = 'linear-gradient(135deg,#2d3449,#3d4559)'; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'linear-gradient(135deg,#222a3d,#2d3449)'; }}
-              >{r.studentName[0]}</div>
+                style={{ width: 52, height: 52, borderRadius: 12, background: r.studentProfile?.photoPreview ? 'transparent' : 'linear-gradient(135deg,#222a3d,#2d3449)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem', fontWeight: 700, color: '#c3c0ff', flexShrink: 0, cursor: 'pointer', transition: 'all 0.2s', border: '2px solid transparent' }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = '#c3c0ff'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; }}
+              >
+                {r.studentProfile?.photoPreview ? (
+                  <img src={r.studentProfile.photoPreview} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  r.studentName[0]
+                )}
+              </div>
 
               {/* Info */}
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -1930,8 +1977,13 @@ export default function AlumniDashboard() {
             ) : liveRequests.slice(0, 2).map(r => (
               <div key={r.id} style={{ background: '#171f33', borderRadius: 16, padding: '1.25rem 1.5rem', border: `1px solid ${r.status === 'accepted' || r.status === 'slot_booked' ? 'rgba(78,222,163,0.15)' : 'rgba(70,69,85,0.2)'}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                  {/* Avatar */}
-                  <div style={{ width: 48, height: 48, borderRadius: 12, background: 'linear-gradient(135deg,#222a3d,#2d3449)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', fontWeight: 700, color: '#c3c0ff', flexShrink: 0 }}>{r.studentName[0]}</div>
+                  <div style={{ width: 48, height: 48, borderRadius: 12, background: r.studentProfile?.photoPreview ? 'transparent' : 'linear-gradient(135deg,#222a3d,#2d3449)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', fontWeight: 700, color: '#c3c0ff', flexShrink: 0, border: '1px solid rgba(195,192,255,0.1)' }}>
+                    {r.studentProfile?.photoPreview ? (
+                      <img src={r.studentProfile.photoPreview} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      r.studentName[0]
+                    )}
+                  </div>
 
                   {/* Info */}
                   <div style={{ flex: 1, minWidth: 0 }}>
