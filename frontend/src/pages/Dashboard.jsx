@@ -8,11 +8,12 @@ import SettingsPage from './SettingsPage';
 import AlumNexLogo from '../AlumNexLogo';
 import { getStudentNotifications, markStudentNotifsRead, sendRequest, getRequestsByStudent } from '../interviewRequests';
 import LogoutConfirmModal from '../components/LogoutConfirmModal';
-import { api } from '../api';
+import { api, SOCKET_URL } from '../api';
 import { getAllAlumni, getUserById } from '../lib/db';
 import { useNotifications } from '../hooks/useNotifications';
 import { useInterviewRequests } from '../hooks/useInterviewRequests';
 import { subscribeRealtimeSync } from '../lib/realtimeSync';
+import io from 'socket.io-client';
 
 // â”€â”€ Inline BookModal for Recommended Mentor â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const TOPICS = [
@@ -135,6 +136,8 @@ export default function Dashboard() {
   const [profileData, setProfileData] = useState({});
   const [aiProfileStrength, setAiProfileStrength] = useState(null);
   const [dbFeedback, setDbFeedback] = useState([]);
+  // Track sessions ended via socket (roomId → true). Only set when "End Session" is clicked.
+  const [endedSessions, setEndedSessions] = useState({});
 
   const hasRealUserId = !!user?.id;
 
@@ -184,6 +187,16 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => subscribeRealtimeSync(() => setLocalRefresh(v => v + 1)), []);
+
+  // Listen for session_ended socket events so we can mark sessions as ended
+  // without relying on a time-based check.
+  useEffect(() => {
+    const socket = io(`${SOCKET_URL}/interview`, { transports: ['websocket', 'polling'] });
+    socket.on('session_ended', (roomId) => {
+      setEndedSessions(prev => ({ ...prev, [roomId]: true }));
+    });
+    return () => socket.disconnect();
+  }, []);
 
   if (!user) return <Navigate to="/" replace />;
   const firstName = (user?.name || user?.role || 'Student').split(' ')[0];
@@ -288,8 +301,11 @@ export default function Dashboard() {
               {allNotifs.map(n => {
                 const req = myRequests.find(r => r.id === n.requestId);
                 const isLive = n.type === 'live';
-                const canJoin = (n.type === 'slot_booked' || isLive) && req?.roomId && req?.scheduledTime &&
-                  Date.now() >= new Date(req.scheduledTime).getTime() - 5 * 60 * 1000;
+                const joinRoomId = req?.roomId || n.roomId || n.requestId || req?.id;
+                const scheduledTime = req?.scheduledTime;
+                const isSessionEnded = endedSessions[joinRoomId] || endedSessions[n.requestId];
+                const canJoin = !isSessionEnded && (n.type === 'slot_booked' || isLive) && joinRoomId &&
+                  (scheduledTime ? Date.now() >= new Date(scheduledTime).getTime() - 5 * 60 * 1000 : true);
                 const iconMap = { slot_booked: 'event_available', accepted: 'check_circle', declined: 'cancel', live: 'videocam', default: 'notifications' };
                 const colorMap = { slot_booked: '#4edea3', accepted: '#c3c0ff', declined: '#ffb4ab', live: '#ff4444', default: '#c7c4d8' };
                 const bgMap = { slot_booked: 'rgba(78,222,163,0.1)', accepted: 'rgba(195,192,255,0.1)', declined: 'rgba(255,180,171,0.1)', live: 'rgba(255,68,68,0.1)', default: 'rgba(70,69,85,0.1)' };
@@ -314,15 +330,15 @@ export default function Dashboard() {
                       {(n.type === 'slot_booked' || n.type === 'live') && (
                         <div style={{ marginTop: 10 }}>
                           {(() => {
-                            // roomId: prefer stored, then derive deterministically from requestId
-                            const joinRoomId = n.roomId || req?.roomId || n.requestId || req?.id;
-                            const scheduledTime = req?.scheduledTime;
-                            const isNowJoinable = scheduledTime
-                              ? Date.now() >= new Date(scheduledTime).getTime() - 5 * 60 * 1000
-                              : !!joinRoomId; // instant meet = always joinable
-
                             const joinUrl = `/interview/${n.requestId || req?.id || joinRoomId}?name=${encodeURIComponent(user?.name || 'Student')}`;
 
+                            if (isSessionEnded) {
+                              return (
+                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.35rem 0.75rem', background: 'rgba(107,114,128,0.1)', border: '1px solid rgba(107,114,128,0.2)', borderRadius: 8, fontSize: '0.72rem', color: '#6b7280', fontWeight: 600 }}>
+                                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>videocam_off</span> Session ended
+                                </div>
+                              );
+                            }
                             if (n.type === 'live' && joinRoomId) {
                               return (
                                 <Link to={joinUrl}
@@ -331,8 +347,8 @@ export default function Dashboard() {
                                 </Link>
                               );
                             }
-                            if (joinRoomId && isNowJoinable) {
-                              const isGoogleMeet = req?.roomId?.includes('meet.google.com') || (typeof joinRoomId === 'string' && joinRoomId.includes('meet.google.com'));
+                            if (joinRoomId && canJoin) {
+                              const isGoogleMeet = typeof joinRoomId === 'string' && joinRoomId.includes('meet.google.com');
                               return (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                                   <Link to={joinUrl}
@@ -906,12 +922,11 @@ export default function Dashboard() {
                             {/* Join Now button for slot_booked notifications */}
                             {n.type === 'slot_booked' && (() => {
                               const req = myRequests.find(r => r.id === n.requestId);
-                              const joinRoomId = n.roomId || req?.roomId || n.requestId || req?.id;
+                              const joinRoomId = req?.roomId || n.roomId || n.requestId || req?.id;
                               const scheduledTime = req?.scheduledTime;
                               if (!joinRoomId) return null;
                               const nowMs = Date.now();
-                              const endMs = scheduledTime ? new Date(scheduledTime).getTime() + 2 * 60 * 60 * 1000 : null;
-                              const isEnded = endMs && nowMs > endMs;
+                              const isEnded = endedSessions[joinRoomId] || endedSessions[n.requestId];
                               const canJoin = !isEnded && (scheduledTime ? nowMs >= new Date(scheduledTime).getTime() - 5 * 60 * 1000 : true);
                             const joinUrl = `/interview/${n.requestId || req?.id || joinRoomId}?name=${encodeURIComponent(user?.name || 'Student')}`;
                               return isEnded ? (

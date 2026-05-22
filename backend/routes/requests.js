@@ -228,9 +228,15 @@ router.patch('/:id', async (req, res) => {
       const createdNotif = await prisma.notification.create({
         data: notifPayload
       });
-      // Emit real-time notification
+      // Emit real-time notification — include room_id in the socket payload
+      // so the student's dashboard can show the correct Join Now link immediately.
+      // (The DB Notification record doesn't have a room_id column, but the socket
+      //  payload can carry extra fields that the frontend reads from state.)
       if (io) {
-        io.of('/notifications').to(notifPayload.user_id).emit('notification', createdNotif);
+        io.of('/notifications').to(notifPayload.user_id).emit('notification', {
+          ...createdNotif,
+          room_id: request.room_id || null,
+        });
       }
     }
 
