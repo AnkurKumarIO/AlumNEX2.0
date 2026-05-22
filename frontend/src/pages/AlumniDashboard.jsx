@@ -78,7 +78,7 @@ function StudentDetailModal({ request, onClose, onAccept }) {
             <p style={{ fontSize: '0.875rem', color: '#c7c4d8' }}>{request.studentName} has been notified. Click "Book Slot" to schedule the interview.</p>
           </div>
         ) : (
-          <div style={{ overflowY: 'auto', flex: 1 }}>
+          <div style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
             {/* Student basic info */}
             <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(70,69,85,0.1)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: '1rem' }}>
