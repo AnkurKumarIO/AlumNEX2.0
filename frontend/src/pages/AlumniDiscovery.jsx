@@ -75,8 +75,10 @@ function BookModal({ alumni, studentName, onClose, onSent }) {
   const [topic, setTopic] = useState(TOPICS[0]);
   const [message, setMessage] = useState('');
   const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
 
-  const handleSend = () => {
+  const handleSend = async () => {
+    setSending(true);
     const authUser = JSON.parse(localStorage.getItem('alumnex_user') || localStorage.getItem('alumniconnect_user') || '{}');
     // Always attach the student's saved profile so alumni can see it immediately
     const studentProfile = (() => {
@@ -85,16 +87,21 @@ function BookModal({ alumni, studentName, onClose, onSent }) {
         return raw ? JSON.parse(raw) : null;
       } catch { return null; }
     })();
-    sendRequest({
-      studentName,
-      studentId: authUser.id || studentName,
-      alumniName: alumni.name,
-      alumniId: alumni.id,
-      alumniRole: alumni.role,
-      topic,
-      message,
-      studentProfile,
-    });
+    try {
+      await sendRequest({
+        studentName,
+        studentId: authUser.id || studentName,
+        alumniName: alumni.name,
+        alumniId: alumni.id,
+        alumniRole: alumni.role,
+        topic,
+        message,
+        studentProfile,
+      });
+    } catch (e) {
+      console.error('sendRequest failed:', e);
+    }
+    setSending(false);
     setSent(true);
     setTimeout(() => { onSent(); onClose(); }, 1800);
   };
@@ -141,8 +148,12 @@ function BookModal({ alumni, studentName, onClose, onSent }) {
             </div>
             <div style={{ display: 'flex', gap: 10, marginTop: '1.5rem' }}>
               <button onClick={onClose} style={{ flex: 1, padding: '0.75rem', background: '#222a3d', color: '#c7c4d8', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleSend} style={{ flex: 2, padding: '0.75rem', background: 'linear-gradient(135deg,#4f46e5,#c3c0ff)', color: '#1d00a5', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>send</span> Send Request
+              <button onClick={handleSend} disabled={sending} style={{ flex: 2, padding: '0.75rem', background: sending ? '#2d3449' : 'linear-gradient(135deg,#4f46e5,#c3c0ff)', color: sending ? '#c7c4d8' : '#1d00a5', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: '0.75rem', cursor: sending ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                {sending ? (
+                  <><div style={{ width: 14, height: 14, border: '2px solid rgba(199,196,216,0.3)', borderTop: '2px solid #c7c4d8', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> Sending...</>
+                ) : (
+                  <><span className="material-symbols-outlined" style={{ fontSize: 16 }}>send</span> Send Request</>
+                )}
               </button>
             </div>
           </>
