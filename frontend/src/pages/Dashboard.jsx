@@ -321,24 +321,24 @@ export default function Dashboard() {
                               ? Date.now() >= new Date(scheduledTime).getTime() - 5 * 60 * 1000
                               : !!joinRoomId; // instant meet = always joinable
 
-                            const joinUrl = joinRoomId && joinRoomId.startsWith('http') ? joinRoomId : `/interview/${joinRoomId}?name=${encodeURIComponent(user?.name || 'Student')}`;
+                            const joinUrl = `/interview/${n.requestId || req?.id || joinRoomId}?name=${encodeURIComponent(user?.name || 'Student')}`;
 
                             if (n.type === 'live' && joinRoomId) {
                               return (
-                                <a href={joinUrl} target={joinUrl.startsWith('http') ? "_blank" : undefined} rel="noopener noreferrer"
+                                <Link to={joinUrl}
                                   style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.35rem 0.75rem', background: 'linear-gradient(135deg,#ff4444,#ff6b6b)', color: '#fff', borderRadius: 8, fontSize: '0.72rem', fontWeight: 700, textDecoration: 'none', width: 'fit-content', animation: 'pulse 1.5s ease-in-out infinite' }}>
                                   <span className="material-symbols-outlined" style={{ fontSize: 14 }}>videocam</span> Join Now
-                                </a>
+                                </Link>
                               );
                             }
                             if (joinRoomId && isNowJoinable) {
-                              const isGoogleMeet = joinUrl.includes('meet.google.com');
+                              const isGoogleMeet = req?.roomId?.includes('meet.google.com') || (typeof joinRoomId === 'string' && joinRoomId.includes('meet.google.com'));
                               return (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                  <a href={joinUrl} target={joinUrl.startsWith('http') ? "_blank" : undefined} rel="noopener noreferrer"
+                                  <Link to={joinUrl}
                                     style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.35rem 0.75rem', background: 'linear-gradient(135deg,#00a572,#4edea3)', color: '#003d29', borderRadius: 8, fontSize: '0.72rem', fontWeight: 700, textDecoration: 'none', width: 'fit-content' }}>
                                     <span className="material-symbols-outlined" style={{ fontSize: 14 }}>videocam</span> Join Now
-                                  </a>
+                                  </Link>
                                   {isGoogleMeet && (
                                     <div style={{ fontSize: '0.68rem', color: 'rgba(199,196,216,0.6)', display: 'flex', alignItems: 'center', gap: 4 }}>
                                       <span className="material-symbols-outlined" style={{ fontSize: 13 }}>info</span>
@@ -359,10 +359,10 @@ export default function Dashboard() {
                             // slot_booked with no scheduled time = instant meet, show join
                             if (joinRoomId) {
                               return (
-                                <a href={`/interview/${joinRoomId}?name=${encodeURIComponent(user?.name || 'Student')}`}
+                                <Link to={`/interview/${n.requestId || req?.id || joinRoomId}?name=${encodeURIComponent(user?.name || 'Student')}`}
                                   style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.35rem 0.75rem', background: 'linear-gradient(135deg,#ff4444,#ff6b6b)', color: '#fff', borderRadius: 8, fontSize: '0.72rem', fontWeight: 700, textDecoration: 'none', width: 'fit-content' }}>
                                   <span className="material-symbols-outlined" style={{ fontSize: 14 }}>videocam</span> Join Now
-                                </a>
+                                </Link>
                               );
                             }
                             return null;
@@ -896,11 +896,11 @@ export default function Dashboard() {
                               const req = myRequests.find(r => r.id === n.requestId);
                               const joinRoomId = n.roomId || req?.roomId || n.requestId || req?.id;
                               if (!joinRoomId) return null;
-                              const joinUrl = joinRoomId.startsWith('http') ? joinRoomId : `/interview/${joinRoomId}?name=${encodeURIComponent(user?.name || 'Student')}`;
+                            const joinUrl = `/interview/${n.requestId || req?.id || joinRoomId}?name=${encodeURIComponent(user?.name || 'Student')}`;
                               return (
-                                <a href={joinUrl} target={joinUrl.startsWith('http') ? "_blank" : undefined} rel="noopener noreferrer" onClick={() => setShowNotifs(false)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 8, padding: '0.35rem 0.875rem', background: 'linear-gradient(135deg,#ff4444,#ff6b6b)', color: '#fff', borderRadius: 8, fontSize: '0.7rem', fontWeight: 700, textDecoration: 'none' }}>
+                              <Link to={joinUrl} onClick={() => setShowNotifs(false)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 8, padding: '0.35rem 0.875rem', background: 'linear-gradient(135deg,#ff4444,#ff6b6b)', color: '#fff', borderRadius: 8, fontSize: '0.7rem', fontWeight: 700, textDecoration: 'none' }}>
                                   <span className="material-symbols-outlined" style={{ fontSize: 14 }}>videocam</span> Join Now — Live
-                                </a>
+                              </Link>
                               );
                             })()}
                             {/* Join Now button for slot_booked notifications */}
@@ -913,15 +913,15 @@ export default function Dashboard() {
                               const endMs = scheduledTime ? new Date(scheduledTime).getTime() + 2 * 60 * 60 * 1000 : null;
                               const isEnded = endMs && nowMs > endMs;
                               const canJoin = !isEnded && (scheduledTime ? nowMs >= new Date(scheduledTime).getTime() - 5 * 60 * 1000 : true);
-                              const joinUrl = joinRoomId.startsWith('http') ? joinRoomId : `/interview/${joinRoomId}?name=${encodeURIComponent(user?.name || 'Student')}`;
+                            const joinUrl = `/interview/${n.requestId || req?.id || joinRoomId}?name=${encodeURIComponent(user?.name || 'Student')}`;
                               return isEnded ? (
                                 <div style={{ marginTop: 6, fontSize: '0.68rem', color: '#6b7280', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
                                   <span className="material-symbols-outlined" style={{ fontSize: 13 }}>videocam_off</span> Session ended
                                 </div>
                               ) : canJoin ? (
-                                <a href={joinUrl} target={joinUrl.startsWith('http') ? "_blank" : undefined} rel="noopener noreferrer" onClick={() => setShowNotifs(false)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 8, padding: '0.35rem 0.875rem', background: 'linear-gradient(135deg,#00a572,#4edea3)', color: '#003d29', borderRadius: 8, fontSize: '0.7rem', fontWeight: 700, textDecoration: 'none' }}>
+                              <Link to={joinUrl} onClick={() => setShowNotifs(false)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 8, padding: '0.35rem 0.875rem', background: 'linear-gradient(135deg,#00a572,#4edea3)', color: '#003d29', borderRadius: 8, fontSize: '0.7rem', fontWeight: 700, textDecoration: 'none' }}>
                                   <span className="material-symbols-outlined" style={{ fontSize: 14 }}>videocam</span> Join Now
-                                </a>
+                              </Link>
                               ) : (
                                 <div style={{ marginTop: 6, fontSize: '0.68rem', color: '#4edea3', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
                                   <span className="material-symbols-outlined" style={{ fontSize: 13 }}>schedule</span>
