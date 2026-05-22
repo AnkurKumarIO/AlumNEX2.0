@@ -225,8 +225,34 @@ export default function TNPDashboard() {
             <div style={{ fontWeight: 900, fontSize: '1rem', color: '#f5e9ff', letterSpacing: '-0.02em' }}>Alum<span style={{ color: '#a855f7' }}>NEX</span></div>
             <div style={{ fontSize: '0.55rem', color: '#c7c4d8', letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: 2 }}>TNP Control</div>
           </div>
-          <button onClick={() => setSidebarOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c7c4d8', padding: 4, display: 'flex' }}>
-            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
+          <button 
+            onClick={() => setSidebarOpen(false)} 
+            title="Collapse Sidebar"
+            style={{ 
+              background: 'rgba(255,255,255,0.03)', 
+              border: '1px solid rgba(255,255,255,0.05)', 
+              borderRadius: '50%',
+              cursor: 'pointer', 
+              color: '#c7c4d8', 
+              width: 28,
+              height: 28,
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(195,192,255,0.1)';
+              e.currentTarget.style.color = '#c3c0ff';
+              e.currentTarget.style.borderColor = 'rgba(195,192,255,0.2)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+              e.currentTarget.style.color = '#c7c4d8';
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)';
+            }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>menu_open</span>
           </button>
         </div>
         <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -341,7 +367,7 @@ export default function TNPDashboard() {
         </header>
 
         {/* Content */}
-        <section style={{ marginTop: 64, padding: '2rem', display: 'flex', flexDirection: 'column', gap: '2rem', maxWidth: '1280px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+        <section style={{ margin: '64px auto 0', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '2rem', maxWidth: '1280px', width: '100%', boxSizing: 'border-box' }}>
           {activeTab !== 'home' ? renderContent() : <HomeDashboard stats={stats} setActiveTab={setActiveTab} />}
         </section>
       </main>
