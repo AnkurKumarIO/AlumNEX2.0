@@ -1,9 +1,6 @@
-import React, { useState, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { api } from '../api';
-import { AuthContext } from '../context/AuthContext';
-
+import { Navigate } from 'react-router-dom';
 export default function StudentLogin() {
+<<<<<<< HEAD
   const navigate = useNavigate();
   const { login } = useContext(AuthContext);
   const [username, setUsername] = useState('');
@@ -133,4 +130,7 @@ export default function StudentLogin() {
       </div>
     </div>
   );
+=======
+  return <Navigate to="/login?role=STUDENT" replace />;
+>>>>>>> d72eb05 (chetana aktest changes)
 }
