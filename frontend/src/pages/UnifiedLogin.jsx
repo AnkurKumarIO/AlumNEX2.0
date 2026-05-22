@@ -27,6 +27,21 @@ function findLocalCredential(username, password) {
   } catch { return null; }
 }
 
+/** Returns true if student has already completed profile setup. */
+function isProfileComplete() {
+  try {
+    const p1 = JSON.parse(localStorage.getItem('alumnex_profile') || 'null');
+    const p2 = JSON.parse(localStorage.getItem('alumniconnect_profile') || 'null');
+    const profile = p1 || p2;
+    // Profile is complete if the flag is set OR if significant data exists
+    if (!profile) return false;
+    if (profile.profileComplete === true) return true;
+    // Fallback: treat as complete if department or skills are filled
+    if (profile.department || (profile.skills && profile.skills.length > 0)) return true;
+    return false;
+  } catch { return false; }
+}
+
 export default function UnifiedLogin() {
   const { user, login } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -74,7 +89,7 @@ export default function UnifiedLogin() {
         }
       } catch {}
       // Redirect logic
-      if (apiResult.user.role === "STUDENT" && !localStorage.getItem("alumnex_profile") && !localStorage.getItem("alumniconnect_profile")) {
+      if (apiResult.user.role === "STUDENT" && !isProfileComplete()) {
         navigate("/profile-setup");
       } else {
         navigate("/dashboard");
@@ -134,7 +149,7 @@ export default function UnifiedLogin() {
               profile_data: profileData,
             };
             login(userData, authData.session?.access_token || `token-${Date.now()}`);
-            if (dbUser.role === "STUDENT" && !localStorage.getItem("alumnex_profile") && !localStorage.getItem("alumniconnect_profile")) {
+            if (dbUser.role === "STUDENT" && !isProfileComplete()) {
               navigate("/profile-setup");
             } else {
               navigate("/dashboard");
@@ -202,7 +217,7 @@ export default function UnifiedLogin() {
       let finalId = localCred.id || `${localCred.role.toLowerCase()}-${Date.now()}`;
       const userData = { id: finalId, name: localCred.name, role: localCred.role, department: localCred.department };
       login(userData, `token-${Date.now()}`);
-      if (localCred.role === "STUDENT" && !localStorage.getItem("alumnex_profile") && !localStorage.getItem("alumniconnect_profile")) { navigate("/profile-setup"); } else { navigate("/dashboard"); }
+      if (localCred.role === "STUDENT" && !isProfileComplete()) { navigate("/profile-setup"); } else { navigate("/dashboard"); }
       setLoading(false);
       return;
     }

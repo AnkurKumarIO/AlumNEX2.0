@@ -15,11 +15,15 @@ const NOTIF_ITEMS = [
 export default function SettingsPage({ role }) {
   const { user, login } = useContext(AuthContext);
   const resumeInputRef = useRef(null);
+  const photoInputRef = useRef(null);
   const userRole = role || user?.role || 'STUDENT';
   const isAlumni = userRole === 'ALUMNI';
 
   const savedProfile = JSON.parse(localStorage.getItem('alumnex_profile') || '{}');
   const savedNotifs  = JSON.parse(localStorage.getItem('alumnex_notifs')  || '{}');
+
+  // Photo state — loaded from savedProfile
+  const [photoPreview, setPhotoPreview] = useState(savedProfile.photoPreview || null);
 
   const [activeSection, setActiveSection] = useState('profile');
   const [saved, setSaved] = useState(false);
@@ -149,13 +153,14 @@ export default function SettingsPage({ role }) {
   };
 
   const saveProfile = async () => {
-    const updated = { ...savedProfile, ...profile };
+    const updated = { ...savedProfile, ...profile, photoPreview };
     localStorage.setItem('alumnex_profile', JSON.stringify(updated));
+    localStorage.setItem('alumniconnect_profile', JSON.stringify(updated));
     emitRealtimeSync({ type: 'profile_updated' });
     const updatedUser = { ...user, name: profile.name, department: profile.department };
     login(updatedUser, localStorage.getItem('alumnex_token'));
     if (user?.id && !user.id.startsWith('stu-') && !user.id.startsWith('alm-')) {
-      await updateUserProfile(user.id, profile).catch(err => console.warn('Profile save:', err.message));
+      await updateUserProfile(user.id, { ...profile, photoPreview }).catch(err => console.warn('Profile save:', err.message));
     }
     flashSaved();
   };
@@ -213,6 +218,32 @@ export default function SettingsPage({ role }) {
         {activeSection === 'profile' && (
           <div style={{ background: '#131b2e', borderRadius: 16, padding: '2rem', border: '1px solid rgba(70,69,85,0.15)' }}>
             <h3 style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: '1.75rem' }}>Edit Profile</h3>
+
+            {/* Profile Photo */}
+            <div style={{ marginBottom: '1.75rem', display: 'flex', alignItems: 'center', gap: 20 }}>
+              <div style={{ position: 'relative', width: 80, height: 80, flexShrink: 0 }}>
+                <div
+                  style={{ width: 80, height: 80, borderRadius: '50%', background: photoPreview ? 'transparent' : 'linear-gradient(135deg,#4f46e5,#c3c0ff)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '3px solid rgba(195,192,255,0.25)', cursor: 'pointer' }}
+                  onClick={() => photoInputRef.current?.click()}
+                >
+                  {photoPreview
+                    ? <img src={photoPreview} alt="profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : <span className="material-symbols-outlined" style={{ color: '#1d00a5', fontSize: 30 }}>person</span>}
+                </div>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#c7c4d8', marginBottom: 8 }}>Profile Photo <span style={{ opacity: 0.5, fontWeight: 400 }}>(optional)</span></div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button onClick={() => photoInputRef.current?.click()} style={{ padding: '0.4rem 0.875rem', background: 'rgba(195,192,255,0.1)', border: '1px solid rgba(195,192,255,0.2)', borderRadius: 8, color: '#c3c0ff', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>
+                    {photoPreview ? 'Change Photo' : 'Upload Photo'}
+                  </button>
+                  {photoPreview && (
+                    <button onClick={() => setPhotoPreview(null)} style={{ padding: '0.4rem 0.875rem', background: 'rgba(255,180,171,0.1)', border: '1px solid rgba(255,180,171,0.25)', borderRadius: 8, color: '#ffb4ab', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>Remove</button>
+                  )}
+                </div>
+                <input ref={photoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) setPhotoPreview(URL.createObjectURL(f)); e.target.value = ''; }} />
+              </div>
+            </div>
 
             {/* Common fields: Name, Email, Phone */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>

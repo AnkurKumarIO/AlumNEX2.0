@@ -662,8 +662,10 @@ export default function Dashboard() {
 
             {/* Profile avatar button */}
             <div style={{ position: 'relative' }}>
-              <button onClick={() => setShowProfile(p => !p)} style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#4f46e5,#c3c0ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.85rem', color: '#1d00a5', border: showProfile ? '2px solid #c3c0ff' : '2px solid transparent', cursor: 'pointer', transition: 'border 0.2s' }}>
-                {firstName ? firstName[0] : '?'}
+              <button onClick={() => setShowProfile(p => !p)} style={{ width: 36, height: 36, borderRadius: '50%', background: profileData?.photoPreview ? 'transparent' : 'linear-gradient(135deg,#4f46e5,#c3c0ff)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.85rem', color: '#1d00a5', border: showProfile ? '2px solid #c3c0ff' : '2px solid transparent', cursor: 'pointer', transition: 'border 0.2s', padding: 0 }}>
+                {profileData?.photoPreview
+                  ? <img src={profileData.photoPreview} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : (firstName ? firstName[0] : '?')}
               </button>
 
               {/* Profile dropdown */}
@@ -675,7 +677,11 @@ export default function Dashboard() {
                   {/* Header */}
                   <div style={{ padding: '1.25rem', background: 'linear-gradient(135deg,rgba(79,70,229,0.2),rgba(11,19,38,0.8))', borderBottom: '1px solid rgba(70,69,85,0.2)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'linear-gradient(135deg,#4f46e5,#c3c0ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '1.1rem', color: '#1d00a5', flexShrink: 0 }}>{firstName ? firstName[0] : '?'}</div>
+                      <div style={{ width: 48, height: 48, borderRadius: '50%', background: profileData?.photoPreview ? 'transparent' : 'linear-gradient(135deg,#4f46e5,#c3c0ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '1.1rem', color: '#1d00a5', flexShrink: 0, overflow: 'hidden' }}>
+                        {profileData?.photoPreview
+                          ? <img src={profileData.photoPreview} alt="profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          : (firstName ? firstName[0] : '?')}
+                      </div>
                       <div>
                         <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#dae2fd' }}>{user?.name || 'Student'}</div>
                         <div style={{ fontSize: '0.7rem', color: '#c7c4d8', marginTop: 2 }}>{savedProfile?.department || user?.department || 'Student'}</div>
