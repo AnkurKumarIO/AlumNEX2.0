@@ -2,6 +2,7 @@ import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { updateUserProfile } from '../lib/db';
+import { api } from '../api';
 import { emitRealtimeSync } from '../lib/realtimeSync';
 
 const STEPS = ['Personal Info', 'Skills & Academics', 'Resume & Projects', 'Career Goals', 'Review'];
@@ -379,11 +380,20 @@ export default function ProfileSetup() {
       profileCompletedAt: new Date().toISOString(),
     };
 
-    // Save to Supabase directly
+    // Save to DB — try backend API first (Prisma), fall back to Supabase direct
     if (userId) {
-      await updateUserProfile(userId, profilePayload).catch(err =>
-        console.warn('Profile save failed:', err)
-      );
+      if (!userId.startsWith('stu-') && !userId.startsWith('alm-')) {
+        try {
+          await api.saveProfile(userId, profilePayload);
+        } catch (err) {
+          console.warn('Profile save via API failed, trying Supabase direct:', err.message);
+          await updateUserProfile(userId, profilePayload).catch(e => console.warn('Profile save failed:', e));
+        }
+      } else {
+        await updateUserProfile(userId, profilePayload).catch(err =>
+          console.warn('Profile save failed:', err)
+        );
+      }
     }
 
     const userData = {

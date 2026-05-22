@@ -27,7 +27,6 @@ function findLocalCredential(username, password) {
   } catch { return null; }
 }
 
-/** Returns true if student has already completed profile setup. */
 function isProfileComplete() {
   try {
     const p1 = JSON.parse(localStorage.getItem('alumnex_profile') || 'null');
@@ -81,8 +80,13 @@ export default function UnifiedLogin() {
     if (apiSuccess && apiResult) {
       const dbUser = apiResult.user;
       const profileData = dbUser.profile_data || {};
+      const existingP1 = JSON.parse(localStorage.getItem('alumnex_profile') || 'null');
+      const existingP2 = JSON.parse(localStorage.getItem('alumniconnect_profile') || 'null');
+      const alreadyComplete = existingP1?.profileComplete || existingP2?.profileComplete || false;
+
       const fullProfile = {
         ...profileData,
+        profileComplete: dbUser.profileComplete || profileData.profileComplete || alreadyComplete || false,
         name: dbUser.name,
         email: dbUser.email,
         department: dbUser.department,
