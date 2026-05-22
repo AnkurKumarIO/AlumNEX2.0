@@ -140,10 +140,13 @@ export default function Dashboard() {
 
   // ── Real-time notifications using Supabase subscriptions ──────────────────
   const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications(user?.id);
-  const { requests: syncedRequests } = useInterviewRequests(hasRealUserId ? user?.id : null, hasRealUserId ? user?.role : null);
+  const { requests: syncedRequests, loading: requestsLoading } = useInterviewRequests(hasRealUserId ? user?.id : null, hasRealUserId ? user?.role : null);
   const [localRefresh, setLocalRefresh] = useState(0);
 
   // Convert DB notifications to display format
+  // roomId: prefer the stored room_id/roomId from the notification, then fall back to the
+  // original request_id UUID (which the backend can look up directly). Never derive a
+  // truncated string — that never matches the DB record and causes a wrong meet link.
   const dbStudentNotifs = (notifications || []).map(n => ({
     id: n.id,
     studentName: user?.name,
@@ -153,7 +156,7 @@ export default function Dashboard() {
     requestId: n.request_id,
     read: n.read || false,
     createdAt: n.created_at || n.createdAt,
-    roomId: n.request_id ? `room-${String(n.request_id).replace(/[^a-z0-9]/gi, '').slice(-16).toLowerCase()}` : null,
+    roomId: n.room_id || n.roomId || n.request_id || null,
   }));
   const fallbackStudentNotifs = getStudentNotifications(user?.name || '');
   const studentNotifs = hasRealUserId
@@ -889,8 +892,10 @@ export default function Dashboard() {
                               {new Date(n.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                             </div>
                             {/* Join Now — instant meet */}
-                            {n.type === 'live' && (n.roomId || req?.roomId || n.requestId || req?.id) && (() => {
+                            {n.type === 'live' && (() => {
+                              const req = myRequests.find(r => r.id === n.requestId);
                               const joinRoomId = n.roomId || req?.roomId || n.requestId || req?.id;
+                              if (!joinRoomId) return null;
                               const joinUrl = joinRoomId.startsWith('http') ? joinRoomId : `/interview/${joinRoomId}?name=${encodeURIComponent(user?.name || 'Student')}`;
                               return (
                                 <a href={joinUrl} target={joinUrl.startsWith('http') ? "_blank" : undefined} rel="noopener noreferrer" onClick={() => setShowNotifs(false)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 8, padding: '0.35rem 0.875rem', background: 'linear-gradient(135deg,#ff4444,#ff6b6b)', color: '#fff', borderRadius: 8, fontSize: '0.7rem', fontWeight: 700, textDecoration: 'none' }}>

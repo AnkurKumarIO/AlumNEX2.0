@@ -1004,7 +1004,7 @@ export default function AlumniDashboard() {
     const now = new Date().toISOString();
     // bookSlot returns the request with the real roomId from the backend
     const result = await bookSlot(req.id, now);
-    const roomId = result?.roomId || `room-${req.id.replace(/[^a-z0-9]/gi, '').slice(-16).toLowerCase()}`;
+    const roomId = result?.roomId || result?.room_id || result?.id || req.id;
     setLiveRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'slot_booked', scheduledTime: now, roomId } : r));
     // Also push local notification so it works even without Supabase Realtime
     try {
