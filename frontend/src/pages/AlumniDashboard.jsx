@@ -595,14 +595,43 @@ function AlumniSessionHistory({ userId, userName }) {
   const myRatings = sessions.map(s => s.student_rating).filter(r => r != null && r > 0);
   const avgRating = myRatings.length ? (myRatings.reduce((a, b) => a + b, 0) / myRatings.length).toFixed(1) : '—';
 
-  const chartRatings = myRatings.slice(-8);
-  const chartPoints = chartRatings.map((r, i) => [
-    i * (1200 / Math.max(chartRatings.length - 1, 1)),
-    260 - ((r / 5) * 240),
-  ]);
-  const pathD = chartPoints.length > 1
-    ? `M ${chartPoints.map(p => p.join(' ')).join(' L ')}`
-    : null;
+  // ── Improved Rating Chart ─────────────────────────────────────────────────
+  // Use last 10 rated sessions, map to date labels
+  const ratedSessions = sessions.filter(s => s.student_rating != null && s.student_rating > 0).slice(-10);
+  const chartW = 800, chartH = 220, padL = 40, padR = 20, padT = 20, padB = 40;
+  const innerW = chartW - padL - padR;
+  const innerH = chartH - padT - padB;
+  const n = ratedSessions.length;
+
+  const getX = (i) => padL + (n <= 1 ? innerW / 2 : (i / (n - 1)) * innerW);
+  const getY = (rating) => padT + innerH - ((rating / 5) * innerH);
+
+  // Smooth bezier path
+  const makePath = (pts) => {
+    if (pts.length < 2) return '';
+    let d = `M ${pts[0][0]} ${pts[0][1]}`;
+    for (let i = 1; i < pts.length; i++) {
+      const cp1x = (pts[i - 1][0] + pts[i][0]) / 2;
+      const cp1y = pts[i - 1][1];
+      const cp2x = (pts[i - 1][0] + pts[i][0]) / 2;
+      const cp2y = pts[i][1];
+      d += ` C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${pts[i][0]} ${pts[i][1]}`;
+    }
+    return d;
+  };
+
+  const pts = ratedSessions.map((s, i) => [getX(i), getY(s.student_rating)]);
+  const linePath = makePath(pts);
+  const areaPath = pts.length > 0
+    ? `${linePath} L ${pts[pts.length - 1][0]} ${padT + innerH} L ${pts[0][0]} ${padT + innerH} Z`
+    : '';
+
+  const fmtLabel = (iso) => {
+    try {
+      const d = new Date(iso);
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    } catch { return ''; }
+  };
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, color: '#c7c4d8', gap: 12 }}>
@@ -636,30 +665,83 @@ function AlumniSessionHistory({ userId, userName }) {
         ))}
       </div>
 
-      {/* Chart */}
-      <div style={{ background: '#131b2e', borderRadius: 12, padding: '2rem', border: '1px solid rgba(70,69,85,0.1)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Student Rating Trend</h2>
-          <span style={{ padding: '0.25rem 0.75rem', background: '#2d3449', borderRadius: 999, fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c7c4d8' }}>Feedback Rating</span>
+      {/* Chart — Real-time Rating Trend */}
+      <div style={{ background: '#131b2e', borderRadius: 16, padding: '2rem', border: '1px solid rgba(70,69,85,0.1)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+          <div>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: 4 }}>Student Rating Trend</h2>
+            <p style={{ fontSize: '0.72rem', color: '#c7c4d8', opacity: 0.7 }}>Ratings given by students after each session</p>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {avgRating !== '—' && (
+              <div style={{ background: 'rgba(255,185,95,0.1)', border: '1px solid rgba(255,185,95,0.2)', borderRadius: 10, padding: '0.35rem 0.875rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: '1.1rem', fontWeight: 900, color: '#ffb95f' }}>{avgRating}</span>
+                <span style={{ color: '#ffb95f', fontSize: '0.85rem' }}>★</span>
+                <span style={{ fontSize: '0.6rem', color: '#c7c4d8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Avg</span>
+              </div>
+            )}
+            <span style={{ padding: '0.25rem 0.75rem', background: '#2d3449', borderRadius: 999, fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c7c4d8' }}>{ratedSessions.length} Rated</span>
+          </div>
         </div>
-        <div style={{ position: 'relative', height: 280 }}>
-          {[0,1,2,3,4].map(i => (
-            <div key={i} style={{ position: 'absolute', left: 0, right: 0, top: `${i * 25}%`, borderBottom: '1px solid rgba(255,255,255,0.05)' }} />
-          ))}
-          {pathD ? (
-            <svg width="100%" height="260" viewBox="0 0 1200 260" preserveAspectRatio="none" style={{ position: 'absolute', top: 0, left: 0 }}>
-              <defs><linearGradient id="arGrad" x1="0%" x2="100%"><stop offset="0%" stopColor="#ffb95f" /><stop offset="100%" stopColor="#c3c0ff" /></linearGradient></defs>
-              <path d={pathD} fill="none" stroke="url(#arGrad)" strokeWidth="4" strokeLinecap="round" />
-              {chartPoints.map(([x, y], i) => (
-                <g key={i}><circle cx={x} cy={y} r="6" fill="#ffb95f" stroke="#0b1326" strokeWidth="2" /><text x={x} y={y - 14} textAnchor="middle" fill="#ffb95f" fontSize="12" fontWeight="700">{chartRatings[i]}★</text></g>
-              ))}
+
+        {ratedSessions.length === 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 200, gap: 12, opacity: 0.5 }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 40, color: '#c7c4d8' }}>bar_chart</span>
+            <p style={{ fontSize: '0.875rem', color: '#c7c4d8' }}>Complete sessions with students to see your rating trend</p>
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <svg width="100%" height={chartH} viewBox={`0 0 ${chartW} ${chartH}`} preserveAspectRatio="xMidYMid meet" style={{ display: 'block', minWidth: 300 }}>
+              <defs>
+                <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#ffb95f" />
+                  <stop offset="100%" stopColor="#c3c0ff" />
+                </linearGradient>
+                <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#ffb95f" stopOpacity="0.18" />
+                  <stop offset="100%" stopColor="#ffb95f" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+
+              {/* Y-axis grid lines and labels */}
+              {[1,2,3,4,5].map(rating => {
+                const y = getY(rating);
+                return (
+                  <g key={rating}>
+                    <line x1={padL} y1={y} x2={chartW - padR} y2={y} stroke="rgba(255,255,255,0.05)" strokeWidth="1" strokeDasharray={rating === 5 ? '0' : '4 4'} />
+                    <text x={padL - 8} y={y + 4} textAnchor="end" fill="rgba(199,196,216,0.5)" fontSize="11" fontWeight="600">{rating}★</text>
+                  </g>
+                );
+              })}
+
+              {/* Area fill */}
+              {areaPath && <path d={areaPath} fill="url(#areaGrad)" />}
+
+              {/* Line */}
+              {linePath && <path d={linePath} fill="none" stroke="url(#lineGrad)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />}
+
+              {/* Data points + tooltips */}
+              {pts.map(([x, y], i) => {
+                const s = ratedSessions[i];
+                const label = fmtLabel(s.createdAt || s.created_at);
+                return (
+                  <g key={i}>
+                    {/* Vertical tick */}
+                    <line x1={x} y1={padT + innerH} x2={x} y2={padT + innerH + 5} stroke="rgba(199,196,216,0.3)" strokeWidth="1" />
+                    {/* Date label */}
+                    <text x={x} y={chartH - 4} textAnchor="middle" fill="rgba(199,196,216,0.45)" fontSize="10" fontWeight="600">{label}</text>
+                    {/* Point glow */}
+                    <circle cx={x} cy={y} r="8" fill="rgba(255,185,95,0.12)" />
+                    {/* Point */}
+                    <circle cx={x} cy={y} r="5" fill="#ffb95f" stroke="#0b1326" strokeWidth="2" />
+                    {/* Rating label */}
+                    <text x={x} y={y - 12} textAnchor="middle" fill="#ffb95f" fontSize="11" fontWeight="800">{s.student_rating}★</text>
+                  </g>
+                );
+              })}
             </svg>
-          ) : (
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c7c4d8', fontSize: '0.875rem', opacity: 0.5 }}>
-              Complete sessions with students to see your rating trend
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Past Sessions */}
@@ -738,6 +820,32 @@ export default function AlumniDashboard() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [globalSearch, setGlobalSearch] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  // ── Session data for home tab stats (real-time from DB) ───────────────────
+  const [dashSessions, setDashSessions] = useState([]);
+  useEffect(() => {
+    if (!user?.id) return;
+    api.getUserFeedback(user.id).then(data => {
+      if (Array.isArray(data)) setDashSessions(data);
+    }).catch(() => {});
+  }, [user?.id]);
+  const dashRatings = dashSessions.map(s => s.student_rating).filter(r => r != null && r > 0);
+  const dashAvgRating = dashRatings.length
+    ? (dashRatings.reduce((a, b) => a + b, 0) / dashRatings.length).toFixed(1)
+    : null;
+  const dashTotalSessions = dashSessions.length;
+
+  // Motivational quotes — cycles daily
+  const QUOTES = [
+    '"The best way to find yourself is to lose yourself in the service of others." — Gandhi',
+    '"Mentorship is a brain to pick, an ear to listen, and a push in the right direction." — J.C. Crosby',
+    '"A mentor is someone who sees more talent and ability within you than you see in yourself." — Bob Proctor',
+    '"Your knowledge is valuable only when it is shared." — Anonymous',
+    '"One person can make a difference, and everyone should try." — JFK',
+    '"The mediocre teacher tells. The good teacher explains. The great teacher inspires." — W. A. Ward',
+    '"Leadership is not about being in charge. It is about taking care of those in your charge." — Simon Sinek',
+  ];
+  const dailyQuote = QUOTES[new Date().getDate() % QUOTES.length];
 
   // ── Real-time notifications for alumni ────────────────────────────────────
   const { notifications, unreadCount, markAsRead } = useNotifications(user?.id);
@@ -1556,24 +1664,30 @@ export default function AlumniDashboard() {
               <span className="material-symbols-outlined" style={{ fontSize: '5rem' }}>auto_awesome</span>
             </div>
             <h2 style={{ fontSize: '1.75rem', fontWeight: 900, letterSpacing: '-0.03em', marginBottom: 8 }}>Welcome back, <span style={{ color: '#c3c0ff' }}>{firstName}</span></h2>
-            <p style={{ fontSize: '0.875rem', color: '#c7c4d8', maxWidth: 400, lineHeight: 1.6 }}>Your mentorship impact has increased by 14% this month. Three students are currently awaiting your feedback.</p>
+            <p style={{ fontSize: '0.875rem', color: 'rgba(195,192,255,0.7)', maxWidth: 400, lineHeight: 1.7, fontStyle: 'italic' }}>{dailyQuote}</p>
             <div style={{ marginTop: '1.5rem', display: 'flex', gap: 12 }}>
               <button onClick={() => setActiveTab('requests')} style={btnOutline}>View Requests</button>
               <button onClick={() => setActiveTab('schedule')} style={btnOutline}>My Schedule</button>
             </div>
           </div>
           <div style={{ background: '#131b2e', borderRadius: 16, padding: '1.5rem', borderLeft: '2px solid #c3c0ff' }}>
-            <div style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#c7c4d8', marginBottom: 16 }}>Students Benefited</div>
+            <div style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#c7c4d8', marginBottom: 16 }}>Total Sessions</div>
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8 }}>
-              <span style={{ fontSize: '2.5rem', fontWeight: 900, letterSpacing: '-0.03em' }}>1,284</span>
-              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#4edea3', marginBottom: 6 }}>+12%</span>
+              <span style={{ fontSize: '2.5rem', fontWeight: 900, letterSpacing: '-0.03em' }}>{dashTotalSessions}</span>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#c7c4d8', marginBottom: 6 }}>Completed</span>
             </div>
           </div>
           <div style={{ background: '#131b2e', borderRadius: 16, padding: '1.5rem', borderLeft: '2px solid #4edea3' }}>
             <div style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#c7c4d8', marginBottom: 16 }}>Average Rating</div>
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8 }}>
-              <span style={{ fontSize: '2.5rem', fontWeight: 900, letterSpacing: '-0.03em' }}>4.9</span>
-              <span style={{ color: '#ffb95f', fontSize: '1rem', marginBottom: 6 }}>★★★★★</span>
+              {dashAvgRating ? (
+                <>
+                  <span style={{ fontSize: '2.5rem', fontWeight: 900, letterSpacing: '-0.03em' }}>{dashAvgRating}</span>
+                  <span style={{ color: '#ffb95f', fontSize: '1rem', marginBottom: 6 }}>{'★'.repeat(Math.round(parseFloat(dashAvgRating)))}{'☆'.repeat(5 - Math.round(parseFloat(dashAvgRating)))}</span>
+                </>
+              ) : (
+                <span style={{ fontSize: '1.5rem', fontWeight: 900, color: 'rgba(199,196,216,0.4)' }}>No ratings yet</span>
+              )}
             </div>
           </div>
         </div>
