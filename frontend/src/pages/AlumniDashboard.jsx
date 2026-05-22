@@ -1114,15 +1114,27 @@ export default function AlumniDashboard() {
   // Profile dropdown
   const [showProfile, setShowProfile] = useState(false);
   const [editProfile, setEditProfile] = useState(false);
-  const [savedProfile] = useState(() => {
+  const savedProfile = (() => {
     try { return JSON.parse(localStorage.getItem('alumnex_profile') || '{}'); } catch { return {}; }
-  });
+  })();
   const [profileForm, setProfileForm] = useState({
-    username: savedProfile.username || user?.name || '',
-    email:    savedProfile.email    || '',
-    domain:   savedProfile.domain   || savedProfile.department || '',
+    username: savedProfile.name || savedProfile.username || user?.name || '',
+    email:    savedProfile.email    || user?.email || '',
+    domain:   savedProfile.domain   || savedProfile.department || user?.department || '',
     experience: savedProfile.experience || '',
   });
+
+  useEffect(() => {
+    const latestProfile = (() => {
+      try { return JSON.parse(localStorage.getItem('alumnex_profile') || '{}'); } catch { return {}; }
+    })();
+    setProfileForm({
+      username: latestProfile.name || latestProfile.username || user?.name || '',
+      email:    latestProfile.email    || user?.email || '',
+      domain:   latestProfile.domain   || latestProfile.department || user?.department || '',
+      experience: latestProfile.experience || '',
+    });
+  }, [editProfile, localRefresh, user]);
 
   // Notifications panel
   const [showNotifs, setShowNotifs] = useState(false);
@@ -1301,10 +1313,19 @@ export default function AlumniDashboard() {
   };
 
   const saveProfileForm = async () => {
-    const updated = { ...savedProfile, ...profileForm };
+    const updated = {
+      ...savedProfile,
+      ...profileForm,
+      name: user?.name || savedProfile.name || profileForm.username,
+      email: user?.email || savedProfile.email || profileForm.email,
+    };
     localStorage.setItem('alumnex_profile', JSON.stringify(updated));
-    const updatedUser = { ...user, name: profileForm.username || user?.name };
-    login(updatedUser, localStorage.getItem('alumnex_token'));
+    localStorage.setItem('alumniconnect_profile', JSON.stringify(updated));
+    const updatedUser = {
+      ...user,
+      name: user?.name || profileForm.username
+    };
+    login(updatedUser, localStorage.getItem('alumnex_token') || localStorage.getItem('alumniconnect_token'));
     emitRealtimeSync({ type: 'profile_updated' });
     // Persist to DB so profile syncs across devices
     if (user?.id && !user.id.startsWith('alm-') && !user.id.startsWith('stu-')) {
@@ -2396,7 +2417,19 @@ export default function AlumniDashboard() {
                                 value={profileForm[field.key]}
                                 onChange={e => setProfileForm(f => ({ ...f, [field.key]: e.target.value }))}
                                 placeholder={field.placeholder}
-                                style={{ width: '100%', background: '#222a3d', border: '1px solid rgba(70,69,85,0.4)', borderRadius: 8, padding: '0.55rem 0.75rem', color: '#dae2fd', fontSize: '0.8rem', outline: 'none', boxSizing: 'border-box' }}
+                                disabled={field.key === 'username' || field.key === 'email'}
+                                style={{
+                                  width: '100%',
+                                  background: '#222a3d',
+                                  border: '1px solid rgba(70,69,85,0.4)',
+                                  borderRadius: 8,
+                                  padding: '0.55rem 0.75rem',
+                                  color: '#dae2fd',
+                                  fontSize: '0.8rem',
+                                  outline: 'none',
+                                  boxSizing: 'border-box',
+                                  ...((field.key === 'username' || field.key === 'email') ? { opacity: 0.65, cursor: 'not-allowed' } : {})
+                                }}
                               />
                             </div>
                           ))}

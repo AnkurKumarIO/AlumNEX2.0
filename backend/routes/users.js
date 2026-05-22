@@ -37,29 +37,87 @@ router.delete('/bulk', async (req, res) => {
 router.patch('/:id/profile', async (req, res) => {
   try {
     const id = req.params.id;
-    const {
-      bio, linkedin, github, portfolio,
-      department, skills, cgpa, college, year,
-      resumeName, resumeUrl, photoPreview,
-      projects, targetRoles,
-      preferredCompanies, openTo, gradMonth, gradYear,
-      name, email,
-    } = req.body;
+    const incoming = req.body;
 
+    // Fetch existing user first
+    const existingUser = await prisma.user.findUnique({
+      where: { id }
+    });
+    if (!existingUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const isVerified = existingUser.verification_status === 'VERIFIED';
+    const isAlumni = existingUser.role === 'ALUMNI';
+    const existingProfileData = JSON.parse(existingUser.profile_data || '{}');
+
+    // Determine final name, email, department (columns on user table)
+    let finalName = existingUser.name;
+    let finalEmail = existingUser.email;
+    let finalDepartment = existingUser.department;
+
+    if (!isVerified) {
+      if (incoming.name) finalName = incoming.name;
+      if (incoming.email) finalEmail = incoming.email;
+      if (incoming.department) finalDepartment = incoming.department;
+    }
+
+    // Merge new fields into existing profile_data JSON object
     const profileDataObj = {
-      bio, linkedin, github, portfolio,
-      skills, cgpa, college, year,
-      resumeName, resumeUrl, photoPreview,
-      projects, targetRoles,
-      preferredCompanies, openTo,
-      gradMonth, gradYear,
-      profileCompletedAt: new Date().toISOString(),
+      ...existingProfileData,
     };
 
-    const updates = { profile_data: JSON.stringify(profileDataObj) };
-    if (department) updates.department = department;
-    if (name)       updates.name = name;
-    if (email)      updates.email = email;
+    // Update non-verified fields if present in request body
+    const nonVerifiedFields = [
+      'bio', 'linkedin', 'github', 'portfolio', 'skills', 'cgpa',
+      'resumeName', 'resumeUrl', 'photoPreview', 'projects', 'targetRoles',
+      'preferredCompanies', 'openTo', 'gradMonth', 'gradYear', 'experience', 'domain'
+    ];
+
+    nonVerifiedFields.forEach(f => {
+      if (incoming[f] !== undefined) {
+        profileDataObj[f] = incoming[f];
+      }
+    });
+
+    // Update verified fields only if user is NOT verified
+    const verifiedStudentFields = ['college', 'year', 'rollNo'];
+    const verifiedAlumniFields = ['company', 'jobTitle', 'currentTitle', 'batchYear', 'passOutYear'];
+
+    if (!isVerified) {
+      verifiedStudentFields.forEach(f => {
+        if (incoming[f] !== undefined) profileDataObj[f] = incoming[f];
+      });
+      verifiedAlumniFields.forEach(f => {
+        if (incoming[f] !== undefined) profileDataObj[f] = incoming[f];
+      });
+    } else {
+      // If verified, enforce database values for locked fields in profile_data
+      profileDataObj.name = finalName;
+      profileDataObj.email = finalEmail;
+      profileDataObj.department = finalDepartment;
+
+      if (isAlumni) {
+        profileDataObj.company = existingProfileData.company || '';
+        profileDataObj.jobTitle = existingProfileData.jobTitle || existingProfileData.currentTitle || '';
+        profileDataObj.currentTitle = existingProfileData.currentTitle || existingProfileData.jobTitle || '';
+        profileDataObj.batchYear = existingProfileData.batchYear || existingProfileData.passOutYear || '';
+        profileDataObj.passOutYear = existingProfileData.passOutYear || existingProfileData.batchYear || '';
+      } else {
+        profileDataObj.college = existingProfileData.college || '';
+        profileDataObj.year = existingProfileData.year || '';
+        profileDataObj.rollNo = existingProfileData.rollNo || '';
+      }
+    }
+
+    profileDataObj.profileCompletedAt = new Date().toISOString();
+
+    const updates = {
+      name: finalName,
+      email: finalEmail,
+      department: finalDepartment,
+      profile_data: JSON.stringify(profileDataObj)
+    };
 
     const user = await prisma.user.update({
       where: { id },
