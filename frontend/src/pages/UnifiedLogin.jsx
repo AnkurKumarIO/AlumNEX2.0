@@ -43,7 +43,13 @@ function isProfileComplete() {
 export default function UnifiedLogin() {
   const { user, login } = useContext(AuthContext);
   const navigate = useNavigate();
-  const [role, setRole] = useState("STUDENT");
+  const [role, setRole] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const r = params.get('role');
+    if (r === 'ALUMNI') return 'ALUMNI';
+    if (r === 'TNP') return 'TNP';
+    return 'STUDENT';
+  });
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);

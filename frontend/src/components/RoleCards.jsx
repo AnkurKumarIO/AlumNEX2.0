@@ -10,7 +10,7 @@ const CARDS = [
     desc: 'Accelerate your career with smart-matched mentors, personalized internship insights, and real-world alumni journeys.',
     checks: ['Smart Mentor Matching', 'Resume Intelligence'],
     btnLabel: 'STUDENT LOGIN',
-    btnTo: '/login',
+    btnTo: '/student/login',
     glowColor: '99, 179, 237',
   },
   {
@@ -21,7 +21,7 @@ const CARDS = [
     desc: 'Re-engage with your alma mater, mentor the next generation, and tap into an exclusive high-tier professional network.',
     checks: ['Giving & Mentorship', 'Executive Network'],
     btnLabel: 'ALUMNI LOGIN',
-    btnTo: '/login',
+    btnTo: '/alumni/login',
     glowColor: '99, 179, 237',
   },
   {
@@ -32,7 +32,7 @@ const CARDS = [
     desc: 'Streamline campus placements with predictive analytics, alumni verified referrals, and automated outreach.',
     checks: ['Placement Intelligence', 'Verified Referrals'],
     btnLabel: 'LAUNCH DASHBOARD',
-    btnTo: '/login',
+    btnTo: '/tnp/login',
     glowColor: '99, 179, 237',
   },
 ];
