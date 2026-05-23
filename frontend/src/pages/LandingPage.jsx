@@ -105,7 +105,7 @@ export default function LandingPage() {
             margin: 0,
             opacity: 0.9
           }}>
-            AlumNex connects students, alumni, and administrators through career pathways, mock interviews, and mentorship.
+            AlumNEX connects students, alumni, and administrators through career pathways, mock interviews, and mentorship.
           </p>
         </section>
 

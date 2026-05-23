@@ -361,7 +361,7 @@ export default function AlumniRegistration() {
                   <span className="material-symbols-outlined" style={{fontSize:18,color:'#4edea3'}}>verified</span>
                   <span style={{fontSize:'0.875rem',fontWeight:700,color:'#4edea3'}}>AI Forensic Check Passed</span>
                 </div>
-                {[{l:'Extracted Name',v:form.name},{l:'Institution',v:ver.dbAlumni?.company||'AlumNex University'},{l:'Document Authenticity',v:'Genuine',badge:true},{l:'AI Confidence',v:'96%'}].map(row=>(
+                {[{l:'Extracted Name',v:form.name},{l:'Institution',v:ver.dbAlumni?.company||'AlumNEX University'},{l:'Document Authenticity',v:'Genuine',badge:true},{l:'AI Confidence',v:'96%'}].map(row=>(
                   <div key={row.l} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0.5rem 0',borderBottom:'1px solid rgba(70,69,85,0.2)'}}>
                     <span style={{fontSize:'0.78rem',color:'#c7c4d8'}}>{row.l}</span>
                     <div style={{display:'flex',alignItems:'center',gap:6}}>

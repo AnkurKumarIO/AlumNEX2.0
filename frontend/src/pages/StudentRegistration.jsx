@@ -136,7 +136,7 @@ export default function StudentRegistration() {
       <div style={{ background:'#171f33', borderRadius:20, padding:'2.5rem', width:'100%', maxWidth:480, border:'1px solid rgba(78,222,163,0.2)', boxShadow:'0 40px 80px rgba(0,0,0,0.5)', textAlign:'center' }}>
         <div style={{ fontSize:'3rem', marginBottom:'0.5rem' }}>🎉</div>
         <h2 style={{ fontSize:'1.75rem', fontWeight:900, letterSpacing:'-0.03em', marginBottom:8 }}>Account Created!</h2>
-        <p style={{ fontSize:'0.875rem', color:'#c7c4d8', marginBottom:'1.5rem' }}>Welcome to AlumNex. Your account is ready.</p>
+        <p style={{ fontSize:'0.875rem', color:'#c7c4d8', marginBottom:'1.5rem' }}>Welcome to AlumNEX. Your account is ready.</p>
         <div style={{ background:'#131b2e', borderRadius:12, padding:'1rem 1.25rem', marginBottom:'1rem', display:'flex', alignItems:'center', justifyContent:'space-between', border:'1px solid rgba(70,69,85,0.2)' }}>
           <div style={{ textAlign:'left' }}>
             <div style={{ fontSize:'0.6rem', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.1em', color:'#c7c4d8', marginBottom:4 }}>Your Username</div>

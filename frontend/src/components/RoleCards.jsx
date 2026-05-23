@@ -176,7 +176,7 @@ export default function RoleCards() {
             </span>
           </h2>
           <p style={{ fontSize: '1rem', color: '#c7c4d8', lineHeight: 1.7, maxWidth: 580, margin: '0 auto', opacity: 0.85 }}>
-            AlumNex connects students, alumni, and administrators through career pathways, mock interviews, and mentorship.
+            AlumNEX connects students, alumni, and administrators through career pathways, mock interviews, and mentorship.
           </p>
         </div>
 
