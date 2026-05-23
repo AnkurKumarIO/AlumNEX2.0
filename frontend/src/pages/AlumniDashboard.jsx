@@ -2176,38 +2176,43 @@ export default function AlumniDashboard() {
       {sidebarOpen && <div className="sidebar-backdrop" onClick={() => setSidebarOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 45 }} />}
 
       <aside style={{ width: 256, minHeight: '100vh', position: 'fixed', left: sidebarOpen ? 0 : -256, top: 0, background: '#131b2e', display: 'flex', flexDirection: 'column', padding: '1.5rem', zIndex: 50, transition: 'left 0.3s ease' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: '2rem' }}>
-          <AlumNexLogo size="md" />
-          <div style={{ fontSize: '0.55rem', color: '#c7c4d8', letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: 4 }}>Alumni Portal</div>
-          <button 
-            onClick={() => setSidebarOpen(false)} 
-            title="Collapse Sidebar"
-            style={{ 
-              background: 'rgba(255,255,255,0.03)', 
-              border: '1px solid rgba(255,255,255,0.05)', 
-              borderRadius: '50%',
-              cursor: 'pointer', 
-              color: '#c7c4d8', 
-              width: 28,
-              height: 28,
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              transition: 'all 0.2s'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(195,192,255,0.1)';
-              e.currentTarget.style.color = '#c3c0ff';
-              e.currentTarget.style.borderColor = 'rgba(195,192,255,0.2)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
-              e.currentTarget.style.color = '#c7c4d8';
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)';
-            }}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>menu_open</span>
-          </button>
+        <div style={{ marginBottom: '2rem' }}>
+          {/* Logo row: logo + collapse button */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+            <AlumNexLogo size="lg" />
+            <button 
+              onClick={() => setSidebarOpen(false)} 
+              title="Collapse Sidebar"
+              style={{ 
+                background: 'rgba(255,255,255,0.03)', 
+                border: '1px solid rgba(255,255,255,0.05)', 
+                borderRadius: '50%',
+                cursor: 'pointer', 
+                color: '#c7c4d8', 
+                width: 28,
+                height: 28,
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                flexShrink: 0,
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(195,192,255,0.1)';
+                e.currentTarget.style.color = '#c3c0ff';
+                e.currentTarget.style.borderColor = 'rgba(195,192,255,0.2)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+                e.currentTarget.style.color = '#c7c4d8';
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)';
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>menu_open</span>
+            </button>
+          </div>
+          {/* Subtitle */}
+          <div style={{ fontSize: '0.6rem', color: '#c7c4d8', letterSpacing: '0.18em', textTransform: 'uppercase' }}>Alumni Portal</div>
         </div>
         <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
           {NAV_ITEMS.map(({ icon, label, tab }) => {

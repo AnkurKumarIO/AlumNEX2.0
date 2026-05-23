@@ -783,9 +783,9 @@ export default function Dashboard() {
       {sidebarOpen && <div className="sidebar-backdrop" onClick={() => setSidebarOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 45 }} />}
       <aside style={{ width: 256, minHeight: '100vh', position: 'fixed', left: sidebarOpen ? 0 : -256, top: 0, background: '#131b2e', display: 'flex', flexDirection: 'column', padding: '1rem', zIndex: 50, transition: 'left 0.3s ease' }}>
         <div style={{ padding: '1.5rem 1rem 1rem' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <AlumNexLogo size="sm" />
-            <div style={{ fontSize: '0.55rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c7c4d8', marginTop: 4 }}>Intelligence Suite</div>
+          {/* Logo row: logo + collapse button */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+            <AlumNexLogo size="lg" />
             <button 
               onClick={() => setSidebarOpen(false)} 
               title="Collapse Sidebar"
@@ -800,6 +800,7 @@ export default function Dashboard() {
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'center',
+                flexShrink: 0,
                 transition: 'all 0.2s'
               }}
               onMouseEnter={(e) => {
@@ -816,6 +817,8 @@ export default function Dashboard() {
               <span className="material-symbols-outlined" style={{ fontSize: 18 }}>menu_open</span>
             </button>
           </div>
+          {/* Subtitle */}
+          <div style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.18em', color: '#c7c4d8' }}>Intelligence Suite</div>
         </div>
         <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
           {NAV_ITEMS.map(({ icon, label: l, tab }) => {
