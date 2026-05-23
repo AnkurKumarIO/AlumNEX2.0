@@ -785,7 +785,7 @@ export default function Dashboard() {
         <div style={{ padding: '1.5rem 1rem 1rem' }}>
           {/* Logo row: logo + collapse button */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-            <AlumNexLogo size="lg" />
+            <AlumNexLogo size="md" />
             <button 
               onClick={() => setSidebarOpen(false)} 
               title="Collapse Sidebar"
