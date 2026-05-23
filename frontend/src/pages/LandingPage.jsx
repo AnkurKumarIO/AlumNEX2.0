@@ -15,6 +15,42 @@ export default function LandingPage() {
       display: 'flex', 
       flexDirection: 'column' 
     }}>
+      <style>{`
+        .glass-card {
+          background: linear-gradient(135deg, rgba(16, 22, 42, 0.75) 0%, rgba(10, 16, 32, 0.85) 100%);
+          border: 1px solid rgba(195, 192, 255, 0.08);
+          border-radius: 16px;
+          box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+          position: relative;
+        }
+        .glass-card:hover {
+          transform: translateY(-4px);
+          border-color: rgba(195, 192, 255, 0.2);
+          box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.5), 0 0 20px rgba(99, 102, 241, 0.15), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+        }
+        @keyframes loadBar {
+          from { width: 0%; }
+        }
+        .bar-tech {
+          animation: loadBar 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+        .bar-finance {
+          animation: loadBar 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards 0.15s;
+        }
+        .bar-product {
+          animation: loadBar 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards 0.3s;
+        }
+        @keyframes flowArc {
+          to { stroke-dashoffset: -20; }
+        }
+        .flow-arc {
+          stroke-dasharray: 6 6;
+          animation: flowArc 3s linear infinite;
+        }
+      `}</style>
       {/* Hero Section */}
       <main style={{ 
         maxWidth: 1200, 
@@ -111,7 +147,7 @@ export default function LandingPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
 
             {/* ── LEFT: Interactive Node Graph ── */}
-            <div style={{ background: 'linear-gradient(135deg,#0a1020 0%,#0d1526 60%,#0f1a2e 100%)', borderRadius: 16, overflow: 'hidden', position: 'relative', minHeight: '340px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', border: '1px solid rgba(195,192,255,0.1)', boxShadow: '0 0 40px rgba(79,70,229,0.08) inset' }}>
+            <div className="glass-card" style={{ overflow: 'hidden', minHeight: '360px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
 
               {/* Subtle dot-grid background */}
               <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(circle at 1.5px 1.5px, rgba(195,192,255,0.06) 1px, transparent 0)', backgroundSize: '28px 28px', zIndex: 0 }}/>
@@ -235,7 +271,7 @@ export default function LandingPage() {
               </svg>
 
               {/* Bottom gradient overlay */}
-              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, #0a1020 0%, rgba(10,16,32,0.7) 35%, rgba(10,16,32,0.1) 65%, transparent 100%)', zIndex: 1 }}/>
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(10, 16, 32, 0.95) 0%, rgba(10, 16, 32, 0.6) 35%, transparent 100%)', zIndex: 1 }}/>
 
               {/* Text content */}
               <div style={{ position: 'relative', zIndex: 2, padding: 'clamp(1.5rem, 4vw, 2rem)' }}>
@@ -253,81 +289,105 @@ export default function LandingPage() {
             {/* ── RIGHT COLUMN ── */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
-              {/* RIGHT TOP: Donut ring + neon bar */}
-              <div style={{ flex: 1, background: '#222a3d', borderRadius: 14, padding: 'clamp(1.25rem, 3vw, 1.75rem)', borderLeft: '2px solid rgba(195,192,255,0.5)', display: 'flex', alignItems: 'center', gap: '1.25rem', minHeight: '140px', overflow: 'hidden' }}>
-                <svg width="76" height="76" viewBox="0 0 80 80" style={{ flexShrink: 0 }}>
-                  <defs>
-                    <filter id="rg"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-                    <style>{`@keyframes fillRing{from{stroke-dashoffset:188}to{stroke-dashoffset:11}}.rf{animation:fillRing 1.8s ease-out forwards}`}</style>
-                  </defs>
-                  <circle cx="40" cy="40" r="30" fill="none" stroke="rgba(195,192,255,0.1)" strokeWidth="8"/>
-                  <circle cx="40" cy="40" r="30" fill="none" stroke="#c3c0ff" strokeWidth="8" strokeLinecap="round" strokeDasharray="188" strokeDashoffset="11" transform="rotate(-90 40 40)" filter="url(#rg)" className="rf" opacity="0.9"/>
-                  <circle cx="40" cy="40" r="30" fill="none" stroke="#c3c0ff" strokeWidth="14" strokeDasharray="188" strokeDashoffset="11" transform="rotate(-90 40 40)" opacity="0.06"/>
-                  <text x="40" y="45" textAnchor="middle" fill="#fff" fontSize="13" fontWeight="900">94%</text>
-                </svg>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 'clamp(1.5rem, 3.5vw, 1.85rem)', fontWeight: 900, lineHeight: 1, color: '#fff' }}>94%</div>
-                  <div style={{ fontSize: 'clamp(0.55rem, 1.5vw, 0.6rem)', textTransform: 'uppercase', letterSpacing: '0.15em', color: '#c7c4d8', fontWeight: 700, marginTop: '0.4rem' }}>Match Accuracy</div>
-                  <div style={{ marginTop: '0.75rem', height: 4, borderRadius: 4, background: 'rgba(195,192,255,0.12)', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: '94%', borderRadius: 4, background: 'linear-gradient(90deg,#4f46e5,#c3c0ff)', boxShadow: '0 0 8px #c3c0ff' }}/>
+              {/* RIGHT TOP: Compatibility Breakdown */}
+              <div className="glass-card" style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', minHeight: '160px', padding: 'clamp(1.25rem, 3vw, 1.75rem)', overflow: 'hidden' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem' }}>
+                  <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#4edea3', boxShadow: '0 0 6px #4edea3' }}/>
+                  <span style={{ fontSize: '0.55rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.18em', color: '#4edea3', opacity: 0.85 }}>Compatibility Breakdown</span>
+                </div>
+                <div style={{ fontSize: 'clamp(1.1rem, 2.5vw, 1.3rem)', fontWeight: 800, color: '#fff', marginBottom: '0.75rem', letterSpacing: '-0.02em' }}>
+                  Top Matching Industries
+                </div>
+                
+                {/* Miniature Bar Chart */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                  {/* Row 1: Tech */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#c7c4d8', width: '50px' }}>Tech</span>
+                    <div style={{ flex: 1, height: 6, background: 'rgba(195, 192, 255, 0.08)', borderRadius: 3, overflow: 'hidden' }}>
+                      <div className="bar-tech" style={{ height: '100%', width: '94%', borderRadius: 3, background: 'linear-gradient(90deg, #3b82f6, #4edea3)', boxShadow: '0 0 8px rgba(78, 222, 163, 0.3)' }} />
+                    </div>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#4edea3', width: '30px', textAlign: 'right' }}>94%</span>
+                  </div>
+                  
+                  {/* Row 2: Finance */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#c7c4d8', width: '50px' }}>Finance</span>
+                    <div style={{ flex: 1, height: 6, background: 'rgba(195, 192, 255, 0.08)', borderRadius: 3, overflow: 'hidden' }}>
+                      <div className="bar-finance" style={{ height: '100%', width: '82%', borderRadius: 3, background: 'linear-gradient(90deg, #6366f1, #c3c0ff)', boxShadow: '0 0 8px rgba(195, 192, 255, 0.3)' }} />
+                    </div>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#c3c0ff', width: '30px', textAlign: 'right' }}>82%</span>
+                  </div>
+                  
+                  {/* Row 3: Product */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#c7c4d8', width: '50px' }}>Product</span>
+                    <div style={{ flex: 1, height: 6, background: 'rgba(195, 192, 255, 0.08)', borderRadius: 3, overflow: 'hidden' }}>
+                      <div className="bar-product" style={{ height: '100%', width: '75%', borderRadius: 3, background: 'linear-gradient(90deg, #f97316, #ffb95f)', boxShadow: '0 0 8px rgba(255, 185, 95, 0.3)' }} />
+                    </div>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#ffb95f', width: '30px', textAlign: 'right' }}>75%</span>
                   </div>
                 </div>
               </div>
 
               {/* RIGHT BOTTOM: World map with glowing mentor dots */}
-              <div style={{ flex: 1, background: '#0a1020', borderRadius: 14, border: '1px solid rgba(195,192,255,0.08)', minHeight: '160px', overflow: 'hidden', position: 'relative' }}>
+              <div className="glass-card" style={{ flex: 1, minHeight: '160px', overflow: 'hidden', position: 'relative', background: '#060e1e' }}>
 
-                <svg viewBox="0 0 1000 500" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+                <svg viewBox="0 0 2000 1001" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
                   <defs>
-                    <filter id="mdot"><feGaussianBlur stdDeviation="1.8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-                    <style>{`@keyframes mp{0%,100%{opacity:.25}50%{opacity:.95}}@keyframes mr{0%{opacity:0;r:5}60%{opacity:.35}100%{opacity:0;r:14}}.md{animation:mp var(--d,2.2s) ease-in-out infinite;animation-delay:var(--dl,0s)}.mr{animation:mr var(--d,2.2s) ease-in-out infinite;animation-delay:var(--dl,0s)}`}</style>
+                    <filter id="cglow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+                    <filter id="mdot2"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+                    <style>{`@keyframes mp2{0%,100%{opacity:.2}50%{opacity:1}}@keyframes mr2{0%{opacity:0}50%{opacity:.4}100%{opacity:0}}.md2{animation:mp2 var(--d,2.2s) ease-in-out infinite;animation-delay:var(--dl,0s)}.mr2{animation:mr2 var(--d,2.2s) ease-in-out infinite;animation-delay:var(--dl,0s)}`}</style>
                   </defs>
                   {/* North America */}
-                  <path d="M120,80 L155,70 L185,75 L210,85 L225,100 L230,120 L220,145 L205,160 L195,175 L185,195 L175,210 L165,225 L155,235 L145,230 L140,215 L148,200 L155,185 L158,170 L150,155 L140,145 L130,140 L120,130 L110,115 L105,100Z" fill="rgba(195,192,255,0.1)" stroke="rgba(195,192,255,0.22)" strokeWidth="0.8"/>
-                  <path d="M195,45 L215,40 L230,48 L225,62 L210,68 L195,62Z" fill="rgba(195,192,255,0.07)" stroke="rgba(195,192,255,0.16)" strokeWidth="0.6"/>
+                  <path d="M270,140 L295,125 L320,118 L355,115 L385,120 L410,130 L430,145 L445,162 L450,180 L445,200 L435,218 L420,232 L405,245 L390,255 L375,262 L360,268 L345,272 L330,270 L318,262 L308,250 L300,238 L295,225 L292,210 L295,195 L300,182 L305,170 L300,158 L288,150Z" fill="rgba(10,30,70,0.9)" stroke="#1e6fff" strokeWidth="1.2" filter="url(#cglow)"/>
+                  <path d="M180,120 L200,110 L225,108 L248,115 L260,128 L255,142 L238,148 L215,145 L195,138Z" fill="rgba(10,30,70,0.9)" stroke="#1e6fff" strokeWidth="1" filter="url(#cglow)"/>
+                  <path d="M270,80 L310,70 L355,68 L390,75 L415,88 L420,105 L410,118 L385,120 L355,115 L320,118 L295,125 L270,118Z" fill="rgba(10,30,70,0.9)" stroke="#1e6fff" strokeWidth="1" filter="url(#cglow)"/>
+                  <path d="M390,55 L420,45 L455,48 L470,62 L465,80 L448,90 L425,92 L405,85 L392,72Z" fill="rgba(10,30,70,0.9)" stroke="#1e6fff" strokeWidth="1" filter="url(#cglow)"/>
+                  <path d="M345,272 L360,268 L368,278 L365,292 L355,298 L342,292 L338,280Z" fill="rgba(10,30,70,0.9)" stroke="#1e6fff" strokeWidth="1" filter="url(#cglow)"/>
                   {/* South America */}
-                  <path d="M178,248 L200,245 L220,255 L235,275 L240,300 L238,330 L230,355 L218,375 L205,385 L192,380 L180,365 L172,345 L168,320 L165,295 L162,270 L165,255Z" fill="rgba(195,192,255,0.1)" stroke="rgba(195,192,255,0.2)" strokeWidth="0.8"/>
+                  <path d="M355,298 L380,292 L408,298 L428,315 L440,338 L445,365 L442,395 L432,425 L418,455 L400,478 L382,492 L365,495 L348,485 L335,465 L325,440 L320,412 L318,382 L320,352 L325,325 L335,308Z" fill="rgba(10,30,70,0.9)" stroke="#1e6fff" strokeWidth="1.2" filter="url(#cglow)"/>
                   {/* Europe */}
-                  <path d="M430,80 L445,72 L462,70 L478,75 L490,85 L495,98 L488,110 L475,118 L460,122 L445,118 L432,108 L425,95Z" fill="rgba(195,192,255,0.11)" stroke="rgba(195,192,255,0.24)" strokeWidth="0.8"/>
-                  <path d="M455,55 L468,48 L478,52 L480,65 L470,72 L458,68Z" fill="rgba(195,192,255,0.08)" stroke="rgba(195,192,255,0.18)" strokeWidth="0.6"/>
-                  <path d="M422,82 L430,78 L432,88 L425,92Z" fill="rgba(195,192,255,0.09)" stroke="rgba(195,192,255,0.18)" strokeWidth="0.6"/>
+                  <path d="M862,118 L885,108 L912,105 L938,110 L958,122 L968,138 L962,155 L945,165 L925,170 L905,168 L885,160 L870,148 L860,135Z" fill="rgba(10,30,70,0.9)" stroke="#1e6fff" strokeWidth="1.2" filter="url(#cglow)"/>
+                  <path d="M905,75 L925,65 L948,68 L960,82 L955,98 L938,105 L918,102 L905,90Z" fill="rgba(10,30,70,0.9)" stroke="#1e6fff" strokeWidth="1" filter="url(#cglow)"/>
+                  <path d="M848,118 L860,112 L865,125 L858,135 L848,132Z" fill="rgba(10,30,70,0.9)" stroke="#1e6fff" strokeWidth="1" filter="url(#cglow)"/>
+                  <path d="M855,155 L875,148 L892,152 L898,168 L890,182 L872,185 L855,178 L848,165Z" fill="rgba(10,30,70,0.9)" stroke="#1e6fff" strokeWidth="1" filter="url(#cglow)"/>
                   {/* Africa */}
-                  <path d="M448,130 L468,122 L490,125 L505,138 L512,158 L515,182 L512,210 L505,238 L495,262 L480,280 L465,288 L450,282 L438,265 L430,242 L428,215 L430,188 L435,162 L440,145Z" fill="rgba(195,192,255,0.1)" stroke="rgba(195,192,255,0.2)" strokeWidth="0.8"/>
+                  <path d="M895,195 L925,185 L958,188 L985,200 L1005,220 L1015,248 L1018,278 L1015,312 L1005,345 L990,375 L970,400 L948,418 L925,425 L902,418 L882,400 L868,375 L858,345 L852,312 L850,278 L852,248 L858,222 L870,205Z" fill="rgba(10,30,70,0.9)" stroke="#1e6fff" strokeWidth="1.2" filter="url(#cglow)"/>
+                  <path d="M1025,335 L1035,325 L1042,338 L1040,355 L1030,362 L1020,352Z" fill="rgba(10,30,70,0.9)" stroke="#1e6fff" strokeWidth="0.8" filter="url(#cglow)"/>
                   {/* Middle East */}
-                  <path d="M510,118 L535,112 L555,118 L562,132 L555,145 L538,150 L520,145 L510,132Z" fill="rgba(195,192,255,0.09)" stroke="rgba(195,192,255,0.18)" strokeWidth="0.7"/>
-                  {/* Asia main */}
-                  <path d="M510,65 L545,55 L590,52 L635,55 L675,62 L710,72 L738,85 L755,100 L758,118 L748,132 L730,140 L710,145 L688,148 L665,145 L642,140 L618,138 L595,140 L572,145 L552,148 L535,145 L518,138 L508,125 L505,108Z" fill="rgba(195,192,255,0.11)" stroke="rgba(195,192,255,0.24)" strokeWidth="0.8"/>
+                  <path d="M1018,188 L1048,178 L1078,182 L1098,198 L1102,218 L1092,235 L1068,242 L1042,238 L1022,222Z" fill="rgba(10,30,70,0.9)" stroke="#1e6fff" strokeWidth="1" filter="url(#cglow)"/>
+                  {/* Asia */}
+                  <path d="M1005,65 L1080,52 L1165,48 L1255,52 L1335,62 L1398,78 L1438,98 L1448,118 L1435,138 L1408,152 L1375,158 L1338,155 L1298,148 L1258,142 L1218,138 L1178,138 L1138,142 L1098,148 L1062,152 L1032,148 L1010,135 L998,118 L998,98Z" fill="rgba(10,30,70,0.9)" stroke="#1e6fff" strokeWidth="1.2" filter="url(#cglow)"/>
                   {/* India */}
-                  <path d="M598,148 L615,145 L628,152 L632,168 L628,185 L618,198 L608,202 L598,195 L592,178 L590,162 L592,150Z" fill="rgba(195,192,255,0.13)" stroke="rgba(195,192,255,0.28)" strokeWidth="0.8"/>
+                  <path d="M1178,195 L1205,188 L1228,195 L1238,215 L1235,238 L1222,258 L1205,268 L1188,262 L1175,242 L1170,218Z" fill="rgba(10,30,70,0.9)" stroke="#1e6fff" strokeWidth="1.2" filter="url(#cglow)"/>
                   {/* SE Asia */}
-                  <path d="M688,148 L710,148 L725,158 L728,172 L718,180 L705,178 L692,168 L685,158Z" fill="rgba(195,192,255,0.09)" stroke="rgba(195,192,255,0.2)" strokeWidth="0.7"/>
+                  <path d="M1338,195 L1368,188 L1392,195 L1402,215 L1395,232 L1372,238 L1348,232 L1335,215Z" fill="rgba(10,30,70,0.9)" stroke="#1e6fff" strokeWidth="1" filter="url(#cglow)"/>
+                  <path d="M1368,268 L1395,262 L1415,268 L1418,282 L1405,290 L1382,288 L1365,280Z" fill="rgba(10,30,70,0.9)" stroke="#1e6fff" strokeWidth="0.8" filter="url(#cglow)"/>
                   {/* East Asia */}
-                  <path d="M710,72 L748,68 L778,75 L798,88 L800,105 L790,118 L770,125 L748,128 L728,122 L710,112 L705,95Z" fill="rgba(195,192,255,0.11)" stroke="rgba(195,192,255,0.24)" strokeWidth="0.8"/>
-                  <path d="M800,88 L812,82 L820,90 L815,102 L805,105 L798,98Z" fill="rgba(195,192,255,0.08)" stroke="rgba(195,192,255,0.18)" strokeWidth="0.6"/>
+                  <path d="M1398,98 L1448,88 L1498,88 L1538,98 L1558,118 L1552,142 L1528,158 L1498,162 L1465,158 L1435,148 L1415,132 L1405,115Z" fill="rgba(10,30,70,0.9)" stroke="#1e6fff" strokeWidth="1.2" filter="url(#cglow)"/>
+                  <path d="M1558,108 L1578,98 L1592,108 L1588,125 L1572,132 L1558,125Z" fill="rgba(10,30,70,0.9)" stroke="#1e6fff" strokeWidth="1" filter="url(#cglow)"/>
                   {/* Australia */}
-                  <path d="M738,295 L768,285 L800,288 L825,300 L838,318 L838,340 L828,358 L810,368 L788,370 L765,362 L748,348 L738,328 L732,308Z" fill="rgba(195,192,255,0.1)" stroke="rgba(195,192,255,0.2)" strokeWidth="0.8"/>
-                  {/* Grid lines */}
-                  <line x1="0" y1="250" x2="1000" y2="250" stroke="rgba(195,192,255,0.04)" strokeWidth="0.5"/>
-                  <line x1="500" y1="0" x2="500" y2="500" stroke="rgba(195,192,255,0.04)" strokeWidth="0.5"/>
-                  <line x1="0" y1="125" x2="1000" y2="125" stroke="rgba(195,192,255,0.025)" strokeWidth="0.4"/>
-                  <line x1="0" y1="375" x2="1000" y2="375" stroke="rgba(195,192,255,0.025)" strokeWidth="0.4"/>
-                  <line x1="250" y1="0" x2="250" y2="500" stroke="rgba(195,192,255,0.025)" strokeWidth="0.4"/>
-                  <line x1="750" y1="0" x2="750" y2="500" stroke="rgba(195,192,255,0.025)" strokeWidth="0.4"/>
+                  <path d="M1468,548 L1512,528 L1562,525 L1608,535 L1642,558 L1658,588 L1655,622 L1638,652 L1612,672 L1578,682 L1542,678 L1508,658 L1482,632 L1465,602 L1458,572Z" fill="rgba(10,30,70,0.9)" stroke="#1e6fff" strokeWidth="1.2" filter="url(#cglow)"/>
+                  {/* Grid */}
+                  <line x1="0" y1="500" x2="2000" y2="500" stroke="rgba(30,111,255,0.05)" strokeWidth="0.8"/>
+                  <line x1="1000" y1="0" x2="1000" y2="1001" stroke="rgba(30,111,255,0.05)" strokeWidth="0.8"/>
+                  <line x1="0" y1="250" x2="2000" y2="250" stroke="rgba(30,111,255,0.03)" strokeWidth="0.5"/>
+                  <line x1="0" y1="750" x2="2000" y2="750" stroke="rgba(30,111,255,0.03)" strokeWidth="0.5"/>
                   {/* Mentor dots */}
-                  {[[148,112,'#4edea3',2.1,0,true],[162,105,'#c3c0ff',2.4,.3,false],[195,108,'#4edea3',1.9,.6,true],[175,115,'#ffb95f',2.6,.2,false],[140,120,'#c3c0ff',2.2,.8,false],[200,105,'#4edea3',2.8,.4,false],[200,310,'#c3c0ff',2.3,.5,false],[188,345,'#4edea3',2.7,.1,false],[432,88,'#c3c0ff',2.0,.2,true],[448,90,'#4edea3',2.5,.5,false],[462,82,'#ffb95f',2.2,.7,false],[455,85,'#c3c0ff',2.8,.3,false],[468,175,'#ffb95f',2.4,.4,false],[478,255,'#c3c0ff',2.6,.6,false],[472,148,'#4edea3',2.3,.2,false],[545,128,'#ffb95f',2.3,.3,false],[600,155,'#4edea3',1.8,0,true],[605,168,'#c3c0ff',2.1,.3,true],[612,178,'#ffb95f',2.4,.6,false],[615,162,'#4edea3',2.0,.2,false],[608,182,'#c3c0ff',2.6,.5,false],[598,160,'#4edea3',2.2,.8,false],[762,95,'#c3c0ff',2.0,.1,true],[772,108,'#4edea3',2.3,.4,true],[808,95,'#ffb95f',2.5,.7,false],[778,100,'#c3c0ff',2.1,.3,false],[712,165,'#c3c0ff',2.2,.2,false],[700,158,'#4edea3',2.4,.5,false],[800,328,'#4edea3',2.1,.4,true],[785,335,'#c3c0ff',2.4,.7,false]].map(([cx,cy,color,d,dl,big],i)=>(
+                  {[[340,185,'#4edea3',2.1,0,true],[380,175,'#c3c0ff',2.4,.3,false],[420,178,'#4edea3',1.9,.6,true],[360,195,'#ffb95f',2.6,.2,false],[380,380,'#c3c0ff',2.3,.5,false],[360,420,'#4edea3',2.7,.1,false],[875,138,'#c3c0ff',2.0,.2,true],[900,132,'#4edea3',2.5,.5,false],[928,128,'#ffb95f',2.2,.7,false],[935,285,'#ffb95f',2.4,.4,false],[945,355,'#c3c0ff',2.6,.6,false],[918,218,'#4edea3',2.3,.2,false],[1055,208,'#ffb95f',2.3,.3,false],[1195,218,'#4edea3',1.8,0,true],[1205,232,'#c3c0ff',2.1,.3,true],[1215,245,'#ffb95f',2.4,.6,false],[1208,225,'#4edea3',2.0,.2,false],[1448,118,'#c3c0ff',2.0,.1,true],[1468,132,'#4edea3',2.3,.4,true],[1572,118,'#ffb95f',2.5,.7,false],[1498,125,'#c3c0ff',2.1,.3,false],[1362,215,'#c3c0ff',2.2,.2,false],[1548,598,'#4edea3',2.1,.4,true],[1528,618,'#c3c0ff',2.4,.7,false]].map(([cx,cy,color,d,dl,big],i)=>(
                     <g key={i}>
-                      <circle cx={cx} cy={cy} r={big?10:7} fill="none" stroke={color} strokeWidth="0.8" className="mr" style={{'--d':`${d}s`,'--dl':`${dl}s`}} opacity="0.55"/>
-                      <circle cx={cx} cy={cy} r={big?3:2} fill={color} className="md" style={{'--d':`${d}s`,'--dl':`${dl}s`}} filter="url(#mdot)"/>
+                      <circle cx={cx} cy={cy} r={big?18:12} fill="none" stroke={color} strokeWidth="1" className="mr2" style={{'--d':`${d}s`,'--dl':`${dl}s`}} opacity="0.5"/>
+                      <circle cx={cx} cy={cy} r={big?5:3.5} fill={color} className="md2" style={{'--d':`${d}s`,'--dl':`${dl}s`}} filter="url(#mdot2)"/>
                     </g>
                   ))}
-                  {/* Connection arcs */}
-                  <path d="M195,108 Q312,60 432,88" fill="none" stroke="rgba(195,192,255,0.1)" strokeWidth="0.8" strokeDasharray="4 5"/>
-                  <path d="M432,88 Q516,72 600,155" fill="none" stroke="rgba(78,222,163,0.08)" strokeWidth="0.8" strokeDasharray="4 5"/>
-                  <path d="M605,168 Q688,130 762,95" fill="none" stroke="rgba(195,192,255,0.08)" strokeWidth="0.8" strokeDasharray="4 5"/>
+                  <path d="M420,178 Q648,80 875,138" fill="none" stroke="rgba(30,111,255,0.15)" strokeWidth="1.2" strokeDasharray="6 7"/>
+                  <path d="M875,138 Q1035,105 1195,218" fill="none" stroke="rgba(78,222,163,0.12)" strokeWidth="1.2" strokeDasharray="6 7"/>
+                  <path d="M1205,232 Q1325,175 1448,118" fill="none" stroke="rgba(30,111,255,0.12)" strokeWidth="1.2" strokeDasharray="6 7"/>
                 </svg>
 
-                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, #0a1020 0%, rgba(10,16,32,0.8) 25%, rgba(10,16,32,0.1) 55%, transparent 100%)', borderRadius: 14 }}/>
-                <div style={{ position: 'relative', zIndex: 1, padding: 'clamp(1.25rem,3vw,1.75rem)', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(6,14,30,0.98) 0%, rgba(6,14,30,0.7) 30%, rgba(6,14,30,0.05) 60%, transparent 100%)', zIndex: 1 }}/>
+                <div style={{ position: 'relative', zIndex: 2, padding: 'clamp(1.25rem,3vw,1.75rem)', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.3rem' }}>
                     <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#4edea3', boxShadow: '0 0 6px #4edea3' }}/>
                     <span style={{ fontSize: '0.55rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.18em', color: '#4edea3', opacity: 0.85 }}>Live Network</span>
