@@ -172,13 +172,39 @@ router.get('/directory/user/:id', async (req, res) => {
 router.get('/recent-activity', async (req, res) => {
   try {
     // Pull latest notifications (all users) for TNP admin overview
-    const notifications = await prisma.notification.findMany({
+    // Prefer TNP-targeted notifications; exclude personal student/alumni ones
+    // that have a matching TNP notification for the same request.
+    const allNotifications = await prisma.notification.findMany({
       orderBy: { createdAt: 'desc' },
-      take: 20,
+      take: 60,
       include: {
         user: { select: { name: true, role: true } },
       },
     });
+
+    // Find the TNP user so we can identify TNP-targeted notifications
+    const tnpUser = await prisma.user.findFirst({ where: { role: 'TNP' }, select: { id: true } }).catch(() => null);
+    const tnpUserId = tnpUser?.id;
+
+    // Collect request_ids that have a TNP-specific notification
+    const tnpNotifRequestIds = new Set(
+      allNotifications
+        .filter(n => n.user_id === tnpUserId && n.request_id)
+        .map(n => n.request_id)
+    );
+
+    // Filter: keep TNP notifications + non-personal ones (no request_id),
+    // but drop student/alumni personal slot/meeting notifications when a TNP version exists
+    const notifications = allNotifications.filter(n => {
+      if (n.user_id === tnpUserId) return true; // always show TNP-targeted
+      if (!n.request_id) return true;            // system/general notifications
+      // Drop personal slot/meeting notifications that have a TNP counterpart
+      if (tnpNotifRequestIds.has(n.request_id) &&
+          (n.type === 'SLOT_BOOKED' || n.type === 'SLOT_BOOKED_ALUMNI' || n.type === 'MEETING_LIVE')) {
+        return false;
+      }
+      return true;
+    }).slice(0, 20);
 
     // Also pull latest registration events
     const recentUsers = await prisma.user.findMany({

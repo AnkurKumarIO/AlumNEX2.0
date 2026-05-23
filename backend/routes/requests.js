@@ -211,6 +211,22 @@ router.patch('/:id', async (req, res) => {
         message: `Your interview with ${request.student?.name || 'the student'} is scheduled for ${formatted}.${meetInfo}`,
         request_id: id,
       });
+
+      // Notify TNP coordinator — show both student and alumni names
+      try {
+        const tnpUser = await prisma.user.findFirst({ where: { role: 'TNP' }, select: { id: true } });
+        if (tnpUser) {
+          notificationsToCreate.push({
+            user_id: tnpUser.id,
+            type: 'SLOT_BOOKED',
+            title: 'Interview Slot Confirmed! 📅',
+            message: `${request.student?.name || 'A student'} (Student) ↔ ${request.alumni?.name || 'an alumni'} (Alumni) — interview scheduled for ${formatted}.${meetInfo}`,
+            request_id: id,
+          });
+        }
+      } catch (tnpErr) {
+        console.warn('[Notify TNP] Could not find TNP user:', tnpErr.message);
+      }
     } else if (status === 'DECLINED') {
       // Notify student of decline
       notificationsToCreate.push({
