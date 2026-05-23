@@ -121,7 +121,6 @@ export default function ProfileSetup() {
       profile.projects.some(p => p.title.trim()),
       profile.targetRoles.length > 0,
       profile.openTo.length > 0,
-      !!(profile.gradMonth && profile.gradYear),
     ];
     return Math.round((checks.filter(Boolean).length / checks.length) * 100);
   };
@@ -289,19 +288,6 @@ export default function ProfileSetup() {
           ))}
         </div>
       </div>
-      <div>
-        <label style={lbl}>Expected Graduation</label>
-        <div style={{ display: 'flex', gap: 12 }}>
-          <select value={profile.gradMonth} onChange={e => set('gradMonth', e.target.value)} style={{ ...inp, flex: 1 }}>
-            <option value="">Month</option>
-            {['January','February','March','April','May','June','July','August','September','October','November','December'].map(m => <option key={m} value={m}>{m}</option>)}
-          </select>
-          <select value={profile.gradYear} onChange={e => set('gradYear', e.target.value)} style={{ ...inp, flex: 1 }}>
-            <option value="">Year</option>
-            {[2025,2026,2027,2028,2029].map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
-        </div>
-      </div>
     </div>,
 
     // Step 4 — Review
@@ -321,7 +307,7 @@ export default function ProfileSetup() {
         { label: 'Projects', val: profile.projects.filter(p => p.title).map(p => p.title).join(', ') || '—' },
         { label: 'Target Roles', val: profile.targetRoles.length ? profile.targetRoles.join(', ') : '—' },
         { label: 'Open To', val: profile.openTo.length ? profile.openTo.join(', ') : '—' },
-        { label: 'Graduation', val: profile.gradMonth && profile.gradYear ? `${profile.gradMonth} ${profile.gradYear}` : '—' },
+        { label: 'Pass-out Year', val: profile.year || '—' },
       ].map(({ label, val }) => (
         <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '0.75rem 1rem', background: '#131b2e', borderRadius: 10, gap: 16 }}>
           <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c7c4d8', flexShrink: 0 }}>{label}</span>

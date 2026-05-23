@@ -305,7 +305,15 @@ export default function SettingsPage({ role }) {
             <div style={{ background: 'rgba(195,192,255,0.03)', border: '1px solid rgba(195,192,255,0.15)', borderRadius: 12, padding: '1rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
               <span className="material-symbols-outlined" style={{ color: '#c3c0ff', fontSize: 18 }}>lock</span>
               <div style={{ fontSize: '0.78rem', color: '#c7c4d8', lineHeight: 1.5 }}>
-                Verified profile details (such as <strong style={{ color: '#dae2fd' }}>Name, Email, Department, Company, Title, and Batch Year</strong>) are managed by your institution's placement office and cannot be changed here. Contact your coordinator if you need to update them.
+                {isAlumni ? (
+                  <>
+                    Verified profile details (such as <strong style={{ color: '#dae2fd' }}>Name, Email, Department, Company, Job Title, and Batch Year</strong>) are managed by your institution's placement office and cannot be changed here. Contact your coordinator if you need to update them.
+                  </>
+                ) : (
+                  <>
+                    Verified profile details (such as <strong style={{ color: '#dae2fd' }}>Name, Email, Department, Roll Number, College, and Pass-out Year</strong>) are managed by your institution's placement office and cannot be changed here. Contact your coordinator if you need to update them.
+                  </>
+                )}
               </div>
             </div>
 
@@ -431,23 +439,10 @@ export default function SettingsPage({ role }) {
                   <label style={lbl}>College / University</label>
                   <input
                     value={profile.college}
-                    onChange={e => setProfile(p => ({ ...p, college: e.target.value }))}
                     placeholder="e.g. IIT Bombay"
                     disabled
                     style={{ ...inp, opacity: 0.65, cursor: 'not-allowed' }}
                   />
-                </div>
-                <div>
-                  <label style={lbl}>Year of Study</label>
-                  <select
-                    value={profile.year}
-                    onChange={e => setProfile(p => ({ ...p, year: e.target.value }))}
-                    disabled
-                    style={{ ...inp, opacity: 0.65, cursor: 'not-allowed' }}
-                  >
-                    <option value="">Select year</option>
-                    {['1st Year','2nd Year','3rd Year','4th Year','Postgraduate'].map(y => <option key={y} value={y}>{y}</option>)}
-                  </select>
                 </div>
                 <div>
                   <label style={lbl}>Roll Number / Student ID</label>
@@ -459,21 +454,17 @@ export default function SettingsPage({ role }) {
                   />
                 </div>
                 <div>
-                  <label style={lbl}>CGPA</label>
-                  <input type="number" min="0" max="10" step="0.1" value={profile.cgpa} onChange={e => setProfile(p => ({ ...p, cgpa: e.target.value }))} placeholder="e.g. 8.5" style={inp} />
+                  <label style={lbl}>Pass-out Year</label>
+                  <input
+                    value={profile.year}
+                    placeholder="e.g. 2025"
+                    disabled
+                    style={{ ...inp, opacity: 0.65, cursor: 'not-allowed' }}
+                  />
                 </div>
                 <div>
-                  <label style={lbl}>Expected Graduation</label>
-                  <div style={{ display: 'flex', gap: 12 }}>
-                    <select value={profile.gradMonth} onChange={e => setProfile(p => ({ ...p, gradMonth: e.target.value }))} style={{ ...inp, flex: 1 }}>
-                      <option value="">Month</option>
-                      {['January','February','March','April','May','June','July','August','September','October','November','December'].map(m => <option key={m} value={m}>{m}</option>)}
-                    </select>
-                    <select value={profile.gradYear} onChange={e => setProfile(p => ({ ...p, gradYear: e.target.value }))} style={{ ...inp, flex: 1 }}>
-                      <option value="">Year</option>
-                      {[2025,2026,2027,2028,2029,2030].map(y => <option key={y} value={y}>{y}</option>)}
-                    </select>
-                  </div>
+                  <label style={lbl}>CGPA</label>
+                  <input type="number" min="0" max="10" step="0.1" value={profile.cgpa} onChange={e => setProfile(p => ({ ...p, cgpa: e.target.value }))} placeholder="e.g. 8.5" style={inp} />
                 </div>
               </div>
             )}
