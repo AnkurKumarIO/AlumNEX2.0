@@ -255,8 +255,15 @@ router.post('/change-password', async (req, res) => {
 
     // 1. Verify current password against Prisma database first
     if (!user.password) {
-      // User has no password in Prisma, must verify via Supabase
+      // User has no password in Prisma — verify via Supabase Auth
       if (!supabase) {
+        return res.status(401).json({ error: 'Cannot verify current password. Please contact support.' });
+      }
+      const { error: signInErr } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentPassword,
+      });
+      if (signInErr) {
         return res.status(401).json({ error: 'Incorrect current password.' });
       }
     } else {
@@ -276,26 +283,15 @@ router.post('/change-password', async (req, res) => {
     // 3. Update in Supabase Auth (if active) - but don't fail if Supabase fails
     if (supabase) {
       try {
-        // Try to verify current password with Supabase
-        const { error: signInErr } = await supabase.auth.signInWithPassword({
-          email: user.email,
-          password: currentPassword,
+        // Update password in Supabase Auth
+        const { error: updateErr } = await supabase.auth.admin.updateUserById(userId, {
+          password: newPassword,
         });
-        
-        if (signInErr) {
-          console.warn('[Change Password] Supabase verification failed:', signInErr.message);
-          console.warn('[Change Password] Continuing with Prisma-only password update');
+        if (updateErr) {
+          console.warn('[Change Password] Supabase update failed:', updateErr.message);
+          console.warn('[Change Password] Password updated in Prisma only');
         } else {
-          // Update password in Supabase Auth
-          const { error: updateErr } = await supabase.auth.admin.updateUserById(userId, {
-            password: newPassword,
-          });
-          if (updateErr) {
-            console.warn('[Change Password] Supabase update failed:', updateErr.message);
-            console.warn('[Change Password] Password updated in Prisma only');
-          } else {
-            console.log(`[Change Password] Password updated in both Prisma and Supabase for user ${userId}`);
-          }
+          console.log(`[Change Password] Password updated in both Prisma and Supabase for user ${userId}`);
         }
       } catch (supabaseErr) {
         console.warn('[Change Password] Supabase error (non-fatal):', supabaseErr.message);
