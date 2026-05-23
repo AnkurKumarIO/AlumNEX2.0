@@ -275,134 +275,61 @@ export default function LandingPage() {
               </div>
 
               {/* RIGHT BOTTOM: World map with glowing mentor dots */}
-              <div style={{ flex: 1, background: '#0d1526', borderRadius: 14, border: '1px solid rgba(70,69,85,0.15)', minHeight: '140px', overflow: 'hidden', position: 'relative' }}>
+              <div style={{ flex: 1, background: '#0a1020', borderRadius: 14, border: '1px solid rgba(195,192,255,0.08)', minHeight: '160px', overflow: 'hidden', position: 'relative' }}>
 
-                {/* World map SVG — abstract continent outlines + mentor dots */}
-                <svg viewBox="0 0 320 140" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+                <svg viewBox="0 0 1000 500" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
                   <defs>
-                    <filter id="wglow" x="-60%" y="-60%" width="220%" height="220%">
-                      <feGaussianBlur stdDeviation="2.5" result="b"/>
-                      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-                    </filter>
-                    <filter id="wglow2" x="-100%" y="-100%" width="300%" height="300%">
-                      <feGaussianBlur stdDeviation="4" result="b"/>
-                      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-                    </filter>
-                    <radialGradient id="wbg" cx="50%" cy="50%" r="70%">
-                      <stop offset="0%" stopColor="#1a2a4a" stopOpacity="0.6"/>
-                      <stop offset="100%" stopColor="#0d1526" stopOpacity="0"/>
-                    </radialGradient>
-                    <style>{`
-                      @keyframes wPulse{0%,100%{opacity:.3;r:2}50%{opacity:1;r:3.2}}
-                      @keyframes wPulse2{0%,100%{opacity:.2;r:1.5}50%{opacity:.85;r:2.5}}
-                      @keyframes wRing{0%,100%{opacity:0;r:4}50%{opacity:.4;r:7}}
-                      .wp{animation:wPulse var(--d,2.2s) ease-in-out infinite;animation-delay:var(--dl,0s)}
-                      .wp2{animation:wPulse2 var(--d,2.8s) ease-in-out infinite;animation-delay:var(--dl,0s)}
-                      .wr{animation:wRing var(--d,2.2s) ease-in-out infinite;animation-delay:var(--dl,0s)}
-                    `}</style>
+                    <filter id="mdot"><feGaussianBlur stdDeviation="1.8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+                    <style>{`@keyframes mp{0%,100%{opacity:.25}50%{opacity:.95}}@keyframes mr{0%{opacity:0;r:5}60%{opacity:.35}100%{opacity:0;r:14}}.md{animation:mp var(--d,2.2s) ease-in-out infinite;animation-delay:var(--dl,0s)}.mr{animation:mr var(--d,2.2s) ease-in-out infinite;animation-delay:var(--dl,0s)}`}</style>
                   </defs>
-
-                  {/* Ambient background glow */}
-                  <ellipse cx="160" cy="70" rx="140" ry="60" fill="url(#wbg)"/>
-
-                  {/* ── Abstract continent outlines ── */}
                   {/* North America */}
-                  <path d="M28 28 C32 22 44 20 52 24 C58 26 62 30 64 36 C66 42 62 50 58 54 C54 58 48 60 44 58 C36 56 28 50 26 44 C24 38 24 34 28 28Z" fill="none" stroke="rgba(195,192,255,0.12)" strokeWidth="0.8"/>
+                  <path d="M120,80 L155,70 L185,75 L210,85 L225,100 L230,120 L220,145 L205,160 L195,175 L185,195 L175,210 L165,225 L155,235 L145,230 L140,215 L148,200 L155,185 L158,170 L150,155 L140,145 L130,140 L120,130 L110,115 L105,100Z" fill="rgba(195,192,255,0.1)" stroke="rgba(195,192,255,0.22)" strokeWidth="0.8"/>
+                  <path d="M195,45 L215,40 L230,48 L225,62 L210,68 L195,62Z" fill="rgba(195,192,255,0.07)" stroke="rgba(195,192,255,0.16)" strokeWidth="0.6"/>
                   {/* South America */}
-                  <path d="M52 68 C56 64 62 64 66 68 C70 72 70 80 68 86 C66 92 60 96 56 94 C50 92 46 86 46 80 C46 74 48 72 52 68Z" fill="none" stroke="rgba(195,192,255,0.1)" strokeWidth="0.8"/>
+                  <path d="M178,248 L200,245 L220,255 L235,275 L240,300 L238,330 L230,355 L218,375 L205,385 L192,380 L180,365 L172,345 L168,320 L165,295 L162,270 L165,255Z" fill="rgba(195,192,255,0.1)" stroke="rgba(195,192,255,0.2)" strokeWidth="0.8"/>
                   {/* Europe */}
-                  <path d="M118 22 C122 18 130 18 136 22 C140 26 140 32 136 36 C132 40 124 40 120 36 C116 32 114 26 118 22Z" fill="none" stroke="rgba(195,192,255,0.12)" strokeWidth="0.8"/>
+                  <path d="M430,80 L445,72 L462,70 L478,75 L490,85 L495,98 L488,110 L475,118 L460,122 L445,118 L432,108 L425,95Z" fill="rgba(195,192,255,0.11)" stroke="rgba(195,192,255,0.24)" strokeWidth="0.8"/>
+                  <path d="M455,55 L468,48 L478,52 L480,65 L470,72 L458,68Z" fill="rgba(195,192,255,0.08)" stroke="rgba(195,192,255,0.18)" strokeWidth="0.6"/>
+                  <path d="M422,82 L430,78 L432,88 L425,92Z" fill="rgba(195,192,255,0.09)" stroke="rgba(195,192,255,0.18)" strokeWidth="0.6"/>
                   {/* Africa */}
-                  <path d="M122 46 C128 42 136 42 140 48 C144 54 144 66 140 74 C136 80 128 82 122 78 C116 74 114 64 114 56 C114 50 118 50 122 46Z" fill="none" stroke="rgba(195,192,255,0.1)" strokeWidth="0.8"/>
-                  {/* Asia */}
-                  <path d="M148 18 C158 14 178 14 192 20 C202 24 208 32 206 40 C204 48 194 52 182 52 C168 52 154 48 148 40 C142 34 140 22 148 18Z" fill="none" stroke="rgba(195,192,255,0.12)" strokeWidth="0.8"/>
-                  {/* India peninsula */}
-                  <path d="M182 52 C186 52 190 56 190 62 C190 68 186 74 182 74 C178 74 174 68 174 62 C174 56 178 52 182 52Z" fill="none" stroke="rgba(195,192,255,0.1)" strokeWidth="0.7"/>
-                  {/* SE Asia / Indonesia */}
-                  <path d="M218 54 C224 50 232 52 236 58 C238 62 234 68 228 68 C222 68 216 64 216 58 C216 56 216 56 218 54Z" fill="none" stroke="rgba(195,192,255,0.09)" strokeWidth="0.7"/>
+                  <path d="M448,130 L468,122 L490,125 L505,138 L512,158 L515,182 L512,210 L505,238 L495,262 L480,280 L465,288 L450,282 L438,265 L430,242 L428,215 L430,188 L435,162 L440,145Z" fill="rgba(195,192,255,0.1)" stroke="rgba(195,192,255,0.2)" strokeWidth="0.8"/>
+                  {/* Middle East */}
+                  <path d="M510,118 L535,112 L555,118 L562,132 L555,145 L538,150 L520,145 L510,132Z" fill="rgba(195,192,255,0.09)" stroke="rgba(195,192,255,0.18)" strokeWidth="0.7"/>
+                  {/* Asia main */}
+                  <path d="M510,65 L545,55 L590,52 L635,55 L675,62 L710,72 L738,85 L755,100 L758,118 L748,132 L730,140 L710,145 L688,148 L665,145 L642,140 L618,138 L595,140 L572,145 L552,148 L535,145 L518,138 L508,125 L505,108Z" fill="rgba(195,192,255,0.11)" stroke="rgba(195,192,255,0.24)" strokeWidth="0.8"/>
+                  {/* India */}
+                  <path d="M598,148 L615,145 L628,152 L632,168 L628,185 L618,198 L608,202 L598,195 L592,178 L590,162 L592,150Z" fill="rgba(195,192,255,0.13)" stroke="rgba(195,192,255,0.28)" strokeWidth="0.8"/>
+                  {/* SE Asia */}
+                  <path d="M688,148 L710,148 L725,158 L728,172 L718,180 L705,178 L692,168 L685,158Z" fill="rgba(195,192,255,0.09)" stroke="rgba(195,192,255,0.2)" strokeWidth="0.7"/>
+                  {/* East Asia */}
+                  <path d="M710,72 L748,68 L778,75 L798,88 L800,105 L790,118 L770,125 L748,128 L728,122 L710,112 L705,95Z" fill="rgba(195,192,255,0.11)" stroke="rgba(195,192,255,0.24)" strokeWidth="0.8"/>
+                  <path d="M800,88 L812,82 L820,90 L815,102 L805,105 L798,98Z" fill="rgba(195,192,255,0.08)" stroke="rgba(195,192,255,0.18)" strokeWidth="0.6"/>
                   {/* Australia */}
-                  <path d="M234 76 C240 72 250 72 256 78 C260 82 260 90 256 94 C250 98 240 98 234 94 C228 90 228 82 234 76Z" fill="none" stroke="rgba(195,192,255,0.1)" strokeWidth="0.8"/>
-
-                  {/* ── Subtle grid lines (latitude/longitude feel) ── */}
-                  <line x1="0" y1="70" x2="320" y2="70" stroke="rgba(195,192,255,0.04)" strokeWidth="0.5"/>
-                  <line x1="160" y1="0" x2="160" y2="140" stroke="rgba(195,192,255,0.04)" strokeWidth="0.5"/>
-                  <ellipse cx="160" cy="70" rx="130" ry="55" fill="none" stroke="rgba(195,192,255,0.03)" strokeWidth="0.5"/>
-                  <ellipse cx="160" cy="70" rx="80"  ry="35" fill="none" stroke="rgba(195,192,255,0.03)" strokeWidth="0.5"/>
-
-                  {/* ── Mentor dots — placed at real geographic hotspots ── */}
-                  {/* [cx, cy, color, duration, delay, big] */}
-                  {[
-                    // North America
-                    [42, 32, '#4edea3', 2.1, 0,    true ],  // San Francisco
-                    [52, 30, '#c3c0ff', 2.4, 0.3,  false],  // Seattle
-                    [58, 36, '#4edea3', 1.9, 0.6,  true ],  // New York
-                    [46, 38, '#ffb95f', 2.6, 0.2,  false],  // Chicago
-                    [36, 42, '#c3c0ff', 2.2, 0.8,  false],  // LA
-                    [62, 40, '#4edea3', 2.8, 0.4,  false],  // Boston
-                    // South America
-                    [56, 74, '#c3c0ff', 2.3, 0.5,  false],  // São Paulo
-                    [50, 78, '#4edea3', 2.7, 0.1,  false],  // Buenos Aires
-                    // Europe
-                    [122, 26, '#c3c0ff', 2.0, 0.2, true ],  // London
-                    [128, 24, '#4edea3', 2.5, 0.5, false],  // Paris
-                    [134, 26, '#ffb95f', 2.2, 0.7, false],  // Berlin
-                    [136, 30, '#c3c0ff', 2.8, 0.3, false],  // Amsterdam
-                    [130, 32, '#4edea3', 2.1, 0.9, false],  // Zurich
-                    // Africa
-                    [126, 56, '#ffb95f', 2.4, 0.4, false],  // Lagos
-                    [132, 72, '#c3c0ff', 2.6, 0.6, false],  // Johannesburg
-                    [130, 48, '#4edea3', 2.3, 0.2, false],  // Cairo
-                    // Asia — India (dense)
-                    [180, 50, '#4edea3', 1.8, 0,   true ],  // Delhi
-                    [184, 56, '#c3c0ff', 2.1, 0.3, true ],  // Mumbai
-                    [186, 60, '#ffb95f', 2.4, 0.6, false],  // Bangalore
-                    [188, 54, '#4edea3', 2.0, 0.2, false],  // Hyderabad
-                    [182, 62, '#c3c0ff', 2.6, 0.5, false],  // Chennai
-                    [176, 52, '#4edea3', 2.2, 0.8, false],  // Pune
-                    // Asia — East
-                    [218, 30, '#c3c0ff', 2.0, 0.1, true ],  // Beijing
-                    [222, 36, '#4edea3', 2.3, 0.4, true ],  // Shanghai
-                    [228, 38, '#ffb95f', 2.5, 0.7, false],  // Tokyo
-                    [224, 42, '#c3c0ff', 2.1, 0.3, false],  // Seoul
-                    [214, 44, '#4edea3', 2.7, 0.6, false],  // Chengdu
-                    // SE Asia
-                    [224, 58, '#c3c0ff', 2.2, 0.2, false],  // Singapore
-                    [220, 54, '#4edea3', 2.4, 0.5, false],  // Bangkok
-                    [228, 56, '#ffb95f', 2.6, 0.8, false],  // Jakarta
-                    // Middle East
-                    [158, 44, '#ffb95f', 2.3, 0.3, false],  // Dubai
-                    [154, 40, '#c3c0ff', 2.5, 0.6, false],  // Riyadh
-                    // Australia
-                    [244, 84, '#4edea3', 2.1, 0.4, true ],  // Sydney
-                    [238, 82, '#c3c0ff', 2.4, 0.7, false],  // Melbourne
-                    [248, 80, '#ffb95f', 2.7, 0.2, false],  // Brisbane
-                  ].map(([cx, cy, color, d, dl, big], i) => (
+                  <path d="M738,295 L768,285 L800,288 L825,300 L838,318 L838,340 L828,358 L810,368 L788,370 L765,362 L748,348 L738,328 L732,308Z" fill="rgba(195,192,255,0.1)" stroke="rgba(195,192,255,0.2)" strokeWidth="0.8"/>
+                  {/* Grid lines */}
+                  <line x1="0" y1="250" x2="1000" y2="250" stroke="rgba(195,192,255,0.04)" strokeWidth="0.5"/>
+                  <line x1="500" y1="0" x2="500" y2="500" stroke="rgba(195,192,255,0.04)" strokeWidth="0.5"/>
+                  <line x1="0" y1="125" x2="1000" y2="125" stroke="rgba(195,192,255,0.025)" strokeWidth="0.4"/>
+                  <line x1="0" y1="375" x2="1000" y2="375" stroke="rgba(195,192,255,0.025)" strokeWidth="0.4"/>
+                  <line x1="250" y1="0" x2="250" y2="500" stroke="rgba(195,192,255,0.025)" strokeWidth="0.4"/>
+                  <line x1="750" y1="0" x2="750" y2="500" stroke="rgba(195,192,255,0.025)" strokeWidth="0.4"/>
+                  {/* Mentor dots */}
+                  {[[148,112,'#4edea3',2.1,0,true],[162,105,'#c3c0ff',2.4,.3,false],[195,108,'#4edea3',1.9,.6,true],[175,115,'#ffb95f',2.6,.2,false],[140,120,'#c3c0ff',2.2,.8,false],[200,105,'#4edea3',2.8,.4,false],[200,310,'#c3c0ff',2.3,.5,false],[188,345,'#4edea3',2.7,.1,false],[432,88,'#c3c0ff',2.0,.2,true],[448,90,'#4edea3',2.5,.5,false],[462,82,'#ffb95f',2.2,.7,false],[455,85,'#c3c0ff',2.8,.3,false],[468,175,'#ffb95f',2.4,.4,false],[478,255,'#c3c0ff',2.6,.6,false],[472,148,'#4edea3',2.3,.2,false],[545,128,'#ffb95f',2.3,.3,false],[600,155,'#4edea3',1.8,0,true],[605,168,'#c3c0ff',2.1,.3,true],[612,178,'#ffb95f',2.4,.6,false],[615,162,'#4edea3',2.0,.2,false],[608,182,'#c3c0ff',2.6,.5,false],[598,160,'#4edea3',2.2,.8,false],[762,95,'#c3c0ff',2.0,.1,true],[772,108,'#4edea3',2.3,.4,true],[808,95,'#ffb95f',2.5,.7,false],[778,100,'#c3c0ff',2.1,.3,false],[712,165,'#c3c0ff',2.2,.2,false],[700,158,'#4edea3',2.4,.5,false],[800,328,'#4edea3',2.1,.4,true],[785,335,'#c3c0ff',2.4,.7,false]].map(([cx,cy,color,d,dl,big],i)=>(
                     <g key={i}>
-                      {/* Ripple ring */}
-                      <circle cx={cx} cy={cy} r={big ? 4 : 3} fill="none" stroke={color} strokeWidth="0.6"
-                        className="wr" style={{'--d':`${d}s`,'--dl':`${dl}s`}} opacity="0.5"/>
-                      {/* Core dot */}
-                      <circle cx={cx} cy={cy} r={big ? 2 : 1.5} fill={color}
-                        className={big ? 'wp' : 'wp2'}
-                        style={{'--d':`${d}s`,'--dl':`${dl}s`}}
-                        filter="url(#wglow)"/>
+                      <circle cx={cx} cy={cy} r={big?10:7} fill="none" stroke={color} strokeWidth="0.8" className="mr" style={{'--d':`${d}s`,'--dl':`${dl}s`}} opacity="0.55"/>
+                      <circle cx={cx} cy={cy} r={big?3:2} fill={color} className="md" style={{'--d':`${d}s`,'--dl':`${dl}s`}} filter="url(#mdot)"/>
                     </g>
                   ))}
-
-                  {/* ── Connection arcs between major hubs ── */}
-                  <path d="M58 36 Q90 10 122 26"  fill="none" stroke="rgba(195,192,255,0.12)" strokeWidth="0.7" strokeDasharray="3 4"/>
-                  <path d="M122 26 Q152 18 180 50" fill="none" stroke="rgba(78,222,163,0.1)"  strokeWidth="0.7" strokeDasharray="3 4"/>
-                  <path d="M184 56 Q204 40 222 36" fill="none" stroke="rgba(195,192,255,0.1)"  strokeWidth="0.7" strokeDasharray="3 4"/>
-                  <path d="M42 32 Q50 60 56 74"    fill="none" stroke="rgba(255,185,95,0.08)"  strokeWidth="0.6" strokeDasharray="3 4"/>
+                  {/* Connection arcs */}
+                  <path d="M195,108 Q312,60 432,88" fill="none" stroke="rgba(195,192,255,0.1)" strokeWidth="0.8" strokeDasharray="4 5"/>
+                  <path d="M432,88 Q516,72 600,155" fill="none" stroke="rgba(78,222,163,0.08)" strokeWidth="0.8" strokeDasharray="4 5"/>
+                  <path d="M605,168 Q688,130 762,95" fill="none" stroke="rgba(195,192,255,0.08)" strokeWidth="0.8" strokeDasharray="4 5"/>
                 </svg>
 
-                {/* Gradient overlay — bottom fade for text readability */}
-                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, #0d1526 0%, rgba(13,21,38,0.75) 30%, rgba(13,21,38,0.1) 70%, transparent 100%)', borderRadius: 14 }}/>
-
-                {/* Content */}
-                <div style={{ position: 'relative', zIndex: 1, padding: 'clamp(1.25rem, 3vw, 1.75rem)', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, #0a1020 0%, rgba(10,16,32,0.8) 25%, rgba(10,16,32,0.1) 55%, transparent 100%)', borderRadius: 14 }}/>
+                <div style={{ position: 'relative', zIndex: 1, padding: 'clamp(1.25rem,3vw,1.75rem)', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.3rem' }}>
-                    <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#4edea3', boxShadow: '0 0 6px #4edea3', animation: 'wPulse 2s ease-in-out infinite' }}/>
+                    <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#4edea3', boxShadow: '0 0 6px #4edea3' }}/>
                     <span style={{ fontSize: '0.55rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.18em', color: '#4edea3', opacity: 0.85 }}>Live Network</span>
                   </div>
                   <div style={{ fontSize: 'clamp(1.75rem,4vw,2rem)', fontWeight: 900, lineHeight: 1, color: '#fff' }}>12k+</div>
