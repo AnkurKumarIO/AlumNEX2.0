@@ -785,7 +785,7 @@ export default function Dashboard() {
         <div style={{ padding: '1.5rem 1rem 1rem' }}>
           {/* Logo row: logo + collapse button */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-            <AlumNexLogo size="md" />
+            <AlumNexLogo size="md" showSubtext={false} />
             <button 
               onClick={() => setSidebarOpen(false)} 
               title="Collapse Sidebar"
@@ -818,7 +818,7 @@ export default function Dashboard() {
             </button>
           </div>
           {/* Subtitle */}
-          <div style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.18em', color: '#c7c4d8', marginTop: 10, textAlign: 'center' }}>Intelligence Suite</div>
+          <div style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.18em', color: '#c7c4d8', marginTop: 10, textAlign: 'center' }}>Intelligence Platform</div>
         </div>
         <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
           {NAV_ITEMS.map(({ icon, label: l, tab }) => {

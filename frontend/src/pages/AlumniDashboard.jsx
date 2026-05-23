@@ -2179,7 +2179,7 @@ export default function AlumniDashboard() {
         <div style={{ marginBottom: '2rem' }}>
           {/* Logo row: logo + collapse button */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-            <AlumNexLogo size="md" />
+            <AlumNexLogo size="md" showSubtext={false} />
             <button 
               onClick={() => setSidebarOpen(false)} 
               title="Collapse Sidebar"
