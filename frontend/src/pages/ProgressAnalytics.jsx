@@ -26,10 +26,15 @@ export default function ProgressAnalytics() {
 
   // Chart — last 8 ratings received
   const chartRatings = myRatings.slice(-8);
-  const chartPoints = chartRatings.map((r, i) => [
-    i * (1200 / Math.max(chartRatings.length - 1, 1)),
-    260 - ((r / 5) * 240),
-  ]);
+  const CHART_W = 1200;
+  const CHART_H = 260;
+  const CHART_PAD_TOP = 20;
+  const CHART_PAD_BOTTOM = 20;
+  const chartY = (r) => CHART_PAD_TOP + (1 - r / 5) * (CHART_H - CHART_PAD_TOP - CHART_PAD_BOTTOM);
+  const chartX = (i) => chartRatings.length === 1
+    ? CHART_W / 2
+    : i * (CHART_W / (chartRatings.length - 1));
+  const chartPoints = chartRatings.map((r, i) => [chartX(i), chartY(r)]);
   const pathD = chartPoints.length > 1
     ? `M ${chartPoints.map(p => p.join(' ')).join(' L ')}`
     : null;
@@ -76,35 +81,44 @@ export default function ProgressAnalytics() {
             <h2 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Rating Trend</h2>
             <span style={{ padding: '0.25rem 0.75rem', background: '#2d3449', borderRadius: 999, fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c7c4d8' }}>Feedback Rating</span>
           </div>
-          <div style={{ position: 'relative', height: 280 }}>
-            {/* Grid lines */}
-            {[0,1,2,3,4].map(i => (
-              <div key={i} style={{ position: 'absolute', left: 0, right: 0, top: `${i * 25}%`, borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center' }}>
-                <span style={{ position: 'absolute', left: -24, fontSize: '0.55rem', color: 'rgba(199,196,216,0.3)', fontWeight: 700 }}>{5 - i}</span>
-              </div>
-            ))}
+          <div style={{ position: 'relative', height: 280, paddingLeft: 28 }}>
+            {/* Y-axis grid lines at ratings 1–5 */}
+            {[1,2,3,4,5].map(r => {
+              const pct = ((5 - r) / 4) * 100;
+              return (
+                <div key={r} style={{ position: 'absolute', left: 28, right: 0, top: `${pct}%`, borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center' }}>
+                  <span style={{ position: 'absolute', left: -24, fontSize: '0.55rem', color: 'rgba(199,196,216,0.4)', fontWeight: 700 }}>{r}</span>
+                </div>
+              );
+            })}
             {pathD ? (
-              <svg width="100%" height="260" viewBox="0 0 1200 260" preserveAspectRatio="none" style={{ position: 'absolute', top: 0, left: 0 }}>
+              <svg width="100%" height="260" viewBox={`0 0 ${CHART_W} ${CHART_H}`} preserveAspectRatio="none" style={{ position: 'absolute', top: 0, left: 28, right: 0, width: 'calc(100% - 28px)' }}>
                 <defs>
                   <linearGradient id="ratingGrad" x1="0%" x2="100%">
                     <stop offset="0%" stopColor="#ffb95f" />
                     <stop offset="100%" stopColor="#c3c0ff" />
                   </linearGradient>
+                  <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#ffb95f" stopOpacity="0.15" />
+                    <stop offset="100%" stopColor="#ffb95f" stopOpacity="0" />
+                  </linearGradient>
                 </defs>
-                <path d={pathD} fill="none" stroke="url(#ratingGrad)" strokeWidth="4" strokeLinecap="round" />
+                {/* Area fill */}
+                <path d={`${pathD} L ${chartPoints[chartPoints.length-1][0]} ${CHART_H} L ${chartPoints[0][0]} ${CHART_H} Z`} fill="url(#areaGrad)" />
+                {/* Line */}
+                <path d={pathD} fill="none" stroke="url(#ratingGrad)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                {/* Dots + labels */}
                 {chartPoints.map(([x, y], i) => (
                   <g key={i}>
                     <circle cx={x} cy={y} r="6" fill="#ffb95f" stroke="#0b1326" strokeWidth="2" />
-                    <text x={x} y={y - 14} textAnchor="middle" fill="#ffb95f" fontSize="12" fontWeight="700">{chartRatings[i]}★</text>
+                    <text x={x} y={y - 12} textAnchor="middle" fill="#ffb95f" fontSize="11" fontWeight="700">{chartRatings[i]}★</text>
                   </g>
                 ))}
               </svg>
             ) : chartPoints.length === 1 ? (
-              <svg width="100%" height="260" viewBox="0 0 1200 260" preserveAspectRatio="none" style={{ position: 'absolute', top: 0, left: 0 }}>
-                <circle cx={600} cy={chartPoints[0][1]} r="8" fill="#ffb95f" stroke="#0b1326" strokeWidth="2">
-                  <animate attributeName="r" values="8;12;8" dur="2s" repeatCount="indefinite" />
-                </circle>
-                <text x={600} y={chartPoints[0][1] - 18} textAnchor="middle" fill="#ffb95f" fontSize="14" fontWeight="700">{chartRatings[0]}★</text>
+              <svg width="100%" height="260" viewBox={`0 0 ${CHART_W} ${CHART_H}`} preserveAspectRatio="none" style={{ position: 'absolute', top: 0, left: 28, width: 'calc(100% - 28px)' }}>
+                <circle cx={CHART_W / 2} cy={chartPoints[0][1]} r="8" fill="#ffb95f" stroke="#0b1326" strokeWidth="2" />
+                <text x={CHART_W / 2} y={chartPoints[0][1] - 16} textAnchor="middle" fill="#ffb95f" fontSize="13" fontWeight="700">{chartRatings[0]}★</text>
               </svg>
             ) : (
               <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c7c4d8', fontSize: '0.875rem', opacity: 0.5 }}>
@@ -112,7 +126,7 @@ export default function ProgressAnalytics() {
               </div>
             )}
             {chartRatings.length > 0 && (
-              <div style={{ position: 'absolute', bottom: -24, left: 0, right: 0, display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c7c4d8' }}>
+              <div style={{ position: 'absolute', bottom: -24, left: 28, right: 0, display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c7c4d8' }}>
                 {chartRatings.map((_, i) => <span key={i}>Session {i + 1}</span>)}
               </div>
             )}
