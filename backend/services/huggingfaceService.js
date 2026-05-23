@@ -1,9 +1,9 @@
 const { HfInference } = require('@huggingface/inference');
 
-// Use a text-generation model available on the free HF Inference API.
-// Must support text-generation task — NOT token-classification or image-captioning.
+// Use a model that supports the conversational/chat task on HF Inference API.
+// mistralai/Mistral-7B-Instruct-v0.3 works via chatCompletion endpoint.
 // Override via HF_MODEL env var if needed.
-const HF_MODEL = process.env.HF_MODEL || 'mistralai/Mistral-7B-Instruct-v0.2';
+const HF_MODEL = process.env.HF_MODEL || 'mistralai/Mistral-7B-Instruct-v0.3';
 const hf = new HfInference({ apiKey: process.env.HUGGINGFACE_API_KEY });
 
 async function analyzeResumeWithHuggingFace(prompt) {
@@ -11,27 +11,29 @@ async function analyzeResumeWithHuggingFace(prompt) {
     throw new Error('Hugging Face API key missing');
   }
 
-  const response = await hf.textGeneration({
+  // Use chatCompletion (conversational task) — widely supported on HF Inference API
+  const response = await hf.chatCompletion({
     model: HF_MODEL,
-    inputs: prompt,
-    parameters: {
-      max_new_tokens: 800,
-      temperature: 0.2,
-      top_p: 0.9,
-      repetition_penalty: 1.05,
-      return_full_text: false,
-    },
+    messages: [
+      {
+        role: 'user',
+        content: prompt,
+      },
+    ],
+    max_tokens: 800,
+    temperature: 0.2,
   });
 
   if (!response) {
     throw new Error('Empty response from Hugging Face');
   }
 
-  if (Array.isArray(response)) {
-    return response[0]?.generated_text || '';
+  const content = response.choices?.[0]?.message?.content;
+  if (!content) {
+    throw new Error('No content in Hugging Face response');
   }
 
-  return response.generated_text || response?.text || '';
+  return content;
 }
 
 async function extractTextViaHuggingFace(fileBuffer, mimeType = 'image/jpeg') {
@@ -39,11 +41,10 @@ async function extractTextViaHuggingFace(fileBuffer, mimeType = 'image/jpeg') {
     return { unavailable: true, reason: 'Hugging Face API key missing' };
   }
 
-  // OCR model priority list — available on the free HF Inference API.
-  // trocr-large-printed is best for printed document/resume OCR.
+  // Use BLIP image captioning — available on free HF Inference API
+  // Note: for proper OCR, Tesseract.js (local) is more reliable
   const ocrModels = [
-    'microsoft/trocr-large-printed',
-    'microsoft/trocr-base-handwritten',
+    'Salesforce/blip-image-captioning-base',
   ];
 
   for (const model of ocrModels) {
@@ -60,7 +61,6 @@ async function extractTextViaHuggingFace(fileBuffer, mimeType = 'image/jpeg') {
       }
     } catch (error) {
       console.error(`Hugging Face OCR Error (${model}):`, error.message);
-      // Continue to next model in the list
     }
   }
 

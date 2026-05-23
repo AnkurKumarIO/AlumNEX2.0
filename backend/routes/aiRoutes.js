@@ -3,10 +3,10 @@ const router  = express.Router();
 const multer  = require('multer');
 const fs      = require('fs');
 const path    = require('path');
-const pdfParsePkg = require('pdf-parse');
-const pdfParse = typeof pdfParsePkg === 'function'
-  ? pdfParsePkg
-  : pdfParsePkg?.default || pdfParsePkg?.pdfParse || pdfParsePkg;
+
+// pdf-parse v2 exports a PDFParse class, not a function
+const { PDFParse } = require('pdf-parse');
+
 const { execFile } = require('child_process');
 const { promisify } = require('util');
 const OpenAI  = require('openai');
@@ -67,8 +67,10 @@ async function extractPdfText(filePath) {
     const dataBuffer = fs.readFileSync(filePath);
     console.log(`[PDF] File size: ${dataBuffer.length} bytes`);
 
-    const data = await pdfParse(dataBuffer);
-    const extractedText = data.text?.trim() || '';
+    // pdf-parse v2: use PDFParse class
+    const parser = new PDFParse({ data: dataBuffer });
+    const result = await parser.getText();
+    const extractedText = result.text?.trim() || '';
 
     console.log(`[PDF] Extracted text length: ${extractedText.length} chars`);
     if (extractedText.length > 0) {
@@ -78,16 +80,24 @@ async function extractPdfText(filePath) {
     return extractedText;
   } catch (e) {
     console.error('[PDF] pdf-parse failed:', e.message);
+    return '';
+  }
+}
 
-    // Fallback: try to extract text using a different method
-    try {
-      console.log('[PDF] Trying alternative extraction method...');
-      // For now, just return a minimal placeholder that will trigger analysis
-      return 'PDF document detected but text extraction failed. This appears to be a resume document.';
-    } catch (fallbackError) {
-      console.error('[PDF] Fallback extraction also failed:', fallbackError.message);
-      return 'PDF document uploaded for analysis.';
-    }
+// ── Helper: Local OCR via Tesseract.js (no API key needed) ────────────────────
+async function extractTextViaTesseract(imageBuffer) {
+  try {
+    const Tesseract = require('tesseract.js');
+    console.log('[Tesseract] Starting local OCR...');
+    const { data: { text } } = await Tesseract.recognize(imageBuffer, 'eng', {
+      logger: () => {}, // suppress progress logs
+    });
+    const cleaned = (text || '').trim();
+    console.log(`[Tesseract] OCR complete: ${cleaned.length} chars`);
+    return cleaned.length > 10 ? { text: cleaned } : { unavailable: true, reason: 'Tesseract returned too little text' };
+  } catch (err) {
+    console.error('[Tesseract] OCR error:', err.message);
+    return { unavailable: true, reason: err.message };
   }
 }
 
@@ -178,7 +188,6 @@ router.post('/resume-analyze', upload.any(), async (req, res) => {
           if (!ocrSuccess && hasHuggingFaceOCR) {
             try {
               console.log('[PDF] Trying Hugging Face OCR fallback...');
-              // Convert PDF to images first, then OCR each page
               if (pdfImgConvert) {
                 const pdfImages = await pdfImgConvert.convert(file.path, { width: 1000 });
                 if (pdfImages && pdfImages.length > 0) {
@@ -195,6 +204,25 @@ router.post('/resume-analyze', upload.any(), async (req, res) => {
               }
             } catch (hfErr) {
               console.error('[PDF->HuggingFace] OCR Error:', hfErr.message);
+            }
+          }
+
+          // Local Tesseract.js OCR — no API key needed, always available
+          if (!ocrSuccess && pdfImgConvert) {
+            try {
+              console.log('[PDF] Trying local Tesseract OCR fallback...');
+              const pdfImages = await pdfImgConvert.convert(file.path, { width: 1200 });
+              if (pdfImages && pdfImages.length > 0) {
+                const tesseractResult = await extractTextViaTesseract(Buffer.from(pdfImages[0]));
+                if (!tesseractResult.unavailable && tesseractResult.text) {
+                  extractedText = normalizeText(tesseractResult.text);
+                  isOcr = true;
+                  ocrSuccess = true;
+                  console.log(`[PDF->Tesseract] OCR Success: ${extractedText.length} chars.`);
+                }
+              }
+            } catch (tessErr) {
+              console.error('[PDF->Tesseract] OCR Error:', tessErr.message);
             }
           }
 
@@ -255,6 +283,23 @@ router.post('/resume-analyze', upload.any(), async (req, res) => {
             }
           } catch (hfErr) {
             console.error('[Image->HuggingFace] OCR Error:', hfErr.message);
+          }
+        }
+
+        // Local Tesseract.js OCR — no API key needed
+        if (!ocrSuccess) {
+          try {
+            console.log('[Image] Trying local Tesseract OCR fallback...');
+            const fileBuffer = fs.readFileSync(file.path);
+            const tesseractResult = await extractTextViaTesseract(fileBuffer);
+            if (!tesseractResult.unavailable && tesseractResult.text) {
+              extractedText = normalizeText(tesseractResult.text);
+              isOcr = true;
+              ocrSuccess = true;
+              console.log(`[Image->Tesseract] OCR Success: ${extractedText.length} chars.`);
+            }
+          } catch (tessErr) {
+            console.error('[Image->Tesseract] OCR Error:', tessErr.message);
           }
         }
 
