@@ -274,24 +274,139 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              {/* RIGHT BOTTOM: Glowing dot heatmap */}
-              <div style={{ flex: 1, background: '#131b2e', borderRadius: 14, padding: 'clamp(1.25rem, 3vw, 1.75rem)', border: '1px solid rgba(70,69,85,0.15)', minHeight: '140px', overflow: 'hidden', position: 'relative' }}>
-                <svg viewBox="0 0 220 80" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.8 }} preserveAspectRatio="xMidYMid slice">
-                  <defs><style>{`@keyframes dp{0%,100%{opacity:.15}50%{opacity:.9}}.dp{animation:dp var(--d,2s) ease-in-out infinite;animation-delay:var(--dl,0s)}`}</style></defs>
-                  {[[10,10,2,'#4edea3',2.1,0],[30,10,1.5,'#c3c0ff',1.8,.3],[50,10,2.5,'#4edea3',2.4,.1],[70,10,1.5,'#c3c0ff',1.9,.5],[90,10,2,'#ffb95f',2.2,.2],[110,10,1.5,'#4edea3',2,.4],[130,10,2,'#c3c0ff',1.7,.1],[150,10,1.5,'#4edea3',2.3,.6],[170,10,2,'#c3c0ff',2.1,.2],[190,10,1.5,'#ffb95f',1.8,.4],[210,10,2,'#4edea3',2,.3],
-                    [10,25,1.5,'#c3c0ff',2,.2],[30,25,3,'#4edea3',1.6,0],[50,25,1.5,'#c3c0ff',2.2,.4],[70,25,3,'#4edea3',1.9,.1],[90,25,1.5,'#c3c0ff',2.4,.5],[110,25,3,'#ffb95f',1.7,.2],[130,25,1.5,'#4edea3',2.1,.3],[150,25,3,'#c3c0ff',1.8,0],[170,25,1.5,'#4edea3',2.3,.6],[190,25,2.5,'#c3c0ff',2,.1],[210,25,1.5,'#ffb95f',1.9,.4],
-                    [10,40,2,'#4edea3',1.8,.1],[30,40,1.5,'#c3c0ff',2.2,.5],[50,40,3,'#ffb95f',1.6,0],[70,40,1.5,'#4edea3',2,.3],[90,40,3,'#c3c0ff',1.9,.2],[110,40,1.5,'#4edea3',2.3,.4],[130,40,2.5,'#c3c0ff',1.7,.1],[150,40,1.5,'#ffb95f',2.1,.5],[170,40,3,'#4edea3',1.8,0],[190,40,1.5,'#c3c0ff',2.4,.3],[210,40,2,'#4edea3',2,.2],
-                    [10,55,1.5,'#c3c0ff',2.1,.4],[30,55,2,'#4edea3',1.9,.1],[50,55,1.5,'#c3c0ff',2.3,.5],[70,55,2.5,'#ffb95f',1.7,0],[90,55,1.5,'#4edea3',2,.3],[110,55,2,'#c3c0ff',1.8,.2],[130,55,1.5,'#4edea3',2.2,.4],[150,55,2.5,'#c3c0ff',1.6,.1],[170,55,1.5,'#ffb95f',2.4,.5],[190,55,2,'#4edea3',1.9,0],[210,55,1.5,'#c3c0ff',2.1,.3],
-                    [10,70,2,'#4edea3',1.7,.2],[30,70,1.5,'#c3c0ff',2.3,.4],[50,70,2,'#4edea3',1.9,.1],[70,70,1.5,'#ffb95f',2.1,.5],[90,70,2.5,'#c3c0ff',1.8,0],[110,70,1.5,'#4edea3',2.4,.3],[130,70,2,'#c3c0ff',1.6,.2],[150,70,1.5,'#4edea3',2.2,.4],[170,70,2.5,'#c3c0ff',1.9,.1],[190,70,1.5,'#ffb95f',2,.5],[210,70,2,'#4edea3',1.7,0],
-                  ].map(([cx,cy,r,color,d,dl],i) => (
-                    <circle key={i} cx={cx} cy={cy} r={r} fill={color} className="dp" style={{'--d':`${d}s`,'--dl':`${dl}s`}}/>
+              {/* RIGHT BOTTOM: World map with glowing mentor dots */}
+              <div style={{ flex: 1, background: '#0d1526', borderRadius: 14, border: '1px solid rgba(70,69,85,0.15)', minHeight: '140px', overflow: 'hidden', position: 'relative' }}>
+
+                {/* World map SVG — abstract continent outlines + mentor dots */}
+                <svg viewBox="0 0 320 140" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <filter id="wglow" x="-60%" y="-60%" width="220%" height="220%">
+                      <feGaussianBlur stdDeviation="2.5" result="b"/>
+                      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+                    </filter>
+                    <filter id="wglow2" x="-100%" y="-100%" width="300%" height="300%">
+                      <feGaussianBlur stdDeviation="4" result="b"/>
+                      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+                    </filter>
+                    <radialGradient id="wbg" cx="50%" cy="50%" r="70%">
+                      <stop offset="0%" stopColor="#1a2a4a" stopOpacity="0.6"/>
+                      <stop offset="100%" stopColor="#0d1526" stopOpacity="0"/>
+                    </radialGradient>
+                    <style>{`
+                      @keyframes wPulse{0%,100%{opacity:.3;r:2}50%{opacity:1;r:3.2}}
+                      @keyframes wPulse2{0%,100%{opacity:.2;r:1.5}50%{opacity:.85;r:2.5}}
+                      @keyframes wRing{0%,100%{opacity:0;r:4}50%{opacity:.4;r:7}}
+                      .wp{animation:wPulse var(--d,2.2s) ease-in-out infinite;animation-delay:var(--dl,0s)}
+                      .wp2{animation:wPulse2 var(--d,2.8s) ease-in-out infinite;animation-delay:var(--dl,0s)}
+                      .wr{animation:wRing var(--d,2.2s) ease-in-out infinite;animation-delay:var(--dl,0s)}
+                    `}</style>
+                  </defs>
+
+                  {/* Ambient background glow */}
+                  <ellipse cx="160" cy="70" rx="140" ry="60" fill="url(#wbg)"/>
+
+                  {/* ── Abstract continent outlines ── */}
+                  {/* North America */}
+                  <path d="M28 28 C32 22 44 20 52 24 C58 26 62 30 64 36 C66 42 62 50 58 54 C54 58 48 60 44 58 C36 56 28 50 26 44 C24 38 24 34 28 28Z" fill="none" stroke="rgba(195,192,255,0.12)" strokeWidth="0.8"/>
+                  {/* South America */}
+                  <path d="M52 68 C56 64 62 64 66 68 C70 72 70 80 68 86 C66 92 60 96 56 94 C50 92 46 86 46 80 C46 74 48 72 52 68Z" fill="none" stroke="rgba(195,192,255,0.1)" strokeWidth="0.8"/>
+                  {/* Europe */}
+                  <path d="M118 22 C122 18 130 18 136 22 C140 26 140 32 136 36 C132 40 124 40 120 36 C116 32 114 26 118 22Z" fill="none" stroke="rgba(195,192,255,0.12)" strokeWidth="0.8"/>
+                  {/* Africa */}
+                  <path d="M122 46 C128 42 136 42 140 48 C144 54 144 66 140 74 C136 80 128 82 122 78 C116 74 114 64 114 56 C114 50 118 50 122 46Z" fill="none" stroke="rgba(195,192,255,0.1)" strokeWidth="0.8"/>
+                  {/* Asia */}
+                  <path d="M148 18 C158 14 178 14 192 20 C202 24 208 32 206 40 C204 48 194 52 182 52 C168 52 154 48 148 40 C142 34 140 22 148 18Z" fill="none" stroke="rgba(195,192,255,0.12)" strokeWidth="0.8"/>
+                  {/* India peninsula */}
+                  <path d="M182 52 C186 52 190 56 190 62 C190 68 186 74 182 74 C178 74 174 68 174 62 C174 56 178 52 182 52Z" fill="none" stroke="rgba(195,192,255,0.1)" strokeWidth="0.7"/>
+                  {/* SE Asia / Indonesia */}
+                  <path d="M218 54 C224 50 232 52 236 58 C238 62 234 68 228 68 C222 68 216 64 216 58 C216 56 216 56 218 54Z" fill="none" stroke="rgba(195,192,255,0.09)" strokeWidth="0.7"/>
+                  {/* Australia */}
+                  <path d="M234 76 C240 72 250 72 256 78 C260 82 260 90 256 94 C250 98 240 98 234 94 C228 90 228 82 234 76Z" fill="none" stroke="rgba(195,192,255,0.1)" strokeWidth="0.8"/>
+
+                  {/* ── Subtle grid lines (latitude/longitude feel) ── */}
+                  <line x1="0" y1="70" x2="320" y2="70" stroke="rgba(195,192,255,0.04)" strokeWidth="0.5"/>
+                  <line x1="160" y1="0" x2="160" y2="140" stroke="rgba(195,192,255,0.04)" strokeWidth="0.5"/>
+                  <ellipse cx="160" cy="70" rx="130" ry="55" fill="none" stroke="rgba(195,192,255,0.03)" strokeWidth="0.5"/>
+                  <ellipse cx="160" cy="70" rx="80"  ry="35" fill="none" stroke="rgba(195,192,255,0.03)" strokeWidth="0.5"/>
+
+                  {/* ── Mentor dots — placed at real geographic hotspots ── */}
+                  {/* [cx, cy, color, duration, delay, big] */}
+                  {[
+                    // North America
+                    [42, 32, '#4edea3', 2.1, 0,    true ],  // San Francisco
+                    [52, 30, '#c3c0ff', 2.4, 0.3,  false],  // Seattle
+                    [58, 36, '#4edea3', 1.9, 0.6,  true ],  // New York
+                    [46, 38, '#ffb95f', 2.6, 0.2,  false],  // Chicago
+                    [36, 42, '#c3c0ff', 2.2, 0.8,  false],  // LA
+                    [62, 40, '#4edea3', 2.8, 0.4,  false],  // Boston
+                    // South America
+                    [56, 74, '#c3c0ff', 2.3, 0.5,  false],  // São Paulo
+                    [50, 78, '#4edea3', 2.7, 0.1,  false],  // Buenos Aires
+                    // Europe
+                    [122, 26, '#c3c0ff', 2.0, 0.2, true ],  // London
+                    [128, 24, '#4edea3', 2.5, 0.5, false],  // Paris
+                    [134, 26, '#ffb95f', 2.2, 0.7, false],  // Berlin
+                    [136, 30, '#c3c0ff', 2.8, 0.3, false],  // Amsterdam
+                    [130, 32, '#4edea3', 2.1, 0.9, false],  // Zurich
+                    // Africa
+                    [126, 56, '#ffb95f', 2.4, 0.4, false],  // Lagos
+                    [132, 72, '#c3c0ff', 2.6, 0.6, false],  // Johannesburg
+                    [130, 48, '#4edea3', 2.3, 0.2, false],  // Cairo
+                    // Asia — India (dense)
+                    [180, 50, '#4edea3', 1.8, 0,   true ],  // Delhi
+                    [184, 56, '#c3c0ff', 2.1, 0.3, true ],  // Mumbai
+                    [186, 60, '#ffb95f', 2.4, 0.6, false],  // Bangalore
+                    [188, 54, '#4edea3', 2.0, 0.2, false],  // Hyderabad
+                    [182, 62, '#c3c0ff', 2.6, 0.5, false],  // Chennai
+                    [176, 52, '#4edea3', 2.2, 0.8, false],  // Pune
+                    // Asia — East
+                    [218, 30, '#c3c0ff', 2.0, 0.1, true ],  // Beijing
+                    [222, 36, '#4edea3', 2.3, 0.4, true ],  // Shanghai
+                    [228, 38, '#ffb95f', 2.5, 0.7, false],  // Tokyo
+                    [224, 42, '#c3c0ff', 2.1, 0.3, false],  // Seoul
+                    [214, 44, '#4edea3', 2.7, 0.6, false],  // Chengdu
+                    // SE Asia
+                    [224, 58, '#c3c0ff', 2.2, 0.2, false],  // Singapore
+                    [220, 54, '#4edea3', 2.4, 0.5, false],  // Bangkok
+                    [228, 56, '#ffb95f', 2.6, 0.8, false],  // Jakarta
+                    // Middle East
+                    [158, 44, '#ffb95f', 2.3, 0.3, false],  // Dubai
+                    [154, 40, '#c3c0ff', 2.5, 0.6, false],  // Riyadh
+                    // Australia
+                    [244, 84, '#4edea3', 2.1, 0.4, true ],  // Sydney
+                    [238, 82, '#c3c0ff', 2.4, 0.7, false],  // Melbourne
+                    [248, 80, '#ffb95f', 2.7, 0.2, false],  // Brisbane
+                  ].map(([cx, cy, color, d, dl, big], i) => (
+                    <g key={i}>
+                      {/* Ripple ring */}
+                      <circle cx={cx} cy={cy} r={big ? 4 : 3} fill="none" stroke={color} strokeWidth="0.6"
+                        className="wr" style={{'--d':`${d}s`,'--dl':`${dl}s`}} opacity="0.5"/>
+                      {/* Core dot */}
+                      <circle cx={cx} cy={cy} r={big ? 2 : 1.5} fill={color}
+                        className={big ? 'wp' : 'wp2'}
+                        style={{'--d':`${d}s`,'--dl':`${dl}s`}}
+                        filter="url(#wglow)"/>
+                    </g>
                   ))}
+
+                  {/* ── Connection arcs between major hubs ── */}
+                  <path d="M58 36 Q90 10 122 26"  fill="none" stroke="rgba(195,192,255,0.12)" strokeWidth="0.7" strokeDasharray="3 4"/>
+                  <path d="M122 26 Q152 18 180 50" fill="none" stroke="rgba(78,222,163,0.1)"  strokeWidth="0.7" strokeDasharray="3 4"/>
+                  <path d="M184 56 Q204 40 222 36" fill="none" stroke="rgba(195,192,255,0.1)"  strokeWidth="0.7" strokeDasharray="3 4"/>
+                  <path d="M42 32 Q50 60 56 74"    fill="none" stroke="rgba(255,185,95,0.08)"  strokeWidth="0.6" strokeDasharray="3 4"/>
                 </svg>
-                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg,rgba(19,27,46,0.65) 0%,rgba(19,27,46,0.25) 100%)', borderRadius: 14 }}/>
-                <div style={{ position: 'relative', zIndex: 1 }}>
-                  <span className="material-symbols-outlined" style={{ color: '#4edea3', fontSize: 'clamp(22px,4vw,26px)', marginBottom: '0.5rem', display: 'block' }}>groups</span>
+
+                {/* Gradient overlay — bottom fade for text readability */}
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, #0d1526 0%, rgba(13,21,38,0.75) 30%, rgba(13,21,38,0.1) 70%, transparent 100%)', borderRadius: 14 }}/>
+
+                {/* Content */}
+                <div style={{ position: 'relative', zIndex: 1, padding: 'clamp(1.25rem, 3vw, 1.75rem)', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.3rem' }}>
+                    <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#4edea3', boxShadow: '0 0 6px #4edea3', animation: 'wPulse 2s ease-in-out infinite' }}/>
+                    <span style={{ fontSize: '0.55rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.18em', color: '#4edea3', opacity: 0.85 }}>Live Network</span>
+                  </div>
                   <div style={{ fontSize: 'clamp(1.75rem,4vw,2rem)', fontWeight: 900, lineHeight: 1, color: '#fff' }}>12k+</div>
-                  <div style={{ fontSize: 'clamp(0.55rem,1.5vw,0.6rem)', textTransform: 'uppercase', letterSpacing: '0.15em', color: '#c7c4d8', fontWeight: 700, marginTop: '0.4rem' }}>Active Mentors</div>
+                  <div style={{ fontSize: 'clamp(0.55rem,1.5vw,0.6rem)', textTransform: 'uppercase', letterSpacing: '0.15em', color: '#c7c4d8', fontWeight: 700, marginTop: '0.35rem' }}>Active Mentors Globally</div>
                 </div>
               </div>
 
