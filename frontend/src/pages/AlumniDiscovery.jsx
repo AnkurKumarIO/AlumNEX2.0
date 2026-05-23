@@ -426,7 +426,7 @@ export default function AlumniDiscovery({ searchQuery = '' }) {
             onMouseLeave={e => { e.currentTarget.style.border = '1px solid transparent'; e.currentTarget.style.boxShadow = 'none'; }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ width: 56, height: 56, borderRadius: 12, background: a.photoPreview ? 'transparent' : 'linear-gradient(135deg,#222a3d,#2d3449)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem', fontWeight: 700, color: '#c3c0ff', flexShrink: 0, border: '1px solid rgba(195,192,255,0.1)' }}>
+                <div style={{ width: 56, height: 56, borderRadius: '50%', background: a.photoPreview ? 'transparent' : 'linear-gradient(135deg,#222a3d,#2d3449)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem', fontWeight: 700, color: '#c3c0ff', flexShrink: 0, border: '1px solid rgba(195,192,255,0.1)' }}>
                   {a.photoPreview ? (
                     <img src={a.photoPreview} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (

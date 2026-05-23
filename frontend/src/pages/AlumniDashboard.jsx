@@ -13,253 +13,6 @@ import SettingsPage from './SettingsPage';
 import LogoutConfirmModal from '../components/LogoutConfirmModal';
 import { subscribeRealtimeSync, emitRealtimeSync } from '../lib/realtimeSync';
 
-// â”€â”€ Student Detail + Accept Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-function StudentDetailModal({ request, onClose, onAccept }) {
-  const rawProfile = request.studentProfile;
-  const initialProfile = typeof rawProfile === 'string' ? (() => {
-    try { return JSON.parse(rawProfile); } catch { return {}; }
-  })() : (rawProfile || {});
-  const [p, setP] = useState(initialProfile);
-  const resumeHref = p.resumeUrl || p.resume_url || '';
-  const [accepting, setAccepting] = useState(false);
-  const [done, setDone] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    const loadLatestProfile = async () => {
-      const sid = request?.studentId;
-      if (!sid || String(sid).startsWith('stu-') || String(sid).startsWith('alm-')) return;
-      try {
-        const user = await getUserById(sid);
-        // profile_data from Supabase may be a JSON string — parse it
-        let dbProfile = user?.profile_data || {};
-        if (typeof dbProfile === 'string') {
-          try { dbProfile = JSON.parse(dbProfile); } catch { dbProfile = {}; }
-        }
-        if (!cancelled && dbProfile && Object.keys(dbProfile).length > 0) {
-          // Live DB profile takes priority over the snapshot stored at request time
-          setP(prev => ({ ...prev, ...dbProfile }));
-        }
-      } catch {}
-    };
-    loadLatestProfile();
-    return () => { cancelled = true; };
-  }, [request?.studentId]);
-
-  const handleAccept = () => {
-    setAccepting(true);
-    setTimeout(() => {
-      acceptRequestOnly(request.id);
-      setDone(true);
-      setTimeout(() => { onAccept(); onClose(); }, 1400);
-    }, 600);
-  };
-
-  return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(6px)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-      <div style={{ background: '#171f33', borderRadius: 20, width: '100%', maxWidth: 560, border: '1px solid rgba(195,192,255,0.15)', boxShadow: '0 40px 80px rgba(0,0,0,0.6)', height: '90vh', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-
-        {/* Header */}
-        <div style={{ padding: '1.5rem 1.5rem 1rem', borderBottom: '1px solid rgba(70,69,85,0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexShrink: 0 }}>
-          <div>
-            <div style={{ fontSize: '0.6rem', fontWeight: 700, color: '#c3c0ff', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>Interview Request</div>
-            <h3 style={{ fontWeight: 700, fontSize: '1.2rem', color: '#dae2fd', marginBottom: 2 }}>{request.studentName}</h3>
-            <div style={{ fontSize: '0.75rem', color: '#c7c4d8' }}>{request.topic}</div>
-          </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c7c4d8', padding: 4 }}>
-            <span className="material-symbols-outlined">close</span>
-          </button>
-        </div>
-
-        {done ? (
-          <div style={{ padding: '3rem', textAlign: 'center' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>✅</div>
-            <h3 style={{ fontWeight: 700, color: '#4edea3', marginBottom: 8 }}>Request Accepted!</h3>
-            <p style={{ fontSize: '0.875rem', color: '#c7c4d8' }}>{request.studentName} has been notified. Click "Book Slot" to schedule the interview.</p>
-          </div>
-        ) : (
-          <div style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
-            {/* Student basic info */}
-            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(70,69,85,0.1)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: '1rem' }}>
-                <div style={{ width: 56, height: 56, borderRadius: 14, background: p.photoPreview ? 'transparent' : 'linear-gradient(135deg,#4f46e5,#c3c0ff)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', fontWeight: 700, color: '#1d00a5', flexShrink: 0, border: '1px solid rgba(195,192,255,0.15)' }}>
-                  {p.photoPreview ? (
-                    <img src={p.photoPreview} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    request?.studentName ? request.studentName[0] : '?'
-                  )}
-                </div>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: '1rem', color: '#dae2fd' }}>{p?.name || request?.studentName || 'Student'}</div>
-                  {p.college && <div style={{ fontSize: '0.78rem', color: '#c7c4d8', marginTop: 2 }}>{p.college}</div>}
-                  {(p.department || p.year) && (
-                    <div style={{ fontSize: '0.72rem', color: '#c3c0ff', marginTop: 2 }}>
-                      {[p.department, p.year].filter(Boolean).join(' • ')}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                {p.cgpa && (
-                  <div style={{ background: '#131b2e', borderRadius: 10, padding: '0.6rem 0.875rem' }}>
-                    <div style={{ fontSize: '0.58rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c7c4d8', marginBottom: 3 }}>CGPA</div>
-                    <div style={{ fontWeight: 700, color: '#4edea3' }}>{p.cgpa} / 10</div>
-                  </div>
-                )}
-                {p.skills?.length > 0 && (
-                  <div style={{ background: '#131b2e', borderRadius: 10, padding: '0.6rem 0.875rem' }}>
-                    <div style={{ fontSize: '0.58rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c7c4d8', marginBottom: 3 }}>Top Skills</div>
-                    <div style={{ fontSize: '0.72rem', color: '#dae2fd', fontWeight: 600 }}>{p.skills.slice(0, 3).join(', ')}</div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Bio */}
-            {p.bio && (
-              <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid rgba(70,69,85,0.1)' }}>
-                <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c7c4d8', marginBottom: 6 }}>About</div>
-                <p style={{ fontSize: '0.8rem', color: '#c7c4d8', lineHeight: 1.6 }}>{p.bio}</p>
-              </div>
-            )}
-
-            {/* Links */}
-            {(p.linkedin || p.github || p.portfolio || p.resumeName || resumeHref) && (
-              <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid rgba(70,69,85,0.1)' }}>
-                <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c7c4d8', marginBottom: 10 }}>Links & Documents</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {p.linkedin && (
-                    <a href={p.linkedin.startsWith('http') ? p.linkedin : `https://${p.linkedin}`} target="_blank" rel="noreferrer"
-                      style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.4rem 0.875rem', background: 'rgba(10,102,194,0.15)', border: '1px solid rgba(10,102,194,0.3)', borderRadius: 8, color: '#60a5fa', fontSize: '0.75rem', fontWeight: 600, textDecoration: 'none' }}>
-                      <span className="material-symbols-outlined" style={{ fontSize: 15 }}>link</span> LinkedIn
-                    </a>
-                  )}
-                  {p.github && (
-                    <a href={p.github.startsWith('http') ? p.github : `https://${p.github}`} target="_blank" rel="noreferrer"
-                      style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.4rem 0.875rem', background: 'rgba(195,192,255,0.1)', border: '1px solid rgba(195,192,255,0.2)', borderRadius: 8, color: '#c3c0ff', fontSize: '0.75rem', fontWeight: 600, textDecoration: 'none' }}>
-                      <span className="material-symbols-outlined" style={{ fontSize: 15 }}>code</span> GitHub
-                    </a>
-                  )}
-                  {p.portfolio && (
-                    <a href={p.portfolio.startsWith('http') ? p.portfolio : `https://${p.portfolio}`} target="_blank" rel="noreferrer"
-                      style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.4rem 0.875rem', background: 'rgba(255,185,95,0.12)', border: '1px solid rgba(255,185,95,0.25)', borderRadius: 8, color: '#ffb95f', fontSize: '0.75rem', fontWeight: 600, textDecoration: 'none' }}>
-                      <span className="material-symbols-outlined" style={{ fontSize: 15 }}>language</span> Portfolio
-                    </a>
-                  )}
-                  {(p.resumeName || resumeHref) && (
-                    <a
-                      href={resumeHref || '#'}
-                      target={resumeHref ? '_blank' : undefined}
-                      rel={resumeHref ? 'noreferrer' : undefined}
-                      onClick={(e) => { if (!resumeHref) e.preventDefault(); }}
-                      style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.4rem 0.875rem', background: 'rgba(78,222,163,0.1)', border: '1px solid rgba(78,222,163,0.2)', borderRadius: 8, color: '#4edea3', fontSize: '0.75rem', fontWeight: 600, textDecoration: 'none', opacity: resumeHref ? 1 : 0.65, cursor: resumeHref ? 'pointer' : 'not-allowed' }}>
-                      <span className="material-symbols-outlined" style={{ fontSize: 15 }}>description</span>
-                      {resumeHref ? `View Resume${p.resumeName ? ` (${p.resumeName})` : ''}` : (p.resumeName || 'Resume uploaded')}
-                    </a>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {(p.targetRoles?.length > 0 || p.preferredCompanies?.length > 0 || p.openTo?.length > 0 || (p.gradMonth || p.gradYear)) && (
-              <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid rgba(70,69,85,0.1)' }}>
-                <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c7c4d8', marginBottom: 8 }}>Career Preferences</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  {p.targetRoles?.length > 0 && (
-                    <div style={{ background: '#131b2e', borderRadius: 10, padding: '0.6rem 0.875rem' }}>
-                      <div style={{ fontSize: '0.58rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c7c4d8', marginBottom: 3 }}>Target Roles</div>
-                      <div style={{ fontSize: '0.72rem', color: '#dae2fd' }}>{p.targetRoles.slice(0, 3).join(', ')}</div>
-                    </div>
-                  )}
-                  {p.openTo?.length > 0 && (
-                    <div style={{ background: '#131b2e', borderRadius: 10, padding: '0.6rem 0.875rem' }}>
-                      <div style={{ fontSize: '0.58rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c7c4d8', marginBottom: 3 }}>Open To</div>
-                      <div style={{ fontSize: '0.72rem', color: '#dae2fd' }}>{p.openTo.join(', ')}</div>
-                    </div>
-                  )}
-                </div>
-                {(p.gradMonth || p.gradYear) && (
-                  <div style={{ marginTop: 8, fontSize: '0.72rem', color: '#c7c4d8' }}>
-                    Graduation: <span style={{ color: '#dae2fd', fontWeight: 600 }}>{[p.gradMonth, p.gradYear].filter(Boolean).join(' ')}</span>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Student's message */}
-            {request.message && (
-              <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid rgba(70,69,85,0.1)' }}>
-                <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c7c4d8', marginBottom: 6 }}>Student's Message</div>
-                <div style={{ background: 'rgba(45,52,73,0.5)', borderLeft: '2px solid #c3c0ff', borderRadius: 8, padding: '0.75rem 1rem' }}>
-                  <p style={{ fontSize: '0.8rem', color: 'rgba(218,226,253,0.85)', fontStyle: 'italic', lineHeight: 1.6 }}>"{request.message}"</p>
-                </div>
-              </div>
-            )}
-
-            {/* Projects */}
-            {p.projects && p.projects.filter(pr => pr && pr.title).length > 0 && (
-              <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid rgba(70,69,85,0.1)' }}>
-                <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c7c4d8', marginBottom: 8 }}>Projects</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {p.projects.filter(pr => pr && pr.title).map((proj, i) => (
-                    <div key={i} style={{ background: 'rgba(255,255,255,0.02)', padding: '0.875rem', borderRadius: 10, border: '1px solid rgba(195,192,255,0.05)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                        <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fff' }}>{proj.title}</div>
-                        {proj.link && (
-                          <a href={proj.link.startsWith('http') ? proj.link : `https://${proj.link}`} target="_blank" rel="noreferrer" style={{ color: '#c3c0ff', display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
-                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>open_in_new</span>
-                          </a>
-                        )}
-                      </div>
-                      {proj.desc && <p style={{ fontSize: '0.75rem', color: '#c7c4d8', margin: '0 0 6px 0', lineHeight: 1.4 }}>{proj.desc}</p>}
-                      {proj.stack && (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                          {proj.stack.split(',').map((t, ti) => (
-                            <span key={ti} style={{ padding: '0.15rem 0.4rem', borderRadius: 4, fontSize: '0.6rem', fontWeight: 600, background: 'rgba(195,192,255,0.05)', color: '#c3c0ff' }}>{t.trim()}</span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Skills tags */}
-            {p.skills?.length > 0 && (
-              <div style={{ padding: '1rem 1.5rem' }}>
-                <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c7c4d8', marginBottom: 8 }}>Skills</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {p.skills.map(s => (
-                    <span key={s} style={{ padding: '0.2rem 0.6rem', background: '#222a3d', borderRadius: 6, fontSize: '0.7rem', fontWeight: 600, color: '#c7c4d8' }}>{s}</span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Footer actions */}
-        {!done && (
-          <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid rgba(70,69,85,0.2)', display: 'flex', gap: 10, flexShrink: 0 }}>
-            <button onClick={() => { declineRequest(request.id); onClose(); }} style={{ flex: 1, padding: '0.75rem', background: '#222a3d', color: '#c7c4d8', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}>
-              Decline
-            </button>
-            <button onClick={handleAccept} disabled={accepting} style={{ flex: 2, padding: '0.75rem', background: accepting ? '#2d3449' : 'linear-gradient(135deg,#4f46e5,#c3c0ff)', color: accepting ? '#c7c4d8' : '#1d00a5', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: '0.8rem', cursor: accepting ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-              {accepting ? (
-                <><div style={{ width: 14, height: 14, border: '2px solid rgba(199,196,216,0.3)', borderTop: '2px solid #c7c4d8', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> Accepting...</>
-              ) : (
-                <><span className="material-symbols-outlined" style={{ fontSize: 16 }}>check_circle</span> Accept Request</>
-              )}
-            </button>
-          </div>
-        )}
-      </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-    </div>
-  );
-}
 
 // â”€â”€ Book Slot Calendar Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function BookSlotModal({ request, onClose, onBooked }) {
@@ -615,9 +368,11 @@ const NAV_ITEMS = [
 // ── Student Full Profile Modal (read-only, mirrors My Profile tab) ──────────────
 // Fetches the student's live profile_data from the DB so alumni always
 // see the latest version — resume, links, projects, bio, etc.
-function StudentFullProfileModal({ request, onClose }) {
+function StudentFullProfileModal({ request, onClose, onAccept, onDecline }) {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [accepting, setAccepting] = useState(false);
+  const [done, setDone] = useState(false);
 
   useEffect(() => {
     if (!request) return;
@@ -664,6 +419,23 @@ function StudentFullProfileModal({ request, onClose }) {
     </div>
   );
 
+  const handleAccept = () => {
+    setAccepting(true);
+    setTimeout(() => {
+      acceptRequestOnly(request.id);
+      setDone(true);
+      setTimeout(() => {
+        if (onAccept) onAccept();
+        onClose();
+      }, 1400);
+    }, 600);
+  };
+
+  const handleDecline = () => {
+    if (onDecline) onDecline();
+    onClose();
+  };
+
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
       <div style={{ background: '#0b1326', borderRadius: 20, width: '100%', maxWidth: 820, maxHeight: '92vh', display: 'flex', flexDirection: 'column', border: '1px solid rgba(195,192,255,0.15)', boxShadow: '0 40px 100px rgba(0,0,0,0.7)', overflow: 'hidden' }}>
@@ -693,6 +465,14 @@ function StudentFullProfileModal({ request, onClose }) {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 200, gap: 12, color: '#c7c4d8' }}>
               <span className="material-symbols-outlined" style={{ fontSize: 28, opacity: 0.4, animation: 'spin 1s linear infinite' }}>progress_activity</span>
               Loading profile...
+            </div>
+          ) : done ? (
+            <div style={{ padding: '4rem 2rem', textAlign: 'center' }}>
+              <div style={{ fontSize: '3.5rem', marginBottom: '1rem', animation: 'scaleUp 0.3s ease' }}>✅</div>
+              <h3 style={{ fontWeight: 800, color: '#4edea3', marginBottom: 8, fontSize: '1.4rem' }}>Request Accepted!</h3>
+              <p style={{ fontSize: '0.9rem', color: '#c7c4d8', maxWidth: 400, margin: '0 auto', lineHeight: 1.5 }}>
+                {request.studentName} has been notified. You can now book an interview slot with them in the dashboard.
+              </p>
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
@@ -832,7 +612,31 @@ function StudentFullProfileModal({ request, onClose }) {
             </div>
           )}
         </div>
+
+        {/* Footer actions */}
+        {!done && request.status === 'pending' && (
+          <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid rgba(70,69,85,0.2)', display: 'flex', gap: 10, flexShrink: 0, background: '#0a0f1d' }}>
+            <button onClick={handleDecline} style={{ flex: 1, padding: '0.75rem', background: '#222a3d', color: '#c7c4d8', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', transition: 'background 0.2s' }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#2a334a'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#222a3d'; }}>
+              Decline
+            </button>
+            <button onClick={handleAccept} disabled={accepting} style={{ flex: 2, padding: '0.75rem', background: accepting ? '#2d3449' : 'linear-gradient(135deg,#4f46e5,#c3c0ff)', color: accepting ? '#c7c4d8' : '#1d00a5', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: '0.8rem', cursor: accepting ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, transition: 'opacity 0.2s' }}
+              onMouseEnter={e => { if (!accepting) e.currentTarget.style.opacity = '0.9'; }}
+              onMouseLeave={e => { if (!accepting) e.currentTarget.style.opacity = '1'; }}>
+              {accepting ? (
+                <><div style={{ width: 14, height: 14, border: '2px solid rgba(199,196,216,0.3)', borderTop: '2px solid #c7c4d8', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> Accepting...</>
+              ) : (
+                <><span className="material-symbols-outlined" style={{ fontSize: 16 }}>check_circle</span> Accept Request</>
+              )}
+            </button>
+          </div>
+        )}
       </div>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes scaleUp { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+      `}</style>
     </div>
   );
 }
@@ -1071,7 +875,6 @@ export default function AlumniDashboard() {
   useEffect(() => subscribeRealtimeSync(() => setLocalRefresh(v => v + 1)), []);
   const [showSlotModal, setShowSlotModal] = useState(false);
   const [extraSlots, setExtraSlots] = useState([]);
-  const [viewingRequest, setViewingRequest] = useState(null);
   const [viewingStudentProfile, setViewingStudentProfile] = useState(null); // request obj for full student profile modal
   const [bookingRequest, setBookingRequest] = useState(null);
   const [reschedulingRequest, setReschedulingRequest] = useState(null);
@@ -1509,7 +1312,7 @@ export default function AlumniDashboard() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {matchedRequests.map(r => (
                 <div key={r.id} style={{ background: '#131b2e', borderRadius: 14, padding: '1rem 1.25rem', border: '1px solid rgba(70,69,85,0.15)', display: 'flex', alignItems: 'center', gap: 14 }}>
-                  <div style={{ width: 44, height: 44, borderRadius: 10, background: r.studentProfile?.photoPreview ? 'transparent' : 'linear-gradient(135deg,#222a3d,#2d3449)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', fontWeight: 700, color: '#c3c0ff', flexShrink: 0, border: '1px solid rgba(195,192,255,0.1)' }}>
+                  <div style={{ width: 44, height: 44, borderRadius: '50%', background: r.studentProfile?.photoPreview ? 'transparent' : 'linear-gradient(135deg,#222a3d,#2d3449)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', fontWeight: 700, color: '#c3c0ff', flexShrink: 0, border: '1px solid rgba(195,192,255,0.1)' }}>
                     {r.studentProfile?.photoPreview ? (
                       <img src={r.studentProfile.photoPreview} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
@@ -1528,7 +1331,7 @@ export default function AlumniDashboard() {
                       color: r.status === 'accepted' ? '#ffb95f' : r.status === 'slot_booked' ? '#4edea3' : '#c3c0ff',
                     }}>{r.status === 'slot_booked' ? '✓ Booked' : r.status === 'accepted' ? 'Accepted' : 'Pending'}</span>
                     {r.status === 'pending' && (
-                      <button onClick={() => { setViewingRequest(r); setGlobalSearch(''); }} style={{ padding: '0.3rem 0.7rem', background: 'rgba(79,70,229,0.2)', color: '#c3c0ff', borderRadius: 7, fontSize: '0.6rem', fontWeight: 700, border: 'none', cursor: 'pointer' }}>View</button>
+                      <button onClick={() => { setViewingStudentProfile(r); setGlobalSearch(''); }} style={{ padding: '0.3rem 0.7rem', background: 'rgba(79,70,229,0.2)', color: '#c3c0ff', borderRadius: 7, fontSize: '0.6rem', fontWeight: 700, border: 'none', cursor: 'pointer' }}>View</button>
                     )}
                     {r.status === 'accepted' && (
                       <>
@@ -1809,10 +1612,7 @@ export default function AlumniDashboard() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
               {/* Avatar */}
               <div 
-                onClick={() => setViewingRequest(r)}
-                style={{ width: 52, height: 52, borderRadius: 12, background: r.studentProfile?.photoPreview ? 'transparent' : 'linear-gradient(135deg,#222a3d,#2d3449)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem', fontWeight: 700, color: '#c3c0ff', flexShrink: 0, cursor: 'pointer', transition: 'all 0.2s', border: '2px solid transparent' }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = '#c3c0ff'; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; }}
+                style={{ width: 52, height: 52, borderRadius: '50%', background: r.studentProfile?.photoPreview ? 'transparent' : 'linear-gradient(135deg,#222a3d,#2d3449)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem', fontWeight: 700, color: '#c3c0ff', flexShrink: 0, border: '2px solid transparent' }}
               >
                 {r.studentProfile?.photoPreview ? (
                   <img src={r.studentProfile.photoPreview} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -1825,7 +1625,7 @@ export default function AlumniDashboard() {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
                   <span 
-                    onClick={() => setViewingRequest(r)}
+                    onClick={() => setViewingStudentProfile(r)}
                     style={{ fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer', color: '#dae2fd', transition: 'all 0.2s', paddingBottom: 2, borderBottom: '2px solid transparent' }}
                     onMouseEnter={e => { e.currentTarget.style.color = '#c3c0ff'; e.currentTarget.style.borderColor = '#c3c0ff'; }}
                     onMouseLeave={e => { e.currentTarget.style.color = '#dae2fd'; e.currentTarget.style.borderColor = 'transparent'; }}
@@ -1841,7 +1641,7 @@ export default function AlumniDashboard() {
                 <div style={{ fontSize: '0.72rem', color: '#c7c4d8' }}>{r.topic}</div>
                 {r.studentId && (
                   <button
-                    onClick={() => setViewingRequest(r)}
+                    onClick={() => setViewingStudentProfile(r)}
                     style={{ marginTop: 3, padding: 0, background: 'none', border: 'none', color: '#c3c0ff', fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer' }}
                   >
                     Student ID: {r.studentId}
@@ -1998,7 +1798,7 @@ export default function AlumniDashboard() {
             ) : liveRequests.slice(0, 2).map(r => (
               <div key={r.id} style={{ background: '#171f33', borderRadius: 16, padding: '1.25rem 1.5rem', border: `1px solid ${r.status === 'accepted' || r.status === 'slot_booked' ? 'rgba(78,222,163,0.15)' : 'rgba(70,69,85,0.2)'}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                  <div style={{ width: 48, height: 48, borderRadius: 12, background: r.studentProfile?.photoPreview ? 'transparent' : 'linear-gradient(135deg,#222a3d,#2d3449)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', fontWeight: 700, color: '#c3c0ff', flexShrink: 0, border: '1px solid rgba(195,192,255,0.1)' }}>
+                  <div style={{ width: 48, height: 48, borderRadius: '50%', background: r.studentProfile?.photoPreview ? 'transparent' : 'linear-gradient(135deg,#222a3d,#2d3449)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', fontWeight: 700, color: '#c3c0ff', flexShrink: 0, border: '1px solid rgba(195,192,255,0.1)' }}>
                     {r.studentProfile?.photoPreview ? (
                       <img src={r.studentProfile.photoPreview} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
@@ -2016,7 +1816,7 @@ export default function AlumniDashboard() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                     {r.status === 'pending' && (
                       <>
-                        <button onClick={() => setViewingRequest(r)} style={{ padding: '0.4rem 0.875rem', background: 'rgba(79,70,229,0.2)', color: '#c3c0ff', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', border: 'none', cursor: 'pointer' }}>
+                        <button onClick={() => setViewingStudentProfile(r)} style={{ padding: '0.4rem 0.875rem', background: 'rgba(79,70,229,0.2)', color: '#c3c0ff', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', border: 'none', cursor: 'pointer' }}>
                           Accept
                         </button>
                         <button onClick={() => handleDeclineRequest(r.id)} style={{ padding: '0.4rem 0.75rem', background: '#222a3d', color: '#c7c4d8', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, border: 'none', cursor: 'pointer' }}>
@@ -2116,17 +1916,12 @@ export default function AlumniDashboard() {
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#0b1326', color: '#dae2fd', fontFamily: 'Inter, sans-serif' }}>
       {showSlotModal && <AddSlotModal onClose={() => setShowSlotModal(false)} onAdd={handleAddSlot} />}
-      {viewingRequest && (
-        <StudentDetailModal
-          request={viewingRequest}
-          onClose={() => setViewingRequest(null)}
-          onAccept={() => handleAccepted(viewingRequest.id)}
-        />
-      )}
       {viewingStudentProfile && (
         <StudentFullProfileModal
           request={viewingStudentProfile}
           onClose={() => setViewingStudentProfile(null)}
+          onAccept={() => handleAccepted(viewingStudentProfile.id)}
+          onDecline={() => handleDeclineRequest(viewingStudentProfile.id)}
         />
       )}
       {bookingRequest && (
