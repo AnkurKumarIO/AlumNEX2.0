@@ -136,8 +136,11 @@ export default function Dashboard() {
   const [profileData, setProfileData] = useState({});
   const [aiProfileStrength, setAiProfileStrength] = useState(null);
   const [dbFeedback, setDbFeedback] = useState([]);
-  // Track sessions ended via socket (roomId → true). Only set when "End Session" is clicked.
-  const [endedSessions, setEndedSessions] = useState({});
+  // Track sessions ended via socket (roomId → true). Persisted to sessionStorage
+  // so "Session ended" badge survives a page refresh within the same tab.
+  const [endedSessions, setEndedSessions] = useState(() => {
+    try { return JSON.parse(sessionStorage.getItem('alumnex_ended_sessions') || '{}'); } catch { return {}; }
+  });
 
   const hasRealUserId = !!user?.id;
 
@@ -193,7 +196,11 @@ export default function Dashboard() {
   useEffect(() => {
     const socket = io(`${SOCKET_URL}/interview`, { transports: ['websocket', 'polling'] });
     socket.on('session_ended', (roomId) => {
-      setEndedSessions(prev => ({ ...prev, [roomId]: true }));
+      setEndedSessions(prev => {
+        const next = { ...prev, [roomId]: true };
+        try { sessionStorage.setItem('alumnex_ended_sessions', JSON.stringify(next)); } catch {}
+        return next;
+      });
     });
     return () => socket.disconnect();
   }, []);

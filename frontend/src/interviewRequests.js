@@ -16,13 +16,42 @@ function saveLocal(requests) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(requests));
   emitRealtimeSync({ type: 'requests_updated' });
 }
-function pushLocalNotif({ studentName, type, title, message, requestId, roomId }) {
+async function pushNotif({ studentName, studentId, type, title, message, requestId, roomId }) {
+  // 1. Always write to localStorage for immediate local display
   try {
     const all = JSON.parse(localStorage.getItem(NOTIF_KEY) || '[]');
     all.unshift({ id: `notif-${Date.now()}`, studentName, type, title, message, requestId, roomId: roomId || null, read: false, createdAt: new Date().toISOString() });
     localStorage.setItem(NOTIF_KEY, JSON.stringify(all));
     emitRealtimeSync({ type: 'student_notifications_updated', studentName });
   } catch {}
+
+  // 2. Also persist to DB so other devices see it
+  try {
+    let realStudentId = studentId;
+    if (!realStudentId) {
+      const authUser = JSON.parse(localStorage.getItem('alumnex_user') || '{}');
+      if (authUser.id && !authUser.id.startsWith('stu-') && !authUser.id.startsWith('alm-')) {
+        realStudentId = authUser.id;
+      }
+    }
+    if (!realStudentId) {
+      // Try to look up by name
+      const { getUserByEmail } = await import('./lib/db');
+      // fallback: skip DB write if we can't resolve the ID
+    }
+    if (realStudentId && !String(realStudentId).startsWith('stu-') && !String(realStudentId).startsWith('alm-')) {
+      await createNotification({
+        userId:    realStudentId,
+        type:      type.toUpperCase(),
+        title,
+        message,
+        requestId: requestId || null,
+        roomId:    roomId    || null,
+      });
+    }
+  } catch (e) {
+    console.warn('pushNotif: DB write failed (notification still in localStorage):', e.message);
+  }
 }
 
 // ── Notifications ─────────────────────────────────────────────────────────────
@@ -272,8 +301,9 @@ export async function acceptRequestOnly(requestId) {
   requests[idx] = { ...requests[idx], status: 'accepted' };
   saveLocal(requests);
 
-  pushLocalNotif({
+  pushNotif({
     studentName: requests[idx].studentName,
+    studentId:   requests[idx].studentId,
     type:        'accepted',
     title:       'Interview Request Accepted! 🎉',
     message:     'Your interview request has been accepted. The alumni will book a slot shortly.',
@@ -309,8 +339,9 @@ export async function bookSlot(requestId, scheduledTime) {
       weekday: 'long', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
     });
     const isInstant = Math.abs(new Date(scheduledTime).getTime() - Date.now()) < 60000;
-    pushLocalNotif({
+    pushNotif({
       studentName: requests[idx].studentName,
+      studentId:   requests[idx].studentId,
       type:        isInstant ? 'live' : 'slot_booked',
       title:       isInstant ? '🔴 Interview is Live Now!' : 'Interview Slot Confirmed! 📅',
       message:     isInstant
@@ -335,8 +366,9 @@ export async function bookSlot(requestId, scheduledTime) {
       weekday: 'long', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
     });
     const isInstant = Math.abs(new Date(scheduledTime).getTime() - Date.now()) < 60000;
-    pushLocalNotif({
+    pushNotif({
       studentName: requests[idx].studentName,
+      studentId:   requests[idx].studentId,
       type:        isInstant ? 'live' : 'slot_booked',
       title:       isInstant ? '🔴 Interview is Live Now!' : 'Interview Slot Confirmed! 📅',
       message:     isInstant
@@ -373,8 +405,9 @@ export async function rescheduleSlot(requestId, newScheduledTime) {
     weekday: 'long', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
   });
 
-  pushLocalNotif({
+  pushNotif({
     studentName: requests[idx].studentName,
+    studentId:   requests[idx].studentId,
     type:        'slot_booked',
     title:       'Interview Rescheduled 🔄',
     message:     `Your interview has been rescheduled to ${formatted}.`,
@@ -401,11 +434,13 @@ export async function declineRequest(requestId) {
   const idx = requests.findIndex(r => r.id === requestId);
   if (idx === -1) return;
   const studentName = requests[idx].studentName;
+  const studentId   = requests[idx].studentId;
   requests[idx] = { ...requests[idx], status: 'declined' };
   saveLocal(requests);
 
-  pushLocalNotif({
+  pushNotif({
     studentName,
+    studentId,
     type:    'declined',
     title:   'Interview Request Update',
     message: 'Your request was not accepted this time. Try another mentor.',

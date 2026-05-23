@@ -176,6 +176,15 @@ export default function SettingsPage({ role }) {
     weekly_digest:      savedNotifs.weekly_digest      ?? true,
   });
 
+  // Hydrate notification preferences from DB profile_data if available
+  useEffect(() => {
+    const dbPrefs = user?.profile_data?.notification_preferences;
+    if (dbPrefs && typeof dbPrefs === 'object') {
+      setNotifs(p => ({ ...p, ...dbPrefs }));
+      localStorage.setItem('alumnex_notifs', JSON.stringify({ ...savedNotifs, ...dbPrefs }));
+    }
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const [skillInput, setSkillInput] = useState('');
 
   const addSkill = () => {
@@ -221,7 +230,35 @@ export default function SettingsPage({ role }) {
       currentTitle: user?.profile_data?.currentTitle || user?.profile_data?.jobTitle || savedProfile.currentTitle || savedProfile.title || profile.currentTitle,
       passOutYear: user?.profile_data?.passOutYear || user?.profile_data?.batchYear || savedProfile.passOutYear || profile.passOutYear,
     };
-    const updated = { ...mergedProfileData, photoPreview };
+
+    // Convert blob URL photo to data URL before saving (blob URLs die on refresh)
+    let finalPhotoPreview = photoPreview;
+    if (photoPreview && photoPreview.startsWith('blob:')) {
+      try {
+        const res = await fetch(photoPreview);
+        const blob = await res.blob();
+        finalPhotoPreview = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        setPhotoPreview(finalPhotoPreview);
+      } catch {
+        finalPhotoPreview = photoPreview; // keep blob URL as fallback
+      }
+    }
+
+    const updated = { ...mergedProfileData, photoPreview: finalPhotoPreview };
+
+    // For DB save: strip large base64 blobs (resume data URL) to avoid hitting limits.
+    // Store only the filename + a flag; the actual file stays in localStorage only.
+    const dbSafeProfile = { ...updated };
+    if (dbSafeProfile.resumeUrl && dbSafeProfile.resumeUrl.startsWith('data:')) {
+      dbSafeProfile.resumeUrl = ''; // don't store base64 in DB
+      dbSafeProfile.resumeStoredLocally = true;
+    }
+
     localStorage.setItem('alumnex_profile', JSON.stringify(updated));
     localStorage.setItem('alumniconnect_profile', JSON.stringify(updated));
     emitRealtimeSync({ type: 'profile_updated' });
@@ -231,23 +268,37 @@ export default function SettingsPage({ role }) {
       department: mergedProfileData.department,
       profile_data: {
         ...(user?.profile_data || {}),
-        ...mergedProfileData,
+        ...dbSafeProfile,
       }
     };
     login(updatedUser, localStorage.getItem('alumnex_token'));
     // Save to DB — try backend API first (Prisma), fall back to Supabase direct
     if (user?.id && !user.id.startsWith('stu-') && !user.id.startsWith('alm-')) {
       try {
-        await api.saveProfile(user.id, updated);
+        await api.saveProfile(user.id, dbSafeProfile);
       } catch (err) {
         console.warn('Profile save via API failed, trying Supabase direct:', err.message);
-        await updateUserProfile(user.id, { ...mergedProfileData, photoPreview }).catch(e => console.warn('Profile save:', e.message));
+        await updateUserProfile(user.id, dbSafeProfile).catch(e => console.warn('Profile save:', e.message));
       }
     }
     flashSaved();
   };
 
-  const saveNotifs = () => { localStorage.setItem('alumnex_notifs', JSON.stringify(notifs)); flashSaved(); };
+  const saveNotifs = async () => {
+    localStorage.setItem('alumnex_notifs', JSON.stringify(notifs));
+    // Also persist to DB so preferences sync across devices
+    if (user?.id && !user.id.startsWith('stu-') && !user.id.startsWith('alm-') && !user.id.startsWith('tnp-')) {
+      try {
+        await api.saveProfile(user.id, {
+          ...JSON.parse(localStorage.getItem('alumnex_profile') || '{}'),
+          notification_preferences: notifs,
+        });
+      } catch (e) {
+        console.warn('saveNotifs: DB sync failed, preferences saved locally only:', e.message);
+      }
+    }
+    flashSaved();
+  };
   const flashSaved = () => { setSaved(true); setTimeout(() => setSaved(false), 2500); };
 
   const inp = {

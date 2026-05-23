@@ -109,16 +109,10 @@ export async function getAllAlumni() {
 // ── Interview Requests ────────────────────────────────────────────────────────
 
 export async function createRequest({ studentId, alumniId, topic, message, studentProfileSnapshot }) {
-  // Try to restore session from localStorage if available
+  // Ensure we have an active Supabase session before inserting (RLS requires auth.uid() = student_id)
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) {
-    // Try to sign in using stored credentials
-    try {
-      const pending = JSON.parse(localStorage.getItem('alumnex_pending_profile') || '{}');
-      if (pending.email && pending.password) {
-        await supabase.auth.signInWithPassword({ email: pending.email, password: pending.password });
-      }
-    } catch {}
+    console.warn('createRequest: No active Supabase session — RLS may block insert');
   }
 
   const requestId = crypto.randomUUID();
@@ -195,7 +189,7 @@ export async function updateRequest(requestId, updates) {
 
 // ── Notifications ─────────────────────────────────────────────────────────────
 
-export async function createNotification({ userId, type, title, message, requestId }) {
+export async function createNotification({ userId, type, title, message, requestId, roomId }) {
   await supabase.from('notifications').insert({
     notification_id: crypto.randomUUID(),
     user_id:    userId,
@@ -203,6 +197,7 @@ export async function createNotification({ userId, type, title, message, request
     title,
     message,
     request_id: requestId || null,
+    room_id:    roomId    || null,
   });
 }
 
@@ -238,7 +233,7 @@ export async function getPendingUsers() {
   const { data } = await supabase
     .from('users')
     .select('id, name, role, department, email, verification_status, createdAt')
-    .in('role', roles)
+    .in('role', ['STUDENT', 'ALUMNI'])
     .order('createdAt', { ascending: false })
     .limit(20);
   return data || [];

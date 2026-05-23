@@ -28,17 +28,30 @@ export function AuthProvider({ children }) {
     setToken(null);
     localStorage.removeItem('alumnex_user');
     localStorage.removeItem('alumnex_token');
-    // NOTE: Do NOT remove alumnex_profile or alumniconnect_profile on logout.
-    // These are preserved so the user does not need to re-fill profile on re-login.
-    // Only remove session/auth keys.
+    // Clear profile data on logout so a different user on the same device
+    // doesn't see the previous user's profile before their own loads from DB.
+    localStorage.removeItem('alumnex_profile');
+    localStorage.removeItem('alumniconnect_profile');
+    localStorage.removeItem('alumnex_notifs');
+    sessionStorage.removeItem('alumnex_ended_sessions');
   };
 
   useEffect(() => {
     return subscribeRealtimeSync(() => {
+      // Only update state if the stored value actually changed to avoid
+      // cross-tab overwrites clobbering the current session's auth state.
       const savedUser = localStorage.getItem('alumnex_user');
       const savedToken = localStorage.getItem('alumnex_token');
-      if (savedUser) setUser(JSON.parse(savedUser));
-      if (savedToken) setToken(savedToken);
+      if (savedUser) {
+        try {
+          const parsed = JSON.parse(savedUser);
+          // Only update if the user ID changed (e.g. different tab logged in as someone else)
+          setUser(prev => (prev?.id !== parsed?.id ? parsed : prev));
+        } catch {}
+      }
+      if (savedToken) {
+        setToken(prev => (prev !== savedToken ? savedToken : prev));
+      }
     });
   }, []);
 
