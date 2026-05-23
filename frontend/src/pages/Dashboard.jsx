@@ -825,7 +825,7 @@ export default function Dashboard() {
             </button>
           </div>
           {/* Subtitle */}
-          <div style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.18em', color: '#c7c4d8', marginTop: 10, textAlign: 'left', paddingLeft: '36px' }}>Student Portal</div>
+          <div style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.18em', color: '#c7c4d8', marginTop: -2, textAlign: 'left', paddingLeft: '36px' }}>Student Portal</div>
         </div>
         <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
           {NAV_ITEMS.map(({ icon, label: l, tab }) => {

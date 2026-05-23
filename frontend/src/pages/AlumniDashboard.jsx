@@ -2212,7 +2212,7 @@ export default function AlumniDashboard() {
             </button>
           </div>
           {/* Subtitle */}
-          <div style={{ fontSize: '0.6rem', color: '#c7c4d8', letterSpacing: '0.18em', textTransform: 'uppercase', marginTop: 10, textAlign: 'left', paddingLeft: '36px' }}>Alumni Portal</div>
+          <div style={{ fontSize: '0.6rem', color: '#c7c4d8', letterSpacing: '0.18em', textTransform: 'uppercase', marginTop: -2, textAlign: 'left', paddingLeft: '36px' }}>Alumni Portal</div>
         </div>
         <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
           {NAV_ITEMS.map(({ icon, label, tab }) => {
