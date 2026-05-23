@@ -111,61 +111,140 @@ export default function LandingPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
 
             {/* ── LEFT: Interactive Node Graph ── */}
-            <div style={{ background: '#0d1526', borderRadius: 14, overflow: 'hidden', position: 'relative', minHeight: '320px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', border: '1px solid rgba(195,192,255,0.08)' }}>
-              <svg viewBox="0 0 400 260" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} xmlns="http://www.w3.org/2000/svg">
+            <div style={{ background: 'linear-gradient(135deg,#0a1020 0%,#0d1526 60%,#0f1a2e 100%)', borderRadius: 16, overflow: 'hidden', position: 'relative', minHeight: '340px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', border: '1px solid rgba(195,192,255,0.1)', boxShadow: '0 0 40px rgba(79,70,229,0.08) inset' }}>
+
+              {/* Subtle dot-grid background */}
+              <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(circle at 1.5px 1.5px, rgba(195,192,255,0.06) 1px, transparent 0)', backgroundSize: '28px 28px', zIndex: 0 }}/>
+
+              {/* SVG Graph — horizontal career progression */}
+              <svg viewBox="0 0 440 280" style={{ position: 'absolute', inset: 0, width: '100%', height: '65%', top: '5%' }} xmlns="http://www.w3.org/2000/svg">
                 <defs>
-                  <radialGradient id="ng1" cx="50%" cy="50%" r="50%"><stop offset="0%" stopColor="#c3c0ff" stopOpacity="0.9"/><stop offset="100%" stopColor="#c3c0ff" stopOpacity="0"/></radialGradient>
-                  <radialGradient id="ng2" cx="50%" cy="50%" r="50%"><stop offset="0%" stopColor="#4edea3" stopOpacity="0.9"/><stop offset="100%" stopColor="#4edea3" stopOpacity="0"/></radialGradient>
-                  <radialGradient id="ng3" cx="50%" cy="50%" r="50%"><stop offset="0%" stopColor="#ffb95f" stopOpacity="0.9"/><stop offset="100%" stopColor="#ffb95f" stopOpacity="0"/></radialGradient>
-                  <filter id="nb"><feGaussianBlur stdDeviation="4"/></filter>
-                  <style>{`@keyframes ndash{to{stroke-dashoffset:-24}}@keyframes npulse{0%,100%{opacity:.5}50%{opacity:1}}.ne{stroke-dasharray:6 6;animation:ndash 1.4s linear infinite}.nes{stroke-dasharray:6 6;animation:ndash 2.2s linear infinite}.np{animation:npulse 2s ease-in-out infinite}.npg{animation:npulse 2.4s ease-in-out infinite}.npo{animation:npulse 2.8s ease-in-out infinite}`}</style>
+                  {/* Gradients for edges */}
+                  <linearGradient id="eg1" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#c3c0ff" stopOpacity="0.8"/>
+                    <stop offset="100%" stopColor="#4edea3" stopOpacity="0.6"/>
+                  </linearGradient>
+                  <linearGradient id="eg2" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#4edea3" stopOpacity="0.7"/>
+                    <stop offset="100%" stopColor="#ffb95f" stopOpacity="0.6"/>
+                  </linearGradient>
+                  <linearGradient id="eg3" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#ffb95f" stopOpacity="0.7"/>
+                    <stop offset="100%" stopColor="#c3c0ff" stopOpacity="0.5"/>
+                  </linearGradient>
+                  <linearGradient id="eg4" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#c3c0ff" stopOpacity="0.5"/>
+                    <stop offset="100%" stopColor="#4edea3" stopOpacity="0.4"/>
+                  </linearGradient>
+                  {/* Glow filters */}
+                  <filter id="glow1" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur stdDeviation="5" result="blur"/>
+                    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                  </filter>
+                  <filter id="glow2" x="-80%" y="-80%" width="260%" height="260%">
+                    <feGaussianBlur stdDeviation="8" result="blur"/>
+                    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                  </filter>
+                  <filter id="softblur"><feGaussianBlur stdDeviation="3"/></filter>
+                  {/* Animations */}
+                  <style>{`
+                    @keyframes gEdge{to{stroke-dashoffset:-32}}
+                    @keyframes gPulse{0%,100%{opacity:.45;transform:scale(1)}50%{opacity:1;transform:scale(1.08)}}
+                    @keyframes gCenter{0%,100%{opacity:.6;r:22}50%{opacity:1;r:24}}
+                    @keyframes gFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+                    @keyframes gFade{0%{opacity:0}100%{opacity:1}}
+                    .ge{stroke-dasharray:8 6;animation:gEdge 1.6s linear infinite}
+                    .ges{stroke-dasharray:8 6;animation:gEdge 2.4s linear infinite}
+                    .gp{animation:gPulse 2.2s ease-in-out infinite}
+                    .gp2{animation:gPulse 2.8s ease-in-out infinite}
+                    .gp3{animation:gPulse 3.2s ease-in-out infinite}
+                    .gc{animation:gCenter 2s ease-in-out infinite}
+                    .gfl{animation:gFloat 3s ease-in-out infinite}
+                  `}</style>
                 </defs>
-                {/* Glow halos */}
-                <circle cx="200" cy="120" r="28" fill="url(#ng1)" filter="url(#nb)" opacity="0.6"/>
-                <circle cx="80"  cy="70"  r="18" fill="url(#ng2)" filter="url(#nb)" opacity="0.5"/>
-                <circle cx="320" cy="60"  r="16" fill="url(#ng3)" filter="url(#nb)" opacity="0.5"/>
-                <circle cx="60"  cy="180" r="14" fill="url(#ng2)" filter="url(#nb)" opacity="0.4"/>
-                <circle cx="340" cy="170" r="14" fill="url(#ng1)" filter="url(#nb)" opacity="0.4"/>
-                <circle cx="200" cy="220" r="14" fill="url(#ng3)" filter="url(#nb)" opacity="0.4"/>
-                <circle cx="130" cy="200" r="12" fill="url(#ng1)" filter="url(#nb)" opacity="0.3"/>
-                <circle cx="270" cy="210" r="12" fill="url(#ng2)" filter="url(#nb)" opacity="0.3"/>
-                {/* Edges */}
-                <line x1="200" y1="120" x2="80"  y2="70"  stroke="#c3c0ff" strokeWidth="1.2" opacity="0.35" className="ne"/>
-                <line x1="200" y1="120" x2="320" y2="60"  stroke="#ffb95f" strokeWidth="1.2" opacity="0.35" className="nes"/>
-                <line x1="200" y1="120" x2="60"  y2="180" stroke="#4edea3" strokeWidth="1.2" opacity="0.35" className="ne"/>
-                <line x1="200" y1="120" x2="340" y2="170" stroke="#c3c0ff" strokeWidth="1.2" opacity="0.35" className="nes"/>
-                <line x1="200" y1="120" x2="200" y2="220" stroke="#ffb95f" strokeWidth="1.2" opacity="0.35" className="ne"/>
-                <line x1="200" y1="120" x2="130" y2="200" stroke="#4edea3" strokeWidth="1"   opacity="0.25" className="nes"/>
-                <line x1="200" y1="120" x2="270" y2="210" stroke="#c3c0ff" strokeWidth="1"   opacity="0.25" className="ne"/>
-                <line x1="80"  y1="70"  x2="130" y2="200" stroke="#c3c0ff" strokeWidth="0.8" opacity="0.12" className="nes"/>
-                <line x1="320" y1="60"  x2="340" y2="170" stroke="#ffb95f" strokeWidth="0.8" opacity="0.12" className="ne"/>
-                <line x1="60"  y1="180" x2="130" y2="200" stroke="#4edea3" strokeWidth="0.8" opacity="0.12" className="nes"/>
-                <line x1="270" y1="210" x2="340" y2="170" stroke="#c3c0ff" strokeWidth="0.8" opacity="0.12" className="ne"/>
-                {/* Center node */}
-                <circle cx="200" cy="120" r="18" fill="#1a2240" stroke="#c3c0ff" strokeWidth="2"/>
-                <circle cx="200" cy="115" r="4.5" fill="#c3c0ff" opacity="0.9" className="np"/>
-                <path d="M192 128 Q200 122 208 128" stroke="#c3c0ff" strokeWidth="1.5" fill="none" opacity="0.9"/>
-                {/* Leaf nodes */}
-                <circle cx="80"  cy="70"  r="13" fill="#131b2e" stroke="#4edea3" strokeWidth="1.5" className="npg"/>
-                <text x="80"  y="74"  textAnchor="middle" fill="#4edea3" fontSize="7" fontWeight="700">SDE</text>
-                <circle cx="320" cy="60"  r="13" fill="#131b2e" stroke="#ffb95f" strokeWidth="1.5" className="npo"/>
-                <text x="320" y="57"  textAnchor="middle" fill="#ffb95f" fontSize="6" fontWeight="700">Tech</text>
-                <text x="320" y="65"  textAnchor="middle" fill="#ffb95f" fontSize="6" fontWeight="700">Lead</text>
-                <circle cx="60"  cy="180" r="12" fill="#131b2e" stroke="#4edea3" strokeWidth="1.5" className="npg"/>
-                <text x="60"  y="184" textAnchor="middle" fill="#4edea3" fontSize="6.5" fontWeight="700">GOOG</text>
-                <circle cx="340" cy="170" r="12" fill="#131b2e" stroke="#c3c0ff" strokeWidth="1.5" className="np"/>
-                <text x="340" y="174" textAnchor="middle" fill="#c3c0ff" fontSize="7" fontWeight="700">CTO</text>
-                <circle cx="200" cy="220" r="11" fill="#131b2e" stroke="#ffb95f" strokeWidth="1.5" className="npo"/>
-                <text x="200" y="224" textAnchor="middle" fill="#ffb95f" fontSize="6.5" fontWeight="700">MSFT</text>
-                <circle cx="130" cy="200" r="10" fill="#131b2e" stroke="#c3c0ff" strokeWidth="1.2" className="np"/>
-                <text x="130" y="204" textAnchor="middle" fill="#c3c0ff" fontSize="6" fontWeight="700">ML</text>
-                <circle cx="270" cy="210" r="10" fill="#131b2e" stroke="#4edea3" strokeWidth="1.2" className="npg"/>
-                <text x="270" y="214" textAnchor="middle" fill="#4edea3" fontSize="6" fontWeight="700">META</text>
+
+                {/* ── Tier 1: Center — User node (x=100) ── */}
+                {/* Outer glow ring */}
+                <circle cx="100" cy="140" r="32" fill="none" stroke="#c3c0ff" strokeWidth="1" opacity="0.15" className="gc"/>
+                <circle cx="100" cy="140" r="26" fill="rgba(195,192,255,0.06)" stroke="#c3c0ff" strokeWidth="1.5" opacity="0.4" filter="url(#softblur)"/>
+                {/* Main node */}
+                <circle cx="100" cy="140" r="22" fill="url(#eg1)" fillOpacity="0.12" stroke="#c3c0ff" strokeWidth="2" filter="url(#glow1)"/>
+                {/* Person icon */}
+                <circle cx="100" cy="133" r="6" fill="#c3c0ff" opacity="0.95"/>
+                <path d="M88 150 Q100 142 112 150" stroke="#c3c0ff" strokeWidth="2" fill="none" opacity="0.9" strokeLinecap="round"/>
+                {/* Label */}
+                <text x="100" y="172" textAnchor="middle" fill="#c3c0ff" fontSize="8.5" fontWeight="700" letterSpacing="0.5" opacity="0.9">YOU</text>
+
+                {/* ── Tier 2: SDE + Intern (x=210) ── */}
+                {/* Edge: center → SDE */}
+                <path d="M122 130 C160 110 175 100 188 100" stroke="url(#eg1)" strokeWidth="1.5" fill="none" className="ge" opacity="0.7"/>
+                {/* Edge: center → Intern */}
+                <path d="M122 150 C160 160 175 175 188 178" stroke="url(#eg1)" strokeWidth="1.2" fill="none" className="ges" opacity="0.5"/>
+
+                {/* SDE node */}
+                <circle cx="100" cy="100" r="14" fill="rgba(78,222,163,0.06)" stroke="#4edea3" strokeWidth="1.5" filter="url(#softblur)" opacity="0.4"/>
+                <circle cx="210" cy="100" r="18" fill="rgba(78,222,163,0.1)" stroke="#4edea3" strokeWidth="1.8" filter="url(#glow1)" className="gp"/>
+                <text x="210" y="96"  textAnchor="middle" fill="#4edea3" fontSize="7.5" fontWeight="800" letterSpacing="0.3">SDE</text>
+                <text x="210" y="106" textAnchor="middle" fill="#4edea3" fontSize="6"   fontWeight="600" opacity="0.7">Eng I</text>
+
+                {/* Intern node */}
+                <circle cx="210" cy="178" r="15" fill="rgba(195,192,255,0.08)" stroke="#c3c0ff" strokeWidth="1.5" filter="url(#glow1)" className="gp2"/>
+                <text x="210" y="174" textAnchor="middle" fill="#c3c0ff" fontSize="7"   fontWeight="800" letterSpacing="0.3">INTERN</text>
+                <text x="210" y="184" textAnchor="middle" fill="#c3c0ff" fontSize="5.5" fontWeight="600" opacity="0.7">Entry</text>
+
+                {/* ── Tier 3: Tech Lead (x=310) ── */}
+                {/* Edge: SDE → Tech Lead */}
+                <path d="M228 100 C258 100 278 110 292 118" stroke="url(#eg2)" strokeWidth="1.5" fill="none" className="ge" opacity="0.7"/>
+                {/* Edge: Intern → Tech Lead */}
+                <path d="M225 172 C258 165 278 148 292 138" stroke="url(#eg2)" strokeWidth="1.2" fill="none" className="ges" opacity="0.45"/>
+
+                {/* Tech Lead node */}
+                <circle cx="310" cy="128" r="20" fill="rgba(255,185,95,0.1)" stroke="#ffb95f" strokeWidth="2" filter="url(#glow1)" className="gp3"/>
+                <text x="310" y="124" textAnchor="middle" fill="#ffb95f" fontSize="7"   fontWeight="800" letterSpacing="0.3">TECH</text>
+                <text x="310" y="134" textAnchor="middle" fill="#ffb95f" fontSize="7"   fontWeight="800" letterSpacing="0.3">LEAD</text>
+
+                {/* ── Tier 4: CTO (x=400) ── */}
+                {/* Edge: Tech Lead → CTO */}
+                <path d="M330 128 C355 128 370 128 382 128" stroke="url(#eg3)" strokeWidth="1.8" fill="none" className="ge" opacity="0.8"/>
+
+                {/* CTO node — crown */}
+                <circle cx="400" cy="128" r="24" fill="rgba(195,192,255,0.04)" stroke="#c3c0ff" strokeWidth="1" opacity="0.2" filter="url(#softblur)"/>
+                <circle cx="400" cy="128" r="20" fill="rgba(195,192,255,0.12)" stroke="#c3c0ff" strokeWidth="2.5" filter="url(#glow2)" className="gp"/>
+                <text x="400" y="124" textAnchor="middle" fill="#fff" fontSize="8.5" fontWeight="900" letterSpacing="0.5">CTO</text>
+                <text x="400" y="135" textAnchor="middle" fill="#c3c0ff" fontSize="5.5" fontWeight="600" opacity="0.8">C-Suite</text>
+
+                {/* ── Company badges floating above nodes ── */}
+                {/* Google badge near SDE */}
+                <rect x="188" y="68" width="44" height="16" rx="8" fill="rgba(78,222,163,0.12)" stroke="#4edea3" strokeWidth="0.8" opacity="0.8"/>
+                <text x="210" y="79" textAnchor="middle" fill="#4edea3" fontSize="6" fontWeight="700" letterSpacing="0.5">GOOGLE</text>
+
+                {/* Microsoft badge near Tech Lead */}
+                <rect x="288" y="96" width="44" height="16" rx="8" fill="rgba(255,185,95,0.12)" stroke="#ffb95f" strokeWidth="0.8" opacity="0.8"/>
+                <text x="310" y="107" textAnchor="middle" fill="#ffb95f" fontSize="6" fontWeight="700" letterSpacing="0.5">MICROSOFT</text>
+
+                {/* Meta badge near Intern */}
+                <rect x="188" y="198" width="44" height="16" rx="8" fill="rgba(195,192,255,0.1)" stroke="#c3c0ff" strokeWidth="0.8" opacity="0.7"/>
+                <text x="210" y="209" textAnchor="middle" fill="#c3c0ff" fontSize="6" fontWeight="700" letterSpacing="0.5">META</text>
+
+                {/* ── Subtle ambient particles ── */}
+                <circle cx="155" cy="80"  r="1.5" fill="#c3c0ff" opacity="0.3" className="gp2"/>
+                <circle cx="260" cy="60"  r="1.5" fill="#4edea3" opacity="0.3" className="gp3"/>
+                <circle cx="355" cy="90"  r="1.5" fill="#ffb95f" opacity="0.3" className="gp"/>
+                <circle cx="155" cy="200" r="1.5" fill="#4edea3" opacity="0.25" className="gp3"/>
+                <circle cx="260" cy="210" r="1.5" fill="#c3c0ff" opacity="0.25" className="gp2"/>
               </svg>
-              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, #0b1326 0%, rgba(11,19,38,0.3) 50%, transparent 100%)', zIndex: 1 }}/>
+
+              {/* Bottom gradient overlay */}
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, #0a1020 0%, rgba(10,16,32,0.7) 35%, rgba(10,16,32,0.1) 65%, transparent 100%)', zIndex: 1 }}/>
+
+              {/* Text content */}
               <div style={{ position: 'relative', zIndex: 2, padding: 'clamp(1.5rem, 4vw, 2rem)' }}>
-                <h4 style={{ fontSize: 'clamp(1.1rem, 3vw, 1.4rem)', fontWeight: 700, color: '#c3c0ff', margin: 0 }}>Predictive Pathways</h4>
-                <p style={{ fontSize: 'clamp(0.78rem, 2vw, 0.85rem)', color: '#c7c4d8', maxWidth: 420, lineHeight: 1.6, margin: '0.5rem 0 0 0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#c3c0ff', boxShadow: '0 0 8px #c3c0ff' }}/>
+                  <span style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.2em', color: '#c3c0ff', opacity: 0.8 }}>Career Intelligence</span>
+                </div>
+                <h4 style={{ fontSize: 'clamp(1.1rem, 3vw, 1.4rem)', fontWeight: 700, color: '#fff', margin: 0, letterSpacing: '-0.01em' }}>Predictive Pathways</h4>
+                <p style={{ fontSize: 'clamp(0.75rem, 2vw, 0.82rem)', color: 'rgba(199,196,216,0.75)', maxWidth: 400, lineHeight: 1.65, margin: '0.5rem 0 0 0' }}>
                   Our platform analyzes thousands of career trajectories to recommend the most efficient path for students based on their specific skill sets.
                 </p>
               </div>
