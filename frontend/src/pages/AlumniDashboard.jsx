@@ -2315,7 +2315,7 @@ export default function AlumniDashboard() {
               <button onClick={() => { setShowProfile(p => !p); setShowNotifs(false); }} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#c3c0ff' }}>{user.name || 'Alumni'}</div>
-                  <div style={{ fontSize: '0.6rem', color: '#c7c4d8' }}>SENIOR MENTOR</div>
+                  <div style={{ fontSize: '0.6rem', color: '#c7c4d8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Alumni</div>
                 </div>
                 {(() => {
                   const lp = (() => { try { return JSON.parse(localStorage.getItem('alumnex_profile') || '{}'); } catch { return {}; } })();
@@ -2350,7 +2350,7 @@ export default function AlumniDashboard() {
                               })()}
                               <div>
                                 <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#dae2fd' }}>{liveProfile.name || user.name || 'Alumni'}</div>
-                                <div style={{ fontSize: '0.7rem', color: '#c3c0ff', marginTop: 2 }}>{liveProfile.currentTitle || liveProfile.domain || liveProfile.department || 'Senior Mentor'}</div>
+                                <div style={{ fontSize: '0.7rem', color: '#c3c0ff', marginTop: 2 }}>{liveProfile.currentTitle || liveProfile.domain || liveProfile.department || 'Alumni'}</div>
                                 {liveProfile.company && <div style={{ fontSize: '0.65rem', color: '#c7c4d8', marginTop: 1 }}>{liveProfile.company}</div>}
                               </div>
                             </div>
