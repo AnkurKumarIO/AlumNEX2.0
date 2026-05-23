@@ -2177,15 +2177,13 @@ export default function AlumniDashboard() {
 
       <aside style={{ width: 256, minHeight: '100vh', position: 'fixed', left: sidebarOpen ? 0 : -256, top: 0, background: '#131b2e', display: 'flex', flexDirection: 'column', padding: '1.5rem', zIndex: 50, transition: 'left 0.3s ease' }}>
         <div style={{ marginBottom: '2rem' }}>
-          {/* Logo row: logo centered, collapse button top-right */}
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 6 }}>
+          {/* Logo row: logo left, collapse button right */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
             <AlumNexLogo size="md" showSubtext={false} />
             <button 
               onClick={() => setSidebarOpen(false)} 
               title="Collapse Sidebar"
               style={{ 
-                position: 'absolute',
-                right: 0,
                 background: 'rgba(255,255,255,0.03)', 
                 border: '1px solid rgba(255,255,255,0.05)', 
                 borderRadius: '50%',
@@ -2214,7 +2212,7 @@ export default function AlumniDashboard() {
             </button>
           </div>
           {/* Subtitle */}
-          <div style={{ fontSize: '0.6rem', color: '#c7c4d8', letterSpacing: '0.18em', textTransform: 'uppercase', marginTop: -2, textAlign: 'left', paddingLeft: '36px' }}>Alumni Portal</div>
+          <div style={{ fontSize: '0.6rem', color: '#c7c4d8', letterSpacing: '0.18em', textTransform: 'uppercase', marginTop: 10, textAlign: 'center', width: '100%' }}>Alumni Portal</div>
         </div>
         <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
           {NAV_ITEMS.map(({ icon, label, tab }) => {
