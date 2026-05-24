@@ -133,7 +133,10 @@ export default function Dashboard() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [recommendedMentor, setRecommendedMentor] = useState(null);
-  const [profileData, setProfileData] = useState({});
+  const [profileData, setProfileData] = useState(() => {
+    // Initialize immediately from localStorage so My Profile renders on first paint
+    try { return JSON.parse(localStorage.getItem('alumnex_profile') || '{}'); } catch { return {}; }
+  });
   const [aiProfileStrength, setAiProfileStrength] = useState(null);
   const [dbFeedback, setDbFeedback] = useState([]);
   // Track sessions ended via socket (roomId → true). Persisted to sessionStorage
@@ -234,9 +237,11 @@ export default function Dashboard() {
         if (typeof rawPd === 'string') {
           try { rawPd = JSON.parse(rawPd); } catch { rawPd = {}; }
         }
+        // Always read localStorage for fields that are never stored in DB (resumeUrl, resumeName)
+        const localPd = (() => { try { return JSON.parse(localStorage.getItem('alumnex_profile') || '{}'); } catch { return {}; } })();
         const pd = (rawPd && Object.keys(rawPd).length > 0)
-          ? rawPd
-          : JSON.parse(localStorage.getItem('alumnex_profile') || '{}');
+          ? { ...rawPd, resumeUrl: rawPd.resumeUrl || localPd.resumeUrl || '', resumeName: rawPd.resumeName || localPd.resumeName || '' }
+          : localPd;
         setProfileData(pd);
         if (Object.keys(pd).length > 0) {
           api.profileStrength(pd).then(r => { if (r && !r.error) setAiProfileStrength(r); }).catch(() => {});
