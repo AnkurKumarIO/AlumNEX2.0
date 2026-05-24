@@ -899,17 +899,19 @@ export default function AlumniDashboard() {
     : null;
   const dashTotalSessions = dashSessions.length;
 
-  // Motivational quotes — cycles daily
+  // Motivational quotes — cycles every 8 seconds
   const QUOTES = [
-    '"The best way to find yourself is to lose yourself in the service of others." — Gandhi',
-    '"Mentorship is a brain to pick, an ear to listen, and a push in the right direction." — J.C. Crosby',
-    '"A mentor is someone who sees more talent and ability within you than you see in yourself." — Bob Proctor',
-    '"Your knowledge is valuable only when it is shared." — Anonymous',
-    '"One person can make a difference, and everyone should try." — JFK',
-    '"The mediocre teacher tells. The good teacher explains. The great teacher inspires." — W. A. Ward',
-    '"Leadership is not about being in charge. It is about taking care of those in your charge." — Simon Sinek',
+    { text: "The best way to find yourself is to lose yourself in the service of others.", author: "Mahatma Gandhi" },
+    { text: "Mentorship is a brain to pick, an ear to listen, and a push in the right direction.", author: "J.C. Crosby" },
+    { text: "A mentor is someone who sees more talent and ability within you than you see in yourself.", author: "Bob Proctor" },
+    { text: "Your knowledge is valuable only when it is shared.", author: "Anonymous" },
+    { text: "The mediocre teacher tells. The good teacher explains. The great teacher inspires.", author: "William Arthur Ward" },
+    { text: "Leadership is not about being in charge. It is about taking care of those in your charge.", author: "Simon Sinek" },
+    { text: "Tell me and I forget. Teach me and I remember. Involve me and I learn.", author: "Benjamin Franklin" },
+    { text: "One of the greatest values of mentors is the ability to see ahead what others cannot see yet.", author: "John C. Maxwell" },
+    { text: "The delicate balance of mentoring someone is not creating them in your own image, but giving them the opportunity to create themselves.", author: "Steven Spielberg" },
   ];
-  const dailyQuote = QUOTES[new Date().getDate() % QUOTES.length];
+  const dailyQuote = QUOTES[Math.floor(Date.now() / 8000) % QUOTES.length];
 
   // ── Real-time notifications for alumni ────────────────────────────────────
   const { notifications, unreadCount, markAsRead } = useNotifications(user?.id);
@@ -1751,7 +1753,9 @@ export default function AlumniDashboard() {
               <span className="material-symbols-outlined" style={{ fontSize: '5rem' }}>auto_awesome</span>
             </div>
             <h2 style={{ fontSize: '1.75rem', fontWeight: 900, letterSpacing: '-0.03em', marginBottom: 8 }}>Welcome back, <span style={{ color: '#c3c0ff' }}>{firstName}</span></h2>
-            <p style={{ fontSize: '0.875rem', color: 'rgba(195,192,255,0.7)', maxWidth: 400, lineHeight: 1.7, fontStyle: 'italic' }}>{dailyQuote}</p>
+            <p style={{ fontSize: '0.875rem', color: 'rgba(195,192,255,0.7)', maxWidth: 400, lineHeight: 1.7, fontStyle: 'italic' }}>
+              "{dailyQuote.text}" <span style={{ fontStyle: 'normal', fontWeight: 700, color: '#c3c0ff', opacity: 0.7 }}>— {dailyQuote.author}</span>
+            </p>
             <div style={{ marginTop: '1.5rem', display: 'flex', gap: 12 }}>
               <button onClick={() => setActiveTab('requests')} style={btnOutline}>View Requests</button>
               <button onClick={() => setActiveTab('schedule')} style={btnOutline}>My Schedule</button>
