@@ -188,26 +188,24 @@ function BookButton({ alumni, studentName, userId, onBook }) {
     (status === 'slot_booked' && existing?.scheduledTime &&
       Date.now() > new Date(existing.scheduledTime).getTime() + 2 * 60 * 60 * 1000);
 
-  // No request yet, or declined, or completed → show Book / Re-apply button
-  if (!existing || status === 'declined' || isCompleted) {
-    const isReapply = status === 'declined' || isCompleted;
+  // No request yet, declined, accepted (session happened), or completed → show Book / Book Again
+  if (!existing || status === 'declined' || status === 'accepted' || isCompleted) {
+    const isReapply = status === 'declined' || status === 'accepted' || isCompleted;
     return (
       <button
         onClick={onBook}
         style={{
           width: '100%', padding: '0.6rem',
           background: isReapply ? 'rgba(195,192,255,0.08)' : 'rgba(79,70,229,0.15)',
-          color: isReapply ? '#c3c0ff' : '#c3c0ff',
+          color: '#c3c0ff',
           border: `1px solid ${isReapply ? 'rgba(195,192,255,0.25)' : 'rgba(195,192,255,0.15)'}`,
           borderRadius: 10, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer',
           textTransform: 'uppercase', letterSpacing: '0.08em',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
         }}
       >
-        {isCompleted ? (
+        {isReapply ? (
           <><span className="material-symbols-outlined" style={{ fontSize: 14 }}>replay</span>Book Again</>
-        ) : status === 'declined' ? (
-          <><span className="material-symbols-outlined" style={{ fontSize: 14 }}>refresh</span>Send Again</>
         ) : (
           <><span className="material-symbols-outlined" style={{ fontSize: 14 }}>send</span>Book Mock Interview</>
         )}
@@ -219,13 +217,6 @@ function BookButton({ alumni, studentName, userId, onBook }) {
     <div style={{ width: '100%', padding: '0.6rem', background: 'rgba(255,185,95,0.1)', border: '1px solid rgba(255,185,95,0.25)', borderRadius: 10, textAlign: 'center' }}>
       <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#ffb95f', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 }}>⏳ Request Pending</div>
       <div style={{ fontSize: '0.7rem', color: '#c7c4d8' }}>Waiting for {alumni.name.split(' ')[0]} to accept</div>
-    </div>
-  );
-
-  if (status === 'accepted') return (
-    <div style={{ width: '100%', padding: '0.6rem', background: 'rgba(195,192,255,0.08)', border: '1px solid rgba(195,192,255,0.2)', borderRadius: 10, textAlign: 'center' }}>
-      <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#c3c0ff', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 }}>✓ Accepted</div>
-      <div style={{ fontSize: '0.7rem', color: '#c7c4d8' }}>Alumni is selecting a time slot...</div>
     </div>
   );
 
