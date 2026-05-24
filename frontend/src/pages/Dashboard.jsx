@@ -697,13 +697,23 @@ export default function Dashboard() {
                 </div>
               </div>
               <p style={{ marginTop: '1rem', fontSize: '0.75rem', textAlign: 'center', color: '#c7c4d8', lineHeight: 1.6, maxWidth: 180 }}>
-                Add your{' '}
-                {profileData.github ? (
-                  <a href={profileData.github.startsWith('http') ? profileData.github : `https://${profileData.github}`} target="_blank" rel="noopener noreferrer" style={{ color: '#c3c0ff', textDecoration: 'underline', cursor: 'pointer' }}>Github Portfolio</a>
-                ) : (
-                  <span onClick={() => setActiveTab('settings')} style={{ color: '#c3c0ff', textDecoration: 'underline', cursor: 'pointer' }}>Github Portfolio</span>
-                )}{' '}
-                to reach All-Star status.
+                {(() => {
+                  const quotes = [
+                    { text: "Every great developer you know got there by solving problems they were unqualified to solve until they actually did it.", author: "Patrick McKenzie" },
+                    { text: "The best way to predict the future is to invent it.", author: "Alan Kay" },
+                    { text: "First, solve the problem. Then, write the code.", author: "John Johnson" },
+                    { text: "Code is like humor. When you have to explain it, it's bad.", author: "Cory House" },
+                    { text: "Make it work, make it right, make it fast.", author: "Kent Beck" },
+                  ];
+                  const idx = Math.floor(Date.now() / 8000) % quotes.length;
+                  const q = quotes[idx];
+                  return (
+                    <>
+                      <span style={{ fontStyle: 'italic', opacity: 0.85 }}>"{q.text}"</span>
+                      <span style={{ display: 'block', marginTop: 6, fontSize: '0.65rem', color: '#c3c0ff', fontWeight: 700, opacity: 0.7 }}>— {q.author}</span>
+                    </>
+                  );
+                })()}
               </p>
             </div>
           </div>
