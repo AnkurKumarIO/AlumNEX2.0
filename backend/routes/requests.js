@@ -216,15 +216,14 @@ router.patch('/:id', async (req, res) => {
       // Notify TNP coordinator — show both student and alumni names
       try {
         const tnpUser = await prisma.user.findFirst({ where: { role: 'TNP' }, select: { id: true } });
-        if (tnpUser) {
-          notificationsToCreate.push({
-            user_id: tnpUser.id,
-            type: 'SLOT_BOOKED',
-            title: `Session Booked: ${request.student?.name || 'Student'} ↔ ${request.alumni?.name || 'Alumni'}`,
-            message: `${request.student?.name || 'A student'} booked a "${request.topic || 'Mock Interview'}" session with ${request.alumni?.name || 'an alumni'} on ${formatted}.`,
-            request_id: id,
-          });
-        }
+        const tnpId = tnpUser?.id || 'tnp-001'; // fallback to hardcoded ID if not in DB yet
+        notificationsToCreate.push({
+          user_id: tnpId,
+          type: 'SLOT_BOOKED',
+          title: `Session Booked: ${request.student?.name || 'Student'} ↔ ${request.alumni?.name || 'Alumni'}`,
+          message: `${request.student?.name || 'A student'} booked a "${request.topic || 'Mock Interview'}" session with ${request.alumni?.name || 'an alumni'} on ${formatted}.`,
+          request_id: id,
+        });
       } catch (tnpErr) {
         console.warn('[Notify TNP] Could not find TNP user:', tnpErr.message);
       }

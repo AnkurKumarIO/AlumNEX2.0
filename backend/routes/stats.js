@@ -184,7 +184,7 @@ router.get('/recent-activity', async (req, res) => {
 
     // Find the TNP user so we can identify TNP-targeted notifications
     const tnpUser = await prisma.user.findFirst({ where: { role: 'TNP' }, select: { id: true } }).catch(() => null);
-    const tnpUserId = tnpUser?.id;
+    const tnpUserId = tnpUser?.id || 'tnp-001'; // fallback to hardcoded ID
 
     // Collect request_ids that have a TNP-specific notification
     const tnpNotifRequestIds = new Set(

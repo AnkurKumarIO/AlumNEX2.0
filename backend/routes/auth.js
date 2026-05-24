@@ -310,10 +310,33 @@ router.post('/change-password', async (req, res) => {
 router.post('/tnp/login', async (req, res) => {
   try {
     const { username, password } = req.body;
-    if (username !== (process.env.TNP_USERNAME || 'admin') || password !== (process.env.TNP_PASSWORD || 'tnp_secure_123')) {
+    const TNP_USERNAME = process.env.TNP_USERNAME || 'admin';
+    const TNP_PASSWORD = process.env.TNP_PASSWORD || 'tnp_secure_123';
+    if (username !== TNP_USERNAME || password !== TNP_PASSWORD) {
       return res.status(401).json({ error: 'Invalid TNP credentials.' });
     }
     const user = { id: 'tnp-001', name: 'TNP Coordinator', role: 'TNP' };
+
+    // Ensure TNP user exists in DB so notification queries (findFirst role=TNP) work
+    try {
+      await prisma.user.upsert({
+        where: { id: 'tnp-001' },
+        update: {},
+        create: {
+          id: 'tnp-001',
+          role: 'TNP',
+          name: 'TNP Coordinator',
+          email: 'tnp@alumnex.internal',
+          department: 'Administration',
+          verification_status: 'VERIFIED',
+          profile_data: '{}',
+        },
+      });
+    } catch (dbErr) {
+      // Non-fatal — log and continue
+      console.warn('[TNP Login] Could not upsert TNP user in DB:', dbErr.message);
+    }
+
     res.json({ message: 'TNP Login successful', token: makeToken(user), user });
   } catch (err) {
     res.status(500).json({ error: err.message });
