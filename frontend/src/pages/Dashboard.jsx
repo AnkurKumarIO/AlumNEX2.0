@@ -523,29 +523,35 @@ export default function Dashboard() {
                     </div>
                   </div>
                   {profileData.resumeUrl && (
-                    <a href={profileData.resumeUrl} download={profileData.resumeName || 'resume.pdf'} style={{ ...btnOutline, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0.4rem 0.8rem' }}>
-                      <span className="material-symbols-outlined" style={{ fontSize: 14 }}>download</span>
-                      Download
-                    </a>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <a href={profileData.resumeUrl} target="_blank" rel="noopener noreferrer" style={{ ...btnOutline, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0.4rem 0.8rem' }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>visibility</span>
+                        View
+                      </a>
+                      <a href={profileData.resumeUrl} download={profileData.resumeName || 'resume.pdf'} style={{ ...btnOutline, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0.4rem 0.8rem' }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>download</span>
+                        Download
+                      </a>
+                    </div>
                   )}
                 </div>
 
                 {/* Social Links */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {profileData.linkedin && (
-                    <a href={profileData.linkedin} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0.75rem 1rem', borderRadius: 10, background: 'rgba(10,102,194,0.1)', border: '1px solid rgba(10,102,194,0.2)', color: '#0a66c2', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 600 }}>
+                    <a href={profileData.linkedin.startsWith('http') ? profileData.linkedin : `https://${profileData.linkedin}`} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0.75rem 1rem', borderRadius: 10, background: 'rgba(10,102,194,0.1)', border: '1px solid rgba(10,102,194,0.2)', color: '#0a66c2', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 600 }}>
                       <span className="material-symbols-outlined" style={{ fontSize: 18 }}>link</span>
                       LinkedIn Profile
                     </a>
                   )}
                   {profileData.github && (
-                    <a href={profileData.github} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0.75rem 1rem', borderRadius: 10, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#fff', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 600 }}>
+                    <a href={profileData.github.startsWith('http') ? profileData.github : `https://${profileData.github}`} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0.75rem 1rem', borderRadius: 10, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#fff', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 600 }}>
                       <span className="material-symbols-outlined" style={{ fontSize: 18 }}>code</span>
                       GitHub Repository
                     </a>
                   )}
                   {profileData.portfolio && (
-                    <a href={profileData.portfolio} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0.75rem 1rem', borderRadius: 10, background: 'rgba(195,192,255,0.05)', border: '1px solid rgba(195,192,255,0.1)', color: '#c3c0ff', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 600 }}>
+                    <a href={profileData.portfolio.startsWith('http') ? profileData.portfolio : `https://${profileData.portfolio}`} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0.75rem 1rem', borderRadius: 10, background: 'rgba(195,192,255,0.05)', border: '1px solid rgba(195,192,255,0.1)', color: '#c3c0ff', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 600 }}>
                       <span className="material-symbols-outlined" style={{ fontSize: 18 }}>language</span>
                       Portfolio Website
                     </a>
@@ -686,7 +692,13 @@ export default function Dashboard() {
                 </div>
               </div>
               <p style={{ marginTop: '1rem', fontSize: '0.75rem', textAlign: 'center', color: '#c7c4d8', lineHeight: 1.6, maxWidth: 180 }}>
-                Add your <span style={{ color: '#c3c0ff', textDecoration: 'underline', cursor: 'pointer' }}>Github Portfolio</span> to reach All-Star status.
+                Add your{' '}
+                {profileData.github ? (
+                  <a href={profileData.github.startsWith('http') ? profileData.github : `https://${profileData.github}`} target="_blank" rel="noopener noreferrer" style={{ color: '#c3c0ff', textDecoration: 'underline', cursor: 'pointer' }}>Github Portfolio</a>
+                ) : (
+                  <span onClick={() => setActiveTab('settings')} style={{ color: '#c3c0ff', textDecoration: 'underline', cursor: 'pointer' }}>Github Portfolio</span>
+                )}{' '}
+                to reach All-Star status.
               </p>
             </div>
           </div>

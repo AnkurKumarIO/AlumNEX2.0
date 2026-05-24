@@ -169,6 +169,21 @@ function ResultsView({ result, onReset, navigate }) {
   const scoreColor = score >= 85 ? '#4edea3' : score >= 70 ? '#c3c0ff' : score >= 55 ? '#ffb95f' : '#ff8a80';
   const scoreLabel = score >= 85 ? 'Excellent' : score >= 70 ? 'Good' : score >= 55 ? 'Fair' : 'Needs Work';
   const atsColor = atsScore >= 80 ? '#4edea3' : atsScore >= 60 ? '#ffb95f' : '#ff8a80';
+  const [skillsSaved, setSkillsSaved] = React.useState(false);
+
+  const saveSkillsToProfile = () => {
+    if (!result.top_skills?.length) return;
+    try {
+      const saved = JSON.parse(localStorage.getItem('alumnex_profile') || '{}');
+      const merged = [...new Set([...(saved.skills || []), ...result.top_skills])];
+      const updated = { ...saved, skills: merged };
+      localStorage.setItem('alumnex_profile', JSON.stringify(updated));
+      localStorage.setItem('alumniconnect_profile', JSON.stringify(updated));
+      // Emit sync so Dashboard re-reads profileData
+      window.dispatchEvent(new CustomEvent('alumnex:sync', { detail: { type: 'profile_updated' } }));
+      setSkillsSaved(true);
+    } catch {}
+  };
 
   return (
     <div style={{ maxWidth: 800, margin: '2rem auto', padding: '0 1rem', fontFamily: 'Inter, sans-serif', color: '#dae2fd' }}>
@@ -355,10 +370,15 @@ function ResultsView({ result, onReset, navigate }) {
       )}
 
       {/* CTA row */}
-      <div style={{ display: 'flex', gap: 12 }}>
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
         <button onClick={() => navigate('/dashboard')} style={{ flex: 1, padding: '0.875rem', background: '#222a3d', color: '#c7c4d8', border: '1px solid rgba(70,69,85,0.2)', borderRadius: 12, fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer', fontFamily: 'inherit' }}>
           ← Dashboard
         </button>
+        {result.top_skills?.length > 0 && (
+          <button onClick={saveSkillsToProfile} disabled={skillsSaved} style={{ flex: 1, padding: '0.875rem', background: skillsSaved ? 'rgba(78,222,163,0.12)' : 'rgba(78,222,163,0.15)', color: skillsSaved ? '#4edea3' : '#4edea3', border: `1px solid ${skillsSaved ? 'rgba(78,222,163,0.4)' : 'rgba(78,222,163,0.25)'}`, borderRadius: 12, fontWeight: 700, fontSize: '0.875rem', cursor: skillsSaved ? 'default' : 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            {skillsSaved ? '✓ Skills Saved to Profile' : '⬆ Save Skills to Profile'}
+          </button>
+        )}
         <button onClick={onReset} style={{ flex: 1, padding: '0.875rem', background: 'linear-gradient(135deg,#4f46e5,#c3c0ff)', color: '#1d00a5', border: 'none', borderRadius: 12, fontWeight: 800, fontSize: '0.875rem', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
           ↺ Analyze Another
         </button>
