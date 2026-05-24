@@ -437,7 +437,8 @@ router.post('/bulk-students', async (req, res) => {
       }
       try {
         const email = s.email.trim().toLowerCase();
-        const username = generateStudentUsername(s.rollNo, s.name, s.year);
+        const rollNo = (s.rollNo || s.studentId || '').trim(); // accept both field names
+        const username = generateStudentUsername(rollNo, s.name, s.year);
 
         // In-memory duplicate check
         if (existingEmails.has(email)) {
@@ -461,7 +462,8 @@ router.post('/bulk-students', async (req, res) => {
           profileData: {
             college:   s.college   || '',
             year:      s.year      || '',
-            rollNo:    s.rollNo    || username,
+            rollNo:    rollNo      || username,
+            studentId: rollNo      || username, // store under both keys for compatibility
           },
           skipDuplicateCheck: true,
         });
@@ -647,7 +649,7 @@ router.post('/bulk-alumni', async (req, res) => {
 // ── GET /register/template/students ──────────────────────────────────────────
 router.get('/template/students', (req, res) => {
   const csv = [
-    'name,email,rollNo,department,college,year',
+    'name,email,studentId,department,college,year',
     'Alice Johnson,alice@college.edu,BT25CSE013,Computer Science,ABC College,2025',
     'Bob Smith,bob@college.edu,BT25ECE007,Electronics,ABC College,2025',
   ].join('\n') + '\n';
