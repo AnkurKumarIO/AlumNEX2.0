@@ -193,16 +193,19 @@ router.get('/recent-activity', async (req, res) => {
         .map(n => n.request_id)
     );
 
-    // Filter: keep TNP notifications + non-personal ones (no request_id),
-    // but drop student/alumni personal slot/meeting notifications when a TNP version exists
+    // Filter: keep only TNP-targeted notifications + non-request system ones.
+    // For slot/meeting events, ONLY show the TNP-specific notification (not personal student/alumni ones).
     const notifications = allNotifications.filter(n => {
-      if (n.user_id === tnpUserId) return true; // always show TNP-targeted
-      if (!n.request_id) return true;            // system/general notifications
-      // Drop personal slot/meeting notifications that have a TNP counterpart
-      if (tnpNotifRequestIds.has(n.request_id) &&
-          (n.type === 'SLOT_BOOKED' || n.type === 'SLOT_BOOKED_ALUMNI' || n.type === 'MEETING_LIVE')) {
+      // Always show TNP-targeted notifications
+      if (n.user_id === tnpUserId) return true;
+      // Show general system notifications (no request_id)
+      if (!n.request_id) return true;
+      // Drop all personal student/alumni slot/meeting notifications — TNP has its own
+      if (n.type === 'SLOT_BOOKED' || n.type === 'SLOT_BOOKED_ALUMNI' ||
+          n.type === 'MEETING_LIVE' || n.type === 'ACCEPTED' || n.type === 'DECLINED') {
         return false;
       }
+      // Show NEW_REQUEST notifications (alumni receives these — useful for TNP overview)
       return true;
     }).slice(0, 20);
 

@@ -101,11 +101,16 @@ export default function GoogleMeetInterviewRoom() {
     if (rating === 0) return;
     setSubmitting(true);
     try {
-      const authUser = JSON.parse(localStorage.getItem('alumnex_user') || '{}');
+      // Auth is stored in sessionStorage — always read from there first
+      let authUser = {};
+      try {
+        const raw = sessionStorage.getItem('alumnex_user') || sessionStorage.getItem('alumniconnect_user');
+        if (raw) authUser = JSON.parse(raw);
+      } catch {}
       const myRealId = authUser.id || user?.id || '';
 
-      // Look up the request record to get real student/alumni UUIDs and names
-      // Try localStorage first (fast), then fall back to what we know
+      // Look up the request record to get real student/alumni UUIDs and names.
+      // The backend is the source of truth — fetch the request by roomId.
       let studentId = '';
       let alumniId = '';
       let studentName = '';
@@ -113,33 +118,59 @@ export default function GoogleMeetInterviewRoom() {
       let topic = 'Mock Interview';
 
       try {
-        const allRequests = JSON.parse(localStorage.getItem('alumnex_interview_requests') || '[]');
-        // Match by roomId (exact URL) or by request_id suffix pattern
-        const req = allRequests.find(r =>
-          r.roomId === roomId ||
-          r.id === roomId ||
-          (r.roomId && roomId && r.roomId.includes(roomId)) ||
-          (r.id && roomId && roomId.includes(r.id.slice(-8)))
-        );
-        if (req) {
-          studentId   = req.studentId   || req.student_id   || '';
-          alumniId    = req.alumniId    || req.alumni_id    || '';
-          studentName = req.studentName || '';
-          alumniName  = req.alumniName  || '';
-          topic       = req.topic       || 'Mock Interview';
+        // roomId may be a full URL (meet.google.com/...) or a UUID request_id
+        // Try fetching the request from the backend using the roomId
+        const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+        const res = await fetch(`${API_BASE}/requests?roomId=${encodeURIComponent(roomId)}`);
+        if (res.ok) {
+          const requests = await res.json();
+          const req = Array.isArray(requests) ? requests.find(r =>
+            r.room_id === roomId ||
+            r.request_id === roomId ||
+            r.id === roomId
+          ) : null;
+          if (req) {
+            studentId   = req.student_id   || req.studentId   || '';
+            alumniId    = req.alumni_id    || req.alumniId    || '';
+            studentName = req.student_name || req.studentName || '';
+            alumniName  = req.alumni_name  || req.alumniName  || '';
+            topic       = req.topic        || 'Mock Interview';
+          }
         }
       } catch {}
 
-      // Fill in what we know from auth context if lookup failed
+      // Fallback: try localStorage requests cache
+      if (!studentId || !alumniId) {
+        try {
+          const allRequests = JSON.parse(localStorage.getItem('alumnex_interview_requests') || '[]');
+          const req = allRequests.find(r =>
+            r.roomId === roomId ||
+            r.room_id === roomId ||
+            r.id === roomId ||
+            r.request_id === roomId ||
+            (r.roomId && roomId && r.roomId.includes(roomId)) ||
+            (r.id && roomId && roomId.includes(r.id.slice(-8)))
+          );
+          if (req) {
+            studentId   = studentId   || req.studentId   || req.student_id   || '';
+            alumniId    = alumniId    || req.alumniId    || req.alumni_id    || '';
+            studentName = studentName || req.studentName || '';
+            alumniName  = alumniName  || req.alumniName  || '';
+            topic       = req.topic   || topic;
+          }
+        } catch {}
+      }
+
+      // Final fallback: use auth context for the current user's side
       if (myRole === 'STUDENT') {
         if (!studentId) studentId = myRealId;
-        if (!studentName) studentName = myId;
-        if (!alumniId) alumniId = peerName;   // best effort
+        if (!studentName) studentName = user?.name || myId;
+        if (!alumniId) alumniId = peerName;
         if (!alumniName) alumniName = peerName;
       } else {
         if (!alumniId) alumniId = myRealId;
-        if (!alumniName) alumniName = myId;
-        if (!studentId) studentId = peerName; // best effort
+        if (!alumniName) alumniName = user?.name || myId;
+        if (!studentId) studentId = peerName;
         if (!studentName) studentName = peerName;
       }
 

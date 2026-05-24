@@ -3,13 +3,14 @@ const router = express.Router();
 const prisma = require('../lib/prisma');
 const { createGoogleMeetLink, generateJitsiFallback } = require('../services/googleMeetService');
 
-// GET /requests?alumniId=&studentId=
+// GET /requests?alumniId=&studentId=&roomId=
 router.get('/', async (req, res) => {
   try {
-    const { alumniId, studentId } = req.query;
+    const { alumniId, studentId, roomId } = req.query;
     const where = {};
     if (alumniId)  where.alumni_id = alumniId;
     if (studentId) where.student_id = studentId;
+    if (roomId)    where.room_id = roomId;
 
     const data = await prisma.interviewRequest.findMany({
       where,
@@ -219,8 +220,8 @@ router.patch('/:id', async (req, res) => {
           notificationsToCreate.push({
             user_id: tnpUser.id,
             type: 'SLOT_BOOKED',
-            title: 'Interview Slot Confirmed! 📅',
-            message: `${request.student?.name || 'A student'} (Student) ↔ ${request.alumni?.name || 'an alumni'} (Alumni) — interview scheduled for ${formatted}.${meetInfo}`,
+            title: `Session Booked: ${request.student?.name || 'Student'} ↔ ${request.alumni?.name || 'Alumni'}`,
+            message: `${request.student?.name || 'A student'} booked a "${request.topic || 'Mock Interview'}" session with ${request.alumni?.name || 'an alumni'} on ${formatted}.`,
             request_id: id,
           });
         }
