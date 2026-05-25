@@ -54,7 +54,8 @@ function BookSlotModal({ request, onClose, onBooked }) {
     setTimeError('');
     setBooking(true);
     const time24 = to24h();
-    const scheduledTime = new Date(`${viewYear}-${String(viewMonth+1).padStart(2,'0')}-${String(selectedDate).padStart(2,'0')}T${time24}`).toISOString();
+    const [h24, m24] = time24.split(':').map(Number);
+    const scheduledTime = new Date(viewYear, viewMonth, selectedDate, h24, m24).toISOString();
     await bookSlot(request.id, scheduledTime);
     setBooking(false);
     setStep('done');
@@ -209,7 +210,8 @@ function RescheduleModal({ request, onClose, onRescheduled }) {
     if (isNaN(h) || h < 1 || h > 12) { setTimeError('Hour must be 1-12'); return; }
     if (isNaN(m) || m < 0 || m > 59) { setTimeError('Minutes must be 00-59'); return; }
     setTimeError('');
-    const newTime = new Date(`${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(selectedDate).padStart(2, '0')}T${to24h()}`).toISOString();
+    const [h24, m24] = to24h().split(':').map(Number);
+    const newTime = new Date(viewYear, viewMonth, selectedDate, h24, m24).toISOString();
     try {
       await rescheduleSlot(request.id, newTime);
     } catch (e) {
@@ -1144,7 +1146,9 @@ export default function AlumniDashboard() {
   };
 
   const handleAddSlot = ({ date, time, duration }) => {
-    const isoTime = new Date(`${date}T${time}`).toISOString();
+    const [y, m, d] = date.split('-').map(Number);
+    const [hh, mm] = time.split(':').map(Number);
+    const isoTime = new Date(y, m - 1, d, hh, mm).toISOString();
     setExtraSlots(s => [...s, {
       when: formatScheduledTime(isoTime),
       title: `Open Slot (${duration} min)`,
