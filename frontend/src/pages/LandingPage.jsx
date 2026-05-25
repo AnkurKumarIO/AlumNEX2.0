@@ -427,7 +427,7 @@ export default function LandingPage() {
               letterSpacing: '-0.02em',
               textShadow: '0 0 20px rgba(195,192,255,0.3)'
             }}>
-              Wanna meet the developers?
+              The Engineering Team
             </h2>
             
             <p style={{
@@ -437,7 +437,7 @@ export default function LandingPage() {
               maxWidth: 550,
               margin: 0
             }}>
-              Discover the brilliant minds of The Tesseract who brought this platform to life during their first year.
+              AlumNEX was architected and developed by The Tesseract—a dedicated group of engineers who built this platform entirely during their first year.
             </p>
             
             <Link to="/developers" style={{

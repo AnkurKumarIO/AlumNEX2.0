@@ -144,11 +144,11 @@ export default function MeetDevelopers() {
             fontSize: 'clamp(1rem, 2vw, 1.15rem)',
             color: '#c7c4d8',
             lineHeight: 1.7,
-            maxWidth: 700,
+            maxWidth: 750,
             margin: '0 auto',
             opacity: 0.9
           }}>
-            We are a team of 4 dedicated first-year developers who built AlumNEX to bridge the gap between students, alumni, and administrators. Our goal is to provide a seamless, intelligent platform that fosters meaningful career connections and guidance.
+            We are a team of four dedicated developers who conceptualized and built AlumNEX entirely during our first year of college. Driven by a passion for scalable engineering and solving real-world problems early in our academic journey, we created this platform to bridge the gap between students, alumni, and administrators. Our goal remains to provide a seamless, intelligent ecosystem that fosters meaningful career connections.
           </p>
         </div>
 
