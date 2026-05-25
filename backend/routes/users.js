@@ -33,18 +33,37 @@ router.delete('/bulk', async (req, res) => {
   }
 });
 
-// PATCH /users/:id/profile — save full profile data
+// PATCH /users/:id/profile — save full profile data (upserts if user not found)
 router.patch('/:id/profile', async (req, res) => {
   try {
     const id = req.params.id;
     const incoming = req.body;
 
-    // Fetch existing user first
-    const existingUser = await prisma.user.findUnique({
-      where: { id }
-    });
+    // Upsert: update if exists, create if not (handles Supabase-only users)
+
+    // Try to find existing user first so we can preserve their data
+    let existingUser = await prisma.user.findUnique({ where: { id } });
     if (!existingUser) {
-      return res.status(404).json({ error: 'User not found' });
+      // Determine a safe email (avoid unique constraint collision)
+      let safeEmail = incoming.email || `${id}@placeholder.local`;
+      if (incoming.email) {
+        const emailTaken = await prisma.user.findUnique({ where: { email: incoming.email } });
+        if (emailTaken) safeEmail = `${id}@placeholder.local`;
+      }
+      existingUser = await prisma.user.upsert({
+        where: { id },
+        update: {},
+        create: {
+          id,
+          role:                incoming.role || 'STUDENT',
+          name:                incoming.name || 'User',
+          email:               safeEmail,
+          department:          incoming.department || 'General',
+          verification_status: 'VERIFIED',
+          profile_data:        '{}',
+        },
+      });
+      console.log(`[users] Auto-created Prisma record for user ${id}`);
     }
 
     const isVerified = existingUser.verification_status === 'VERIFIED';
@@ -63,15 +82,14 @@ router.patch('/:id/profile', async (req, res) => {
     }
 
     // Merge new fields into existing profile_data JSON object
-    const profileDataObj = {
-      ...existingProfileData,
-    };
+    const profileDataObj = { ...existingProfileData };
 
     // Update non-verified fields if present in request body
     const nonVerifiedFields = [
       'bio', 'linkedin', 'github', 'portfolio', 'skills', 'cgpa',
       'resumeName', 'resumeUrl', 'photoPreview', 'projects', 'targetRoles',
-      'preferredCompanies', 'openTo', 'gradMonth', 'gradYear', 'experience', 'domain'
+      'preferredCompanies', 'openTo', 'gradMonth', 'gradYear', 'experience', 'domain',
+      'phone', 'notification_preferences',
     ];
 
     nonVerifiedFields.forEach(f => {
@@ -119,17 +137,9 @@ router.patch('/:id/profile', async (req, res) => {
       profile_data: JSON.stringify(profileDataObj)
     };
 
-    const user = await prisma.user.update({
-      where: { id },
-      data: updates
-    });
+    const user = await prisma.user.update({ where: { id }, data: updates });
 
-    const result = {
-      ...user,
-      profile_data: JSON.parse(user.profile_data || '{}')
-    };
-
-    res.json({ message: 'Profile saved', user: result });
+    res.json({ message: 'Profile saved', user: { ...user, profile_data: JSON.parse(user.profile_data || '{}') } });
   } catch (err) {
     console.error('Profile update error:', err);
     res.status(500).json({ error: err.message });

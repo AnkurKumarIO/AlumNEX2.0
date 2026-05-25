@@ -34,6 +34,8 @@ model User {
 
   student_sessions    SessionFeedback[]  @relation("StudentSessions")
   alumni_sessions     SessionFeedback[]  @relation("AlumniSessions")
+  
+  profile_assets      ProfileAsset[]
 
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
@@ -177,4 +179,24 @@ model CollegeRegistry {
   department String
 
   @@map("college_registry")
+}
+
+model ProfileAsset {
+  id         String   @id @default(uuid())
+  user_id    String
+  asset_type String   // 'photo' or 'resume'
+  file_name  String?
+  mime_type  String?
+  file_data  String   // Base64 encoded
+  file_size  Int?
+  
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  
+  @@unique([user_id, asset_type])
+  @@index([user_id])
+  @@index([user_id, asset_type])
+  @@map("profile_assets")
 }

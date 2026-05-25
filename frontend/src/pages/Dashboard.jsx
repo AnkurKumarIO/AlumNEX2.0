@@ -13,6 +13,8 @@ import { getAllAlumni, getUserById } from '../lib/db';
 import { useNotifications } from '../hooks/useNotifications';
 import { useInterviewRequests } from '../hooks/useInterviewRequests';
 import { subscribeRealtimeSync } from '../lib/realtimeSync';
+import { loadProfileFromStorage } from '../lib/profilePersistence';
+import { getProfileAsset } from '../lib/profileAssetsAPI';
 import io from 'socket.io-client';
 
 // â”€â”€ Inline BookModal for Recommended Mentor â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -135,7 +137,10 @@ export default function Dashboard() {
   const [recommendedMentor, setRecommendedMentor] = useState(null);
   const [profileData, setProfileData] = useState(() => {
     // Initialize immediately from localStorage so My Profile renders on first paint
-    try { return JSON.parse(localStorage.getItem('alumnex_profile') || '{}'); } catch { return {}; }
+    const saved = loadProfileFromStorage();
+    console.log('[Dashboard] Initial load from localStorage, has photo:', !!saved.photoPreview);
+    console.log('[Dashboard] Initial load from localStorage, has resume:', !!saved.resumeUrl);
+    return saved;
   });
   const [aiProfileStrength, setAiProfileStrength] = useState(null);
   const [dbFeedback, setDbFeedback] = useState([]);
@@ -231,27 +236,62 @@ export default function Dashboard() {
       api.getUserFeedback(user.id).then(data => {
         if (Array.isArray(data)) setDbFeedback(data);
       }).catch(() => {});
-      getUserById(user.id).then(u => {
-        // profile_data from Supabase may be a raw JSON string — always parse it
+      getUserById(user.id).then(async (u) => {
         let rawPd = u?.profile_data;
         if (typeof rawPd === 'string') {
           try { rawPd = JSON.parse(rawPd); } catch { rawPd = {}; }
         }
-        // Always read localStorage for fields that are never stored in DB (resumeUrl, resumeName)
-        const localPd = (() => { try { return JSON.parse(localStorage.getItem('alumnex_profile') || '{}'); } catch { return {}; } })();
-        const pd = (rawPd && Object.keys(rawPd).length > 0)
-          ? { ...rawPd, resumeUrl: rawPd.resumeUrl || localPd.resumeUrl || '', resumeName: rawPd.resumeName || localPd.resumeName || '' }
+        
+        const localPd = loadProfileFromStorage();
+        
+        let pd = (rawPd && Object.keys(rawPd).length > 0)
+          ? { 
+              ...rawPd, 
+              resumeUrl: localPd.resumeUrl || rawPd.resumeUrl || '', 
+              resumeName: localPd.resumeName || rawPd.resumeName || '',
+              photoPreview: localPd.photoPreview || (rawPd.photoPreview === '__stored_locally__' ? '' : rawPd.photoPreview) || ''
+            }
           : localPd;
+        
+        // Fetch real photo/resume if stored in DB
+        try {
+          if (!pd.photoPreview || pd.photoPreview === '__stored_in_database__' || pd.photoPreview === '__stored_locally__') {
+            console.log('[Dashboard] Fetching photo from database...');
+            const photoAsset = await getProfileAsset(user.id, 'photo');
+            if (photoAsset?.fileData) {
+              pd.photoPreview = photoAsset.fileData;
+              console.log('[Dashboard] ✓ Photo loaded from database');
+            } else {
+              console.log('[Dashboard] No photo found in database');
+            }
+          }
+          if (!pd.resumeUrl || pd.resumeUrl === '__stored_in_database__' || pd.resumeUrl === '__stored_locally__') {
+            console.log('[Dashboard] Fetching resume from database...');
+            const resumeAsset = await getProfileAsset(user.id, 'resume');
+            if (resumeAsset?.fileData) {
+              pd.resumeUrl = resumeAsset.fileData;
+              pd.resumeName = resumeAsset.fileName || pd.resumeName;
+              console.log('[Dashboard] ✓ Resume loaded from database');
+            } else {
+              console.log('[Dashboard] No resume found in database');
+            }
+          }
+        } catch(e) {
+          console.error('[Dashboard] Failed to load profile assets', e);
+        }
+
         setProfileData(pd);
+        
         if (Object.keys(pd).length > 0) {
           api.profileStrength(pd).then(r => { if (r && !r.error) setAiProfileStrength(r); }).catch(() => {});
         }
       }).catch(() => {
-        const saved = JSON.parse(localStorage.getItem('alumnex_profile') || '{}');
+        const saved = loadProfileFromStorage();
+        console.log('[Dashboard] Fallback to localStorage, photo:', saved.photoPreview ? `${saved.photoPreview.substring(0, 50)}...` : 'none');
         setProfileData(saved);
       });
     } else {
-      const saved = JSON.parse(localStorage.getItem('alumnex_profile') || '{}');
+      const saved = loadProfileFromStorage();
       setProfileData(saved);
     }
   }, [user?.id, localRefresh]);
@@ -529,10 +569,26 @@ export default function Dashboard() {
                   </div>
                   {profileData.resumeUrl && (
                     <div style={{ display: 'flex', gap: 8 }}>
-                      <a href={profileData.resumeUrl} target="_blank" rel="noopener noreferrer" style={{ ...btnOutline, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0.4rem 0.8rem' }}>
+                      <button 
+                        onClick={() => {
+                          // Open base64 PDF in new window
+                          const win = window.open('', '_blank');
+                          if (win) {
+                            win.document.write(`
+                              <html>
+                                <head><title>${profileData.resumeName || 'Resume'}</title></head>
+                                <body style="margin:0">
+                                  <iframe src="${profileData.resumeUrl}" style="width:100%;height:100vh;border:none"></iframe>
+                                </body>
+                              </html>
+                            `);
+                          }
+                        }}
+                        style={{ ...btnOutline, display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0.4rem 0.8rem', cursor: 'pointer' }}
+                      >
                         <span className="material-symbols-outlined" style={{ fontSize: 14 }}>visibility</span>
                         View
-                      </a>
+                      </button>
                       <a href={profileData.resumeUrl} download={profileData.resumeName || 'resume.pdf'} style={{ ...btnOutline, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0.4rem 0.8rem' }}>
                         <span className="material-symbols-outlined" style={{ fontSize: 14 }}>download</span>
                         Download

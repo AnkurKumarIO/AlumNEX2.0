@@ -4,6 +4,7 @@ import { AuthContext } from '../context/AuthContext';
 import { updateUserProfile } from '../lib/db';
 import { api } from '../api';
 import { emitRealtimeSync } from '../lib/realtimeSync';
+import { uploadProfileAsset, fileToBase64, compressImage } from '../lib/profileAssetsAPI';
 
 const STEPS = ['Personal Info', 'Skills & Academics', 'Resume & Projects', 'Career Goals', 'Review'];
 const DEPTS = ['Computer Science', 'Information Technology', 'Electronics & Communication', 'Mechanical Engineering', 'Civil Engineering', 'Electrical Engineering', 'MBA', 'Other'];
@@ -130,11 +131,25 @@ export default function ProfileSetup() {
   const lbl = { fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c7c4d8', display: 'block', marginBottom: 6 };
   const section = { display: 'flex', flexDirection: 'column', gap: '1.25rem' };
 
-  const handlePhotoChange = (e) => {
+  const handlePhotoChange = async (e) => {
     const f = e.target.files[0];
     if (f) {
       setPhotoFile(f);
-      setPhotoPreview(URL.createObjectURL(f));
+      try {
+        const base64 = await fileToBase64(f);
+        let finalBase64 = base64;
+        if (base64.length > 500 * 1024) {
+          finalBase64 = await compressImage(base64, 800, 0.8);
+        }
+        setPhotoPreview(finalBase64);
+        
+        const userId = user?.id || JSON.parse(localStorage.getItem('alumnex_pending_profile') || '{}')?.id;
+        if (userId && !userId.startsWith('stu-') && !userId.startsWith('alm-')) {
+          await uploadProfileAsset(userId, 'photo', finalBase64, f.name, f.type);
+        }
+      } catch (err) {
+        console.error('Photo upload error:', err);
+      }
     }
     e.target.value = '';
   };
@@ -236,7 +251,18 @@ export default function ProfileSetup() {
             if (!file) return;
             set('resumeName', file.name);
             const reader = new FileReader();
-            reader.onload = () => set('resumeUrl', reader.result);
+            reader.onload = async () => {
+              const base64 = reader.result;
+              set('resumeUrl', base64);
+              const userId = user?.id || JSON.parse(localStorage.getItem('alumnex_pending_profile') || '{}')?.id;
+              if (userId && !userId.startsWith('stu-') && !userId.startsWith('alm-')) {
+                try {
+                  await uploadProfileAsset(userId, 'resume', base64, file.name, file.type);
+                } catch(err) {
+                  console.error('Resume upload error:', err);
+                }
+              }
+            };
             reader.readAsDataURL(file);
             e.target.value = '';
           }}
@@ -347,7 +373,8 @@ export default function ProfileSetup() {
       department: finalDepartment,
       college: finalCollege,
       year: finalYear,
-      photoPreview,
+      photoPreview: photoPreview ? '__stored_in_database__' : '',
+      resumeUrl: profile.resumeUrl ? '__stored_in_database__' : '',
       profileComplete: true,
     };
     localStorage.setItem('alumnex_profile', JSON.stringify(fullProfile));
@@ -362,6 +389,8 @@ export default function ProfileSetup() {
       department: finalDepartment,
       college: finalCollege,
       year: finalYear,
+      photoPreview: photoPreview ? '__stored_in_database__' : '',
+      resumeUrl: profile.resumeUrl ? '__stored_in_database__' : '',
       profileComplete: true,
       profileCompletedAt: new Date().toISOString(),
     };
