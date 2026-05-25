@@ -3,13 +3,8 @@ import { AuthContext } from '../context/AuthContext';
 import { updateUserProfile } from '../lib/db';
 import { api } from '../api';
 import { emitRealtimeSync } from '../lib/realtimeSync';
-<<<<<<< HEAD
 import { saveProfileToStorage, loadProfileFromStorage, verifyProfileIntegrity } from '../lib/profilePersistence';
 import { uploadProfileAsset, getProfileAsset, fileToBase64, compressImage } from '../lib/profileAssetsAPI';
-=======
-import { uploadResume } from '../lib/resumeStorage';
-import { uploadProfilePicture } from '../lib/profilePictureStorage';
->>>>>>> b81a516120f75700a9b76e3ec361f2a8e47951ed
 
 const NOTIF_ITEMS = [
   { key: 'interview_requests', label: 'Interview Requests', desc: 'When a student sends you a booking request' },
@@ -267,6 +262,13 @@ export default function SettingsPage({ role }) {
 
   const removeSkill = (s) => setProfile(p => ({ ...p, skills: p.skills.filter(x => x !== s) }));
 
+  const toDataUrl = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
   const handleResumeUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -276,7 +278,6 @@ export default function SettingsPage({ role }) {
     }
     
     try {
-<<<<<<< HEAD
       console.log('[SettingsPage] Resume selected:', file.name, file.size);
       
       // Convert to base64
@@ -305,12 +306,6 @@ export default function SettingsPage({ role }) {
     } finally { 
       if (e.target) e.target.value = ''; 
     }
-=======
-      const { url } = await uploadResume(file, user?.id || `temp-${Date.now()}`);
-      setProfile(p => ({ ...p, resumeName: file.name, resumeUrl: url }));
-    } catch { alert('Could not upload resume.'); }
-    finally { if (e.target) e.target.value = ''; }
->>>>>>> b81a516120f75700a9b76e3ec361f2a8e47951ed
   };
 
   const [saving, setSaving] = useState(false);
@@ -322,7 +317,6 @@ export default function SettingsPage({ role }) {
       return;
     }
 
-<<<<<<< HEAD
     setSaving(true);
     setSaveError('');
 
@@ -438,11 +432,6 @@ export default function SettingsPage({ role }) {
       // 3. Persist to DB — backend first, Supabase direct as fallback
       let dbSaved = false;
       let lastError = '';
-=======
-    const updated = { ...mergedProfileData, photoPreview };
-
-    const dbSafeProfile = { ...updated };
->>>>>>> b81a516120f75700a9b76e3ec361f2a8e47951ed
 
       try {
         const controller = new AbortController();
@@ -602,7 +591,6 @@ export default function SettingsPage({ role }) {
                 <input ref={photoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => { 
                   const f = e.target.files?.[0]; 
                   if (f) {
-<<<<<<< HEAD
                     console.log('[SettingsPage] Photo selected:', f.name, f.type, f.size);
                     
                     try {
@@ -632,13 +620,6 @@ export default function SettingsPage({ role }) {
                       console.error('[SettingsPage] Photo upload error:', err);
                       alert('Failed to upload photo: ' + err.message);
                     }
-=======
-                    setPhotoPreview(URL.createObjectURL(f)); 
-                    try {
-                      const { url } = await uploadProfilePicture(f, user?.id || `temp-${Date.now()}`);
-                      setPhotoPreview(url);
-                    } catch { alert('Could not upload photo.'); }
->>>>>>> b81a516120f75700a9b76e3ec361f2a8e47951ed
                   }
                   e.target.value = ''; 
                 }} />

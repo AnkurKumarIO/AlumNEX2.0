@@ -137,7 +137,6 @@ export default function ProfileSetup() {
       setPhotoPreview(URL.createObjectURL(f)); // optimistic
       setPhotoFile(f);
       try {
-<<<<<<< HEAD
         const base64 = await fileToBase64(f);
         let finalBase64 = base64;
         if (base64.length > 500 * 1024) {
@@ -152,11 +151,6 @@ export default function ProfileSetup() {
       } catch (err) {
         console.error('Photo upload error:', err);
       }
-=======
-        const { url } = await uploadProfilePicture(f, user?.id || `temp-${Date.now()}`);
-        setPhotoPreview(url);
-      } catch { alert('Could not upload photo.'); }
->>>>>>> b81a516120f75700a9b76e3ec361f2a8e47951ed
     }
     e.target.value = '';
   };
@@ -257,7 +251,6 @@ export default function ProfileSetup() {
             const file = e.target.files?.[0];
             if (!file) return;
             set('resumeName', file.name);
-<<<<<<< HEAD
             const reader = new FileReader();
             reader.onload = async () => {
               const base64 = reader.result;
@@ -272,12 +265,6 @@ export default function ProfileSetup() {
               }
             };
             reader.readAsDataURL(file);
-=======
-            try {
-              const { url } = await uploadResume(file, user?.id || `temp-${Date.now()}`);
-              set('resumeUrl', url);
-            } catch { alert('Could not upload resume.'); }
->>>>>>> b81a516120f75700a9b76e3ec361f2a8e47951ed
             e.target.value = '';
           }}
         />
@@ -403,12 +390,8 @@ export default function ProfileSetup() {
       department: finalDepartment,
       college: finalCollege,
       year: finalYear,
-<<<<<<< HEAD
       photoPreview: photoPreview ? '__stored_in_database__' : '',
       resumeUrl: profile.resumeUrl ? '__stored_in_database__' : '',
-=======
-      photoPreview,
->>>>>>> b81a516120f75700a9b76e3ec361f2a8e47951ed
       profileComplete: true,
       profileCompletedAt: new Date().toISOString(),
     };
