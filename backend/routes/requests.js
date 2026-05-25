@@ -31,6 +31,7 @@ router.get('/', async (req, res) => {
       id:           r.request_id, // Alias for frontend compat
       student_name: r.student?.name || '',
       alumni_name:  r.alumni?.name   || '',
+      scheduled_time: r.scheduled_time ? (new Date(r.scheduled_time).toISOString()) : null,
       student_profile_snapshot: r.student_profile_snapshot ? JSON.parse(r.student_profile_snapshot) : (r.student?.profile_data ? JSON.parse(r.student.profile_data) : null),
     }));
 
@@ -190,6 +191,7 @@ router.patch('/:id', async (req, res) => {
       });
     } else if (status === 'SLOT_BOOKED') {
       const formatted = new Date(scheduledTime).toLocaleString('en-US', {
+        timeZone: 'Asia/Kolkata',
         weekday: 'long', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
       });
       const meetLinkStored = request.room_id || '';
@@ -256,7 +258,12 @@ router.patch('/:id', async (req, res) => {
       }
     }
 
-    res.json({ ...request, id: request.request_id });
+    const safeRequest = {
+      ...request,
+      id: request.request_id,
+      scheduled_time: request.scheduled_time ? new Date(request.scheduled_time).toISOString() : null,
+    };
+    res.json(safeRequest);
   } catch (err) {
     console.error('Update request error:', err);
     res.status(500).json({ error: err.message });

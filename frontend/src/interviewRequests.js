@@ -380,14 +380,6 @@ export async function acceptRequestOnly(requestId) {
   requests[idx] = { ...requests[idx], status: 'accepted' };
   saveLocal(requests);
 
-  pushNotif({
-    studentName: requests[idx].studentName,
-    studentId:   requests[idx].studentId,
-    type:        'accepted',
-    title:       'Interview Request Accepted! 🎉',
-    message:     'Your interview request has been accepted. The alumni will book a slot shortly.',
-    requestId,
-  });
   return requests[idx];
 }
 
@@ -414,21 +406,6 @@ export async function bookSlot(requestId, scheduledTime) {
     requests[idx] = { ...requests[idx], status: 'slot_booked', scheduledTime, roomId: finalRoomId };
     saveLocal(requests);
 
-    const formatted = new Date(scheduledTime).toLocaleString('en-US', {
-      weekday: 'long', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
-    });
-    const isInstant = Math.abs(new Date(scheduledTime).getTime() - Date.now()) < 60000;
-    pushNotif({
-      studentName: requests[idx].studentName,
-      studentId:   requests[idx].studentId,
-      type:        isInstant ? 'live' : 'slot_booked',
-      title:       isInstant ? '🔴 Interview is Live Now!' : 'Interview Slot Confirmed! 📅',
-      message:     isInstant
-        ? 'Your mock interview is starting now. Click Join to enter the room.'
-        : `Your interview is scheduled for ${formatted}.`,
-      requestId,
-      roomId: finalRoomId,
-    });
     return requests[idx];
   } catch (e) {
     console.warn('bookSlot Backend error, trying Supabase:', e.message);
@@ -480,18 +457,6 @@ export async function rescheduleSlot(requestId, newScheduledTime) {
   requests[idx] = { ...requests[idx], scheduledTime: newScheduledTime };
   saveLocal(requests);
 
-  const formatted = new Date(newScheduledTime).toLocaleString('en-US', {
-    weekday: 'long', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
-  });
-
-  pushNotif({
-    studentName: requests[idx].studentName,
-    studentId:   requests[idx].studentId,
-    type:        'slot_booked',
-    title:       'Interview Rescheduled 🔄',
-    message:     `Your interview has been rescheduled to ${formatted}.`,
-    requestId,
-  });
   return requests[idx];
 }
 
@@ -516,15 +481,6 @@ export async function declineRequest(requestId) {
   const studentId   = requests[idx].studentId;
   requests[idx] = { ...requests[idx], status: 'declined' };
   saveLocal(requests);
-
-  pushNotif({
-    studentName,
-    studentId,
-    type:    'declined',
-    title:   'Interview Request Update',
-    message: 'Your request was not accepted this time. Try another mentor.',
-    requestId,
-  });
 }
 
 // ── Legacy compat ─────────────────────────────────────────────────────────────
