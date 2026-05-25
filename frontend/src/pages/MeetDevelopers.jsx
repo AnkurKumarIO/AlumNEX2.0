@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Mail, Code, User, Terminal, Monitor } from 'lucide-react';
+import { Mail } from 'lucide-react';
 import Footer from '../components/Footer';
 
 const Linkedin = ({ size = 24, color = "currentColor" }) => (
@@ -28,35 +28,27 @@ export default function MeetDevelopers() {
   const team = [
     {
       name: "Garv Khatri",
-      role: "Full Stack Developer",
       bio: "Passionate about building scalable web applications and intuitive user interfaces. Specializes in React and Node.js.",
       email: "mailto:garv@example.com",
-      linkedin: "#",
-      icon: <Terminal size={24} color="#4edea3" />
+      linkedin: "#"
     },
     {
       name: "Ankur Kumar",
-      role: "Backend Engineer",
       bio: "Database architect and API specialist. Loves optimizing queries and building robust server-side architectures.",
       email: "mailto:ankur@example.com",
-      linkedin: "#",
-      icon: <Code size={24} color="#c3c0ff" />
+      linkedin: "#"
     },
     {
       name: "Chetana Gattani",
-      role: "Frontend Developer",
       bio: "UI/UX enthusiast with a keen eye for detail. Focuses on creating responsive, accessible, and stunning digital experiences.",
       email: "mailto:chetana@example.com",
-      linkedin: "#",
-      icon: <Monitor size={24} color="#ffb95f" />
+      linkedin: "#"
     },
     {
       name: "Pranjal Chaudhari",
-      role: "Systems Architect",
       bio: "Cloud computing and deployment expert. Ensures high availability and seamless integration of various platform services.",
       email: "mailto:pranjal@example.com",
-      linkedin: "#",
-      icon: <User size={24} color="#6c5ce7" />
+      linkedin: "#"
     }
   ];
 
@@ -165,46 +157,22 @@ export default function MeetDevelopers() {
         }}>
           {team.map((member, index) => (
             <div key={index} className="dev-card">
-              {/* Icon / Avatar Placeholder */}
-              <div style={{
-                width: 72,
-                height: 72,
-                borderRadius: '50%',
-                background: 'rgba(16, 22, 42, 0.8)',
-                border: '1px solid rgba(195, 192, 255, 0.15)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: '1.5rem',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
-              }}>
-                {member.icon}
-              </div>
-
               {/* Info */}
               <h3 style={{
-                fontSize: '1.25rem',
-                fontWeight: 700,
+                fontSize: '1.4rem',
+                fontWeight: 800,
                 color: '#fff',
-                margin: '0 0 0.25rem 0',
-                letterSpacing: '-0.01em'
+                margin: '0 0 1rem 0',
+                letterSpacing: '-0.01em',
+                width: '100%',
+                borderBottom: '1px solid rgba(195, 192, 255, 0.1)',
+                paddingBottom: '1rem'
               }}>
                 {member.name}
               </h3>
               
               <p style={{
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                color: '#4edea3',
-                margin: '0 0 1rem 0',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em'
-              }}>
-                {member.role}
-              </p>
-              
-              <p style={{
-                fontSize: '0.9rem',
+                fontSize: '0.95rem',
                 color: '#a0a0b8',
                 lineHeight: 1.6,
                 margin: '0 0 1.5rem 0',
