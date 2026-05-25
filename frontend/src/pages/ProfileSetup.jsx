@@ -4,12 +4,7 @@ import { AuthContext } from '../context/AuthContext';
 import { updateUserProfile } from '../lib/db';
 import { api } from '../api';
 import { emitRealtimeSync } from '../lib/realtimeSync';
-<<<<<<< HEAD
 import { uploadProfileAsset, fileToBase64, compressImage } from '../lib/profileAssetsAPI';
-=======
-import { uploadResume } from '../lib/resumeStorage';
-import { uploadProfilePicture } from '../lib/profilePictureStorage';
->>>>>>> b81a516120f75700a9b76e3ec361f2a8e47951ed
 
 const STEPS = ['Personal Info', 'Skills & Academics', 'Resume & Projects', 'Career Goals', 'Review'];
 const DEPTS = ['Computer Science', 'Information Technology', 'Electronics & Communication', 'Mechanical Engineering', 'Civil Engineering', 'Electrical Engineering', 'MBA', 'Other'];
