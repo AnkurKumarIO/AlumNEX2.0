@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Mail, Code, User, Terminal, Monitor } from 'lucide-react';
 import Footer from '../components/Footer';
 
@@ -21,6 +21,10 @@ const Linkedin = ({ size = 24, color = "currentColor" }) => (
 );
 
 export default function MeetDevelopers() {
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   const team = [
     {
       name: "Garv Khatri",
