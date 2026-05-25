@@ -4,6 +4,8 @@ import { AuthContext } from '../context/AuthContext';
 import { updateUserProfile } from '../lib/db';
 import { api } from '../api';
 import { emitRealtimeSync } from '../lib/realtimeSync';
+import { uploadResume } from '../lib/resumeStorage';
+import { uploadProfilePicture } from '../lib/profilePictureStorage';
 
 const STEPS = ['Personal Info', 'Skills & Academics', 'Resume & Projects', 'Career Goals', 'Review'];
 const DEPTS = ['Computer Science', 'Information Technology', 'Electronics & Communication', 'Mechanical Engineering', 'Civil Engineering', 'Electrical Engineering', 'MBA', 'Other'];
@@ -130,11 +132,15 @@ export default function ProfileSetup() {
   const lbl = { fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c7c4d8', display: 'block', marginBottom: 6 };
   const section = { display: 'flex', flexDirection: 'column', gap: '1.25rem' };
 
-  const handlePhotoChange = (e) => {
+  const handlePhotoChange = async (e) => {
     const f = e.target.files[0];
     if (f) {
+      setPhotoPreview(URL.createObjectURL(f)); // optimistic
       setPhotoFile(f);
-      setPhotoPreview(URL.createObjectURL(f));
+      try {
+        const { url } = await uploadProfilePicture(f, user?.id || `temp-${Date.now()}`);
+        setPhotoPreview(url);
+      } catch { alert('Could not upload photo.'); }
     }
     e.target.value = '';
   };
@@ -231,13 +237,14 @@ export default function ProfileSetup() {
           type="file"
           accept=".pdf,application/pdf"
           style={{ display: 'none' }}
-          onChange={e => {
+          onChange={async e => {
             const file = e.target.files?.[0];
             if (!file) return;
             set('resumeName', file.name);
-            const reader = new FileReader();
-            reader.onload = () => set('resumeUrl', reader.result);
-            reader.readAsDataURL(file);
+            try {
+              const { url } = await uploadResume(file, user?.id || `temp-${Date.now()}`);
+              set('resumeUrl', url);
+            } catch { alert('Could not upload resume.'); }
             e.target.value = '';
           }}
         />
@@ -362,6 +369,7 @@ export default function ProfileSetup() {
       department: finalDepartment,
       college: finalCollege,
       year: finalYear,
+      photoPreview,
       profileComplete: true,
       profileCompletedAt: new Date().toISOString(),
     };

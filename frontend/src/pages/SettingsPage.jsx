@@ -3,6 +3,8 @@ import { AuthContext } from '../context/AuthContext';
 import { updateUserProfile } from '../lib/db';
 import { api } from '../api';
 import { emitRealtimeSync } from '../lib/realtimeSync';
+import { uploadResume } from '../lib/resumeStorage';
+import { uploadProfilePicture } from '../lib/profilePictureStorage';
 
 const NOTIF_ITEMS = [
   { key: 'interview_requests', label: 'Interview Requests', desc: 'When a student sends you a booking request' },
@@ -197,21 +199,14 @@ export default function SettingsPage({ role }) {
 
   const removeSkill = (s) => setProfile(p => ({ ...p, skills: p.skills.filter(x => x !== s) }));
 
-  const toDataUrl = (file) => new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-
   const handleResumeUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.type !== 'application/pdf') { alert('Please upload a PDF resume.'); return; }
     try {
-      const dataUrl = await toDataUrl(file);
-      setProfile(p => ({ ...p, resumeName: file.name, resumeUrl: dataUrl }));
-    } catch { alert('Could not read resume file.'); }
+      const { url } = await uploadResume(file, user?.id || `temp-${Date.now()}`);
+      setProfile(p => ({ ...p, resumeName: file.name, resumeUrl: url }));
+    } catch { alert('Could not upload resume.'); }
     finally { if (e.target) e.target.value = ''; }
   };
 
@@ -231,33 +226,9 @@ export default function SettingsPage({ role }) {
       passOutYear: user?.profile_data?.passOutYear || user?.profile_data?.batchYear || savedProfile.passOutYear || profile.passOutYear,
     };
 
-    // Convert blob URL photo to data URL before saving (blob URLs die on refresh)
-    let finalPhotoPreview = photoPreview;
-    if (photoPreview && photoPreview.startsWith('blob:')) {
-      try {
-        const res = await fetch(photoPreview);
-        const blob = await res.blob();
-        finalPhotoPreview = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
-        });
-        setPhotoPreview(finalPhotoPreview);
-      } catch {
-        finalPhotoPreview = photoPreview; // keep blob URL as fallback
-      }
-    }
+    const updated = { ...mergedProfileData, photoPreview };
 
-    const updated = { ...mergedProfileData, photoPreview: finalPhotoPreview };
-
-    // For DB save: strip large base64 blobs (resume data URL) to avoid hitting limits.
-    // Store only the filename + a flag; the actual file stays in localStorage only.
     const dbSafeProfile = { ...updated };
-    if (dbSafeProfile.resumeUrl && dbSafeProfile.resumeUrl.startsWith('data:')) {
-      dbSafeProfile.resumeUrl = ''; // don't store base64 in DB
-      dbSafeProfile.resumeStoredLocally = true;
-    }
 
     localStorage.setItem('alumnex_profile', JSON.stringify(updated));
     localStorage.setItem('alumniconnect_profile', JSON.stringify(updated));
@@ -390,7 +361,17 @@ export default function SettingsPage({ role }) {
                     <button onClick={() => setPhotoPreview(null)} style={{ padding: '0.4rem 0.875rem', background: 'rgba(255,180,171,0.1)', border: '1px solid rgba(255,180,171,0.25)', borderRadius: 8, color: '#ffb4ab', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>Remove</button>
                   )}
                 </div>
-                <input ref={photoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) setPhotoPreview(URL.createObjectURL(f)); e.target.value = ''; }} />
+                <input ref={photoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => { 
+                  const f = e.target.files?.[0]; 
+                  if (f) {
+                    setPhotoPreview(URL.createObjectURL(f)); 
+                    try {
+                      const { url } = await uploadProfilePicture(f, user?.id || `temp-${Date.now()}`);
+                      setPhotoPreview(url);
+                    } catch { alert('Could not upload photo.'); }
+                  }
+                  e.target.value = ''; 
+                }} />
               </div>
             </div>
 
