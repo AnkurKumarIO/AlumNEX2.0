@@ -17,6 +17,7 @@ import ResumeAnalyzer from './pages/ResumeAnalyzer';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsAndConditions from './pages/TermsAndConditions';
 import ContactUs from './pages/ContactUs';
+import MeetDevelopers from './pages/MeetDevelopers';
 
 function DashboardRouter() {
   const { user } = useContext(AuthContext);
@@ -51,7 +52,7 @@ function ProfileSetupGuard() {
 function PublicNavbar() {
   const { user } = useContext(AuthContext);
   const isInterview = window.location.pathname.startsWith('/interview');
-  const isLegalPage = ['/privacy', '/terms', '/contact'].includes(window.location.pathname);
+  const isLegalPage = ['/privacy', '/terms', '/contact', '/developers'].includes(window.location.pathname);
   
   // Show navbar on legal pages even if not authenticated
   if (user && !isLegalPage) return null;
@@ -94,6 +95,7 @@ function App() {
           <Route path="/privacy"                element={<PrivacyPolicy />} />
           <Route path="/terms"                  element={<TermsAndConditions />} />
           <Route path="/contact"                element={<ContactUs />} />
+          <Route path="/developers"             element={<MeetDevelopers />} />
           {/* Self-registration removed — accounts created by TNP bulk upload */}
           <Route path="/student/register"       element={<Navigate to="/login" replace />} />
           <Route path="/auth/student/register"  element={<Navigate to="/login" replace />} />

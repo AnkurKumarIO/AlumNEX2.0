@@ -387,6 +387,85 @@ export default function LandingPage() {
             </div>
           </div>
         </section>
+
+        {/* Meet the Developers CTA */}
+        <section style={{ 
+          marginTop: 'clamp(4rem, 10vh, 8rem)', 
+          width: '100%',
+          display: 'flex',
+          justifyContent: 'center'
+        }}>
+          <div className="glass-card" style={{
+            padding: 'clamp(2.5rem, 6vw, 3.5rem)',
+            textAlign: 'center',
+            maxWidth: 800,
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '1.5rem',
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            {/* Background Glow */}
+            <div style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '100%',
+              height: '100%',
+              background: 'radial-gradient(circle at center, rgba(108, 92, 231, 0.15) 0%, transparent 70%)',
+              pointerEvents: 'none'
+            }} />
+            
+            <h2 style={{
+              fontSize: 'clamp(1.75rem, 4vw, 2.5rem)',
+              fontWeight: 800,
+              color: '#fff',
+              margin: 0,
+              letterSpacing: '-0.02em',
+              textShadow: '0 0 20px rgba(195,192,255,0.3)'
+            }}>
+              Wanna meet the developers?
+            </h2>
+            
+            <p style={{
+              fontSize: 'clamp(0.9rem, 2vw, 1.1rem)',
+              color: '#c7c4d8',
+              lineHeight: 1.6,
+              maxWidth: 550,
+              margin: 0
+            }}>
+              Discover the brilliant minds of The Tesseract who brought this platform to life during their first year.
+            </p>
+            
+            <Link to="/developers" style={{
+              marginTop: '0.5rem',
+              padding: '0.8rem 2.2rem',
+              background: 'linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%)',
+              color: '#fff',
+              borderRadius: '999px',
+              textDecoration: 'none',
+              fontWeight: 700,
+              fontSize: '1.05rem',
+              letterSpacing: '0.02em',
+              boxShadow: '0 4px 16px rgba(108, 92, 231, 0.3)',
+              transition: 'all 0.3s ease',
+              border: '1px solid rgba(255,255,255,0.1)'
+            }}
+            onMouseOver={e => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 8px 24px rgba(108, 92, 231, 0.4)';
+            }}
+            onMouseOut={e => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 4px 16px rgba(108, 92, 231, 0.3)';
+            }}>
+              Meet The Team
+            </Link>
+          </div>
+        </section>
       </main>
 
       {/* Footer */}
