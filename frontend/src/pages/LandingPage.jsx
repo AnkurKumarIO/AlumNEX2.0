@@ -396,74 +396,92 @@ export default function LandingPage() {
           justifyContent: 'center'
         }}>
           <div className="glass-card" style={{
-            padding: 'clamp(2.5rem, 6vw, 3.5rem)',
-            textAlign: 'center',
-            maxWidth: 800,
+            padding: 'clamp(2rem, 4vw, 3rem) clamp(2.5rem, 5vw, 4rem)',
             width: '100%',
             display: 'flex',
-            flexDirection: 'column',
+            flexDirection: 'row',
             alignItems: 'center',
-            gap: '1.5rem',
+            justifyContent: 'space-between',
+            gap: '2rem',
             position: 'relative',
-            overflow: 'hidden'
+            overflow: 'hidden',
+            flexWrap: 'wrap'
           }}>
-            {/* Background Glow */}
+            {/* Subtle background ambient glow */}
             <div style={{
               position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              width: '100%',
+              top: 0,
+              right: 0,
+              width: '50%',
               height: '100%',
-              background: 'radial-gradient(circle at center, rgba(108, 92, 231, 0.15) 0%, transparent 70%)',
-              pointerEvents: 'none'
+              background: 'radial-gradient(ellipse at right, rgba(108, 92, 231, 0.08) 0%, transparent 70%)',
+              pointerEvents: 'none',
+              zIndex: 0
             }} />
             
-            <h2 style={{
-              fontSize: 'clamp(1.75rem, 4vw, 2.5rem)',
-              fontWeight: 800,
-              color: '#fff',
-              margin: 0,
-              letterSpacing: '-0.02em',
-              textShadow: '0 0 20px rgba(195,192,255,0.3)'
-            }}>
-              The Engineering Team
-            </h2>
+            <div style={{ flex: '1 1 500px', position: 'relative', zIndex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.75rem' }}>
+                <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#c3c0ff', boxShadow: '0 0 8px #c3c0ff' }}/>
+                <span style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.18em', color: '#c3c0ff', opacity: 0.9 }}>
+                  The Architecture
+                </span>
+              </div>
+              
+              <h2 style={{
+                fontSize: 'clamp(1.5rem, 3vw, 2.25rem)',
+                fontWeight: 800,
+                color: '#fff',
+                margin: 0,
+                letterSpacing: '-0.02em',
+                lineHeight: 1.2
+              }}>
+                Curious about the tech behind AlumNEX?
+              </h2>
+              
+              <p style={{
+                fontSize: 'clamp(0.85rem, 1.8vw, 1rem)',
+                color: 'rgba(199,196,216,0.8)',
+                lineHeight: 1.6,
+                maxWidth: 600,
+                margin: '1rem 0 0 0'
+              }}>
+                Discover the engineering minds of The Tesseract—the dedicated team of developers who architected and built this platform entirely during their first year.
+              </p>
+            </div>
             
-            <p style={{
-              fontSize: 'clamp(0.9rem, 2vw, 1.1rem)',
-              color: '#c7c4d8',
-              lineHeight: 1.6,
-              maxWidth: 550,
-              margin: 0
-            }}>
-              AlumNEX was architected and developed by The Tesseract—a dedicated group of engineers who built this platform entirely during their first year.
-            </p>
-            
-            <Link to="/developers" style={{
-              marginTop: '0.5rem',
-              padding: '0.8rem 2.2rem',
-              background: 'linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%)',
-              color: '#fff',
-              borderRadius: '999px',
-              textDecoration: 'none',
-              fontWeight: 700,
-              fontSize: '1.05rem',
-              letterSpacing: '0.02em',
-              boxShadow: '0 4px 16px rgba(108, 92, 231, 0.3)',
-              transition: 'all 0.3s ease',
-              border: '1px solid rgba(255,255,255,0.1)'
-            }}
-            onMouseOver={e => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 8px 24px rgba(108, 92, 231, 0.4)';
-            }}
-            onMouseOut={e => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 4px 16px rgba(108, 92, 231, 0.3)';
-            }}>
-              Meet The Team
-            </Link>
+            <div style={{ position: 'relative', zIndex: 1, flexShrink: 0 }}>
+              <Link to="/developers" style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '0.8rem 2.2rem',
+                background: 'linear-gradient(135deg, rgba(108, 92, 231, 0.2) 0%, rgba(108, 92, 231, 0.05) 100%)',
+                color: '#fff',
+                borderRadius: '999px',
+                textDecoration: 'none',
+                fontWeight: 600,
+                fontSize: '0.95rem',
+                letterSpacing: '0.02em',
+                transition: 'all 0.3s ease',
+                border: '1px solid rgba(195,192,255,0.2)',
+                backdropFilter: 'blur(10px)',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
+              }}
+              onMouseOver={e => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(108, 92, 231, 0.4) 0%, rgba(108, 92, 231, 0.1) 100%)';
+                e.currentTarget.style.borderColor = 'rgba(195,192,255,0.4)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 8px 25px rgba(108, 92, 231, 0.3)';
+              }}
+              onMouseOut={e => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(108, 92, 231, 0.2) 0%, rgba(108, 92, 231, 0.05) 100%)';
+                e.currentTarget.style.borderColor = 'rgba(195,192,255,0.2)';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.2)';
+              }}>
+                Meet The Team
+              </Link>
+            </div>
           </div>
         </section>
       </main>
