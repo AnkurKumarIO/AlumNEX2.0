@@ -24,6 +24,14 @@ function formatScheduledTimeIST(value) {
   }).format(new Date(value));
 }
 
+function parseUTCISOString(value) {
+  if (!value || typeof value !== 'string') return null;
+  const iso = value.trim();
+  if (!iso.endsWith('Z')) return null;
+  const parsed = new Date(iso);
+  return Number.isFinite(parsed.getTime()) ? parsed : null;
+}
+
 // GET /requests?alumniId=&studentId=&roomId=
 router.get('/', async (req, res) => {
   try {
@@ -127,9 +135,20 @@ router.patch('/:id', async (req, res) => {
     const { status, scheduledTime, roomId } = req.body;
 
     const updates = { status };
-    if (scheduledTime) {
-      updates.scheduled_time = new Date(scheduledTime);
+    let parsedScheduledTime = null;
 
+    if (scheduledTime) {
+      parsedScheduledTime = parseUTCISOString(scheduledTime);
+      if (!parsedScheduledTime) {
+        return res.status(400).json({
+          error: 'scheduledTime must be a valid UTC ISO string ending with Z',
+        });
+      }
+      updates.scheduled_time = parsedScheduledTime;
+    }
+
+    // Only set or generate a room when a scheduled time exists.
+    if (parsedScheduledTime) {
       // If a real meet URL was already provided by the client, use it.
       // Otherwise generate one now on the backend using the alumni's Google token.
       if (roomId && roomId.startsWith('http')) {
@@ -145,12 +164,13 @@ router.patch('/:id', async (req, res) => {
 
         if (requestRecord?.alumni?.google_refresh_token) {
           try {
-            const endTime = new Date(new Date(scheduledTime).getTime() + 60 * 60 * 1000).toISOString();
+            const scheduledTimeIso = parsedScheduledTime.toISOString();
+            const endTime = new Date(parsedScheduledTime.getTime() + 60 * 60 * 1000).toISOString();
             meetLink = await createGoogleMeetLink(
               requestRecord.alumni.google_refresh_token,
               id,
               `AlumNEX Interview — ${requestRecord.alumni.name || 'Alumni'}`,
-              scheduledTime,
+              scheduledTimeIso,
               endTime
             );
             console.log(`[Requests] Created Google Meet for slot booking (alumni token): ${meetLink}`);
@@ -162,12 +182,13 @@ router.patch('/:id', async (req, res) => {
         // Try platform-wide token as fallback
         if (!meetLink && process.env.GOOGLE_REFRESH_TOKEN) {
           try {
-            const endTime = new Date(new Date(scheduledTime).getTime() + 60 * 60 * 1000).toISOString();
+            const scheduledTimeIso = parsedScheduledTime.toISOString();
+            const endTime = new Date(parsedScheduledTime.getTime() + 60 * 60 * 1000).toISOString();
             meetLink = await createGoogleMeetLink(
               process.env.GOOGLE_REFRESH_TOKEN,
               id,
               `AlumNEX Interview`,
-              scheduledTime,
+              scheduledTimeIso,
               endTime
             );
             console.log(`[Requests] Created Google Meet using platform token: ${meetLink}`);
