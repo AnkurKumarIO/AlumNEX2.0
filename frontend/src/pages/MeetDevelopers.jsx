@@ -28,36 +28,28 @@ export default function MeetDevelopers() {
   const team = [
     {
       name: "Garv Khatri",
-      initials: "GK",
       accentColor: "rgba(56, 189, 248, 0.4)",
-      avatarGradient: "linear-gradient(135deg, #38bdf8 0%, #0369a1 100%)",
       bio: "I'm Garv, a Computer Science Undergraduate at VNIT Nagpur (Batch of 2029). I had the incredible opportunity to build this platform with an amazing team. We designed AlumNEX to simplify alumni-student connections and bring our campus network closer together. Loved using the site or want to talk tech? I’d love to connect on LinkedIn!",
       email: "mailto:krishnakhatri1126@gmail.com",
       linkedin: "https://www.linkedin.com/in/garv-khatri-89b780380/"
     },
     {
       name: "Ankur Kumar",
-      initials: "AK",
       accentColor: "rgba(167, 139, 250, 0.4)",
-      avatarGradient: "linear-gradient(135deg, #a78bfa 0%, #6d28d9 100%)",
       bio: "I'm Ankur, a Computer Science Undergraduate at VNIT Nagpur (Batch of 2029). Building AlumNEX with the Tesseract team was an incredible experience. I enjoyed crafting the platform’s architecture to bridge the gap between students and alumni through intelligent systems. Looking for collaborators on AI projects or have questions about the platform? Let's connect on LinkedIn!",
       email: "mailto:quantum.ankurkr@gmail.com",
       linkedin: "https://www.linkedin.com/in/honestly-ankur/"
     },
     {
       name: "Chetana Gattani",
-      initials: "CG",
       accentColor: "rgba(244, 114, 182, 0.4)",
-      avatarGradient: "linear-gradient(135deg, #f472b6 0%, #be185d 100%)",
       bio: "UI/UX enthusiast with a keen eye for detail. Focuses on creating responsive, accessible, and stunning digital experiences.",
       email: "mailto:chetana@example.com",
       linkedin: "#"
     },
     {
       name: "Pranjal Chaudhari",
-      initials: "PC",
       accentColor: "rgba(52, 211, 153, 0.4)",
-      avatarGradient: "linear-gradient(135deg, #34d399 0%, #047857 100%)",
       bio: "I’m Pranjal, a Computer Science undergraduate at VNIT Nagpur (Batch 2029) passionate about building impactful and user-focused tech. Through AlumNEX, I worked on creating a platform that makes alumni-student connections more meaningful and accessible. I enjoy full-stack development, exploring new technologies, and turning ideas into real-world products that people genuinely use and enjoy.",
       email: "mailto:pc125830@gmail.com",
       linkedin: "https://www.linkedin.com/in/pranjal-chaudhari-5576993a5"
@@ -92,21 +84,6 @@ export default function MeetDevelopers() {
           transform: translateY(-8px);
           border-color: var(--accent-glow);
           box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.5), 0 0 25px var(--accent-glow), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
-        }
-        .dev-avatar {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 56px;
-          height: 56px;
-          border-radius: 50%;
-          font-size: 1.25rem;
-          font-weight: 900;
-          color: #fff;
-          margin-bottom: 1.25rem;
-          border: 2px solid rgba(255, 255, 255, 0.15);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-          letter-spacing: -0.03em;
         }
         .social-btn {
           display: flex;
@@ -194,11 +171,6 @@ export default function MeetDevelopers() {
         <div className="team-grid">
           {team.map((member, index) => (
             <div key={index} className="dev-card" style={{ '--accent-glow': member.accentColor }}>
-              {/* Badge */}
-              <div className="dev-avatar" style={{ background: member.avatarGradient }}>
-                {member.initials}
-              </div>
-              
               {/* Info */}
               <h3 style={{
                 fontSize: '1.4rem',
