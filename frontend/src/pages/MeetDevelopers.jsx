@@ -97,6 +97,21 @@ export default function MeetDevelopers() {
           color: #fff;
           transform: scale(1.1);
         }
+        .team-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 2rem;
+          margin-top: 2rem;
+          width: 100%;
+        }
+        @media (min-width: 768px) {
+          .team-grid {
+            grid-template-columns: repeat(2, 1fr);
+            max-width: 960px;
+            margin-left: auto;
+            margin-right: auto;
+          }
+        }
       `}</style>
 
       <main style={{
@@ -149,12 +164,7 @@ export default function MeetDevelopers() {
         </div>
 
         {/* Team Grid */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-          gap: '2rem',
-          marginTop: '2rem'
-        }}>
+        <div className="team-grid">
           {team.map((member, index) => (
             <div key={index} className="dev-card">
               {/* Info */}
