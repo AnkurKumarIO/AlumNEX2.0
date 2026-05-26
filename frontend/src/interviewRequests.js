@@ -9,6 +9,17 @@ import { getProfileAsset } from './lib/profileAssetsAPI';
 const STORAGE_KEY = 'alumnex_interview_requests';
 const NOTIF_KEY   = 'alumniconnect_student_notifications';
 
+function normalizeRequestRow(row) {
+  if (!row) return row;
+  return {
+    ...row,
+    id: row.id || row.request_id,
+    scheduledTime: row.scheduledTime || row.scheduled_time || null,
+    roomId: row.roomId || row.room_id || null,
+    createdAt: row.createdAt || row.created_at || new Date().toISOString(),
+  };
+}
+
 // ── localStorage helpers (fallback) ──────────────────────────────────────────
 function loadLocal() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { return []; }
@@ -213,7 +224,7 @@ export async function sendRequest({ studentName, studentId, alumniName, alumniRo
       if (result?.request_id || result?.id) {
         const reqId = result.request_id || result.id;
         const local = loadLocal();
-        local.push({
+        local.push(normalizeRequestRow({
           id:            reqId,
           studentName,
           studentId:     realStudentId,
@@ -226,9 +237,9 @@ export async function sendRequest({ studentName, studentId, alumniName, alumniRo
           status:        'pending',
           scheduledTime: null,
           roomId:        null,
-          createdAt:     result.created_at || new Date().toISOString(),
+          createdAt:     result.createdAt || result.created_at || new Date().toISOString(),
           studentProfile: mergedStudentProfile,
-        });
+        }));
         saveLocal(local);
         return { ...result, id: reqId };
       }
@@ -245,7 +256,7 @@ export async function sendRequest({ studentName, studentId, alumniName, alumniRo
         });
         if (result?.request_id) {
           const local = loadLocal();
-          local.push({
+          local.push(normalizeRequestRow({
             id:            result.request_id,
             studentName,
             studentId:     realStudentId,
@@ -258,9 +269,9 @@ export async function sendRequest({ studentName, studentId, alumniName, alumniRo
             status:        'pending',
             scheduledTime: null,
             roomId:        null,
-            createdAt:     result.created_at || new Date().toISOString(),
+            createdAt:     result.createdAt || result.created_at || new Date().toISOString(),
             studentProfile: mergedStudentProfile,
-          });
+          }));
           saveLocal(local);
           return result;
         }
@@ -274,7 +285,7 @@ export async function sendRequest({ studentName, studentId, alumniName, alumniRo
 
   // Fallback — localStorage only
   const local = loadLocal();
-  const req = {
+  const req = normalizeRequestRow({
     id:            `req-${Date.now()}`,
     studentName,
     studentId:     realStudentId || studentId,
@@ -289,7 +300,7 @@ export async function sendRequest({ studentName, studentId, alumniName, alumniRo
     roomId:        null,
     createdAt:     new Date().toISOString(),
     studentProfile: mergedStudentProfile || null,
-  };
+  });
   local.push(req);
   saveLocal(local);
   return req;
@@ -403,7 +414,13 @@ export async function bookSlot(requestId, scheduledTime) {
     // Use the room_id the backend actually stored (may be a Google Meet URL)
     const finalRoomId = result?.room_id || result?.roomId || placeholderRoomId;
 
-    requests[idx] = { ...requests[idx], status: 'slot_booked', scheduledTime, roomId: finalRoomId };
+    requests[idx] = normalizeRequestRow({
+      ...requests[idx],
+      status: 'slot_booked',
+      scheduledTime: result?.scheduled_time || result?.scheduledTime || scheduledTime,
+      roomId: finalRoomId,
+      createdAt: requests[idx].createdAt || result?.createdAt || result?.created_at,
+    });
     saveLocal(requests);
 
     return requests[idx];
@@ -415,7 +432,12 @@ export async function bookSlot(requestId, scheduledTime) {
       console.warn('bookSlot Supabase error:', dbErr.message);
     }
 
-    requests[idx] = { ...requests[idx], status: 'slot_booked', scheduledTime, roomId: placeholderRoomId };
+    requests[idx] = normalizeRequestRow({
+      ...requests[idx],
+      status: 'slot_booked',
+      scheduledTime,
+      roomId: placeholderRoomId,
+    });
     saveLocal(requests);
 
     return requests[idx];
@@ -439,7 +461,7 @@ export async function rescheduleSlot(requestId, newScheduledTime) {
   const requests = loadLocal();
   const idx = requests.findIndex(r => r.id === requestId);
   if (idx === -1) return null;
-  requests[idx] = { ...requests[idx], scheduledTime: newScheduledTime };
+  requests[idx] = normalizeRequestRow({ ...requests[idx], scheduledTime: newScheduledTime });
   saveLocal(requests);
 
   return requests[idx];
