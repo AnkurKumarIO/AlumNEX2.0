@@ -13,9 +13,19 @@ import SettingsPage from './SettingsPage';
 import LogoutConfirmModal from '../components/LogoutConfirmModal';
 import { subscribeRealtimeSync, emitRealtimeSync } from '../lib/realtimeSync';
 
+// Ensure a DB timestamp (which may lack timezone info) is always parsed as UTC.
+// Supabase returns timestamps like "2026-05-26T00:33:07" (no Z / offset), which
+// new Date() would misread as local time (IST). Appending 'Z' forces UTC parsing.
+const toUtcDate = (ts) => {
+  if (!ts) return new Date(NaN);
+  const s = String(ts);
+  if (/[Zz]$/.test(s) || /[+-]\d{2}:\d{2}$/.test(s)) return new Date(s);
+  return new Date(s + 'Z');
+};
+
 // Helper to parse dates and return components in Asia/Kolkata (IST) timezone
 const getISTComponents = (dateOrString) => {
-  const d = new Date(dateOrString);
+  const d = toUtcDate(dateOrString);
   const istDate = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
   return {
     year: istDate.getUTCFullYear(),
@@ -35,7 +45,7 @@ function buildISTIsoString(year, monthIndex, day, hours24, minutes) {
 }
 
 function getEventEndMs(scheduledTime, durationMinutes = 120) {
-  const startMs = new Date(scheduledTime).getTime();
+  const startMs = toUtcDate(scheduledTime).getTime();
   if (!Number.isFinite(startMs)) return Number.POSITIVE_INFINITY;
   return startMs + durationMinutes * 60 * 1000;
 }
@@ -49,7 +59,7 @@ function getRequestScheduledTime(request) {
 }
 
 function formatISTDateTime(value, options = {}) {
-  const ms = new Date(value).getTime();
+  const ms = toUtcDate(value).getTime();
   if (!Number.isFinite(ms)) return '';
   return new Date(ms).toLocaleString('en-US', {
     timeZone: 'Asia/Kolkata',
@@ -297,7 +307,7 @@ function RescheduleModal({ request, onClose, onRescheduled }) {
               <div>
                 <div style={{ fontSize: '0.6rem', fontWeight: 700, color: '#ffb95f', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 3 }}>Reschedule Interview</div>
                 <h3 style={{ fontWeight: 700, fontSize: '1rem', color: '#dae2fd' }}>with {request.studentName}</h3>
-                {request.scheduledTime && <div style={{ fontSize: '0.72rem', color: '#c7c4d8', marginTop: 2 }}>Current: {new Date(request.scheduledTime).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>}
+                {request.scheduledTime && <div style={{ fontSize: '0.72rem', color: '#c7c4d8', marginTop: 2 }}>Current: {toUtcDate(request.scheduledTime).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>}
               </div>
               <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c7c4d8' }}>
                 <span className="material-symbols-outlined">close</span>
@@ -806,7 +816,7 @@ function AlumniSessionHistory({ userId, userName }) {
 
   const fmtLabel = (iso) => {
     try {
-      const d = new Date(iso);
+      const d = toUtcDate(iso);
       return d.toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric' });
     } catch { return ''; }
   };
@@ -941,7 +951,7 @@ function AlumniSessionHistory({ userId, userName }) {
                       <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{s.student_name || 'Student'}</div>
                       <div style={{ fontSize: '0.65rem', color: '#c7c4d8', marginTop: 2 }}>{s.topic || 'Mock Interview'}</div>
                       <div style={{ fontSize: '0.6rem', color: 'rgba(199,196,216,0.4)', marginTop: 2 }}>
-                        {new Date(s.createdAt).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', year: 'numeric' })}
+                        {toUtcDate(s.createdAt).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', year: 'numeric' })}
                       </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1222,7 +1232,7 @@ export default function AlumniDashboard() {
   const now = Date.now();
   const upcomingMeetings = allScheduled.filter(s => {
     if (!s.scheduledTime) return false;
-    const t = new Date(s.scheduledTime).getTime();
+    const t = toUtcDate(s.scheduledTime).getTime();
     return t > now && t - now <= 24 * 60 * 60 * 1000;
   });
 
@@ -1555,12 +1565,12 @@ export default function AlumniDashboard() {
           isFreeSlot: true,
           duration: s.duration || 60,
         })),
-      ].sort((a, b) => new Date(a.scheduledTime) - new Date(b.scheduledTime));
+      ].sort((a, b) => toUtcDate(a.scheduledTime) - toUtcDate(b.scheduledTime));
 
       const weekStartVal = monday.getTime() - 5.5 * 60 * 60 * 1000;
       const weekEndVal   = weekStartVal + 7 * 24 * 60 * 60 * 1000;
       const weekEvents = allEvents.filter(e => {
-        const t = new Date(e.scheduledTime).getTime();
+        const t = toUtcDate(e.scheduledTime).getTime();
         return t >= weekStartVal && t < weekEndVal;
       });
 
@@ -1572,8 +1582,8 @@ export default function AlumniDashboard() {
       });
 
       const isEnded = (e) => Date.now() > getEventEndMs(e.scheduledTime, e.duration || 120);
-      const fmtTime = (iso) => new Date(iso).toLocaleTimeString('en-US', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' });
-      const fmtDate = (iso) => new Date(iso).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'short', month: 'short', day: 'numeric' });
+      const fmtTime = (iso) => toUtcDate(iso).toLocaleTimeString('en-US', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' });
+      const fmtDate = (iso) => toUtcDate(iso).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'short', month: 'short', day: 'numeric' });
 
       // Unique sorted time labels for calendar rows
       const allTimes = [...new Set(weekEvents.map(e => {
@@ -1818,7 +1828,7 @@ export default function AlumniDashboard() {
                 {r.status === 'slot_booked' && (() => {
                   const now = Date.now();
                   const scheduledTime = getRequestScheduledTime(r);
-                  const scheduledMs = new Date(scheduledTime).getTime();
+                  const scheduledMs = toUtcDate(scheduledTime).getTime();
                   const endMs = getEventEndMs(scheduledTime, 120);
                   const isEnded = now > endMs;
                   const canJoin = Number.isFinite(scheduledMs) && !isEnded && now >= scheduledMs - 5 * 60 * 1000;
@@ -1990,7 +2000,7 @@ export default function AlumniDashboard() {
                         {r.status === 'slot_booked' && (() => {
                           const now = Date.now();
                           const scheduledTime = getRequestScheduledTime(r);
-                          const scheduledMs = new Date(scheduledTime).getTime();
+                          const scheduledMs = toUtcDate(scheduledTime).getTime();
                           const endMs = getEventEndMs(scheduledTime, 120);
                           const isEnded = now > endMs;
                           const canJoin = Number.isFinite(scheduledMs) && !isEnded && now >= scheduledMs - 5 * 60 * 1000;
@@ -2239,7 +2249,7 @@ export default function AlumniDashboard() {
                             <div style={{ fontWeight: 600, fontSize: '0.8rem', marginBottom: 3 }}>{n.title}</div>
                             <div style={{ fontSize: '0.72rem', color: '#c7c4d8', lineHeight: 1.4 }}>{n.desc}</div>
                             <div style={{ fontSize: '0.62rem', color: 'rgba(199,196,216,0.4)', marginTop: 4 }}>
-                              {new Date(n.time).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              {toUtcDate(n.time).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                             </div>
                           </div>
                           {(n.type === 'request' || n.type === 'new_request') && (
