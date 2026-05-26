@@ -35,7 +35,34 @@ function buildISTIsoString(year, monthIndex, day, hours24, minutes) {
 }
 
 function getEventEndMs(scheduledTime, durationMinutes = 120) {
-  return new Date(scheduledTime).getTime() + durationMinutes * 60 * 1000;
+  const startMs = new Date(scheduledTime).getTime();
+  if (!Number.isFinite(startMs)) return Number.POSITIVE_INFINITY;
+  return startMs + durationMinutes * 60 * 1000;
+}
+
+function getRequestCreatedAt(request) {
+  return request?.createdAt || request?.created_at || null;
+}
+
+function getRequestScheduledTime(request) {
+  return request?.scheduledTime || request?.scheduled_time || null;
+}
+
+function formatISTDateTime(value, options = {}) {
+  const ms = new Date(value).getTime();
+  if (!Number.isFinite(ms)) return '';
+  return new Date(ms).toLocaleString('en-US', {
+    timeZone: 'Asia/Kolkata',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    ...options,
+  });
+}
+
+function dedupeRequestsById(requests) {
+  return Array.from(new Map((requests || []).map((request) => [request.id, request])).values());
 }
 
 // â”€â”€ Book Slot Calendar Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -1061,9 +1088,9 @@ export default function AlumniDashboard() {
             topic:         r.topic,
             message:       r.message || '',
             status:        (r.status || 'PENDING').toLowerCase(),
-            scheduledTime: r.scheduled_time || null,
-            roomId:        r.room_id || null,
-            createdAt:     r.created_at,
+            scheduledTime: r.scheduled_time || r.scheduledTime || null,
+            roomId:        r.room_id || r.roomId || null,
+            createdAt:     r.createdAt || r.created_at || null,
             studentProfile: (() => {
               const raw = r.student_profile_snapshot || r.student?.profile_data || null;
               if (!raw) return null;
@@ -1071,14 +1098,15 @@ export default function AlumniDashboard() {
               return raw;
             })(),
           }));
+          const dedupedMapped = dedupeRequestsById(mapped);
           const local = JSON.parse(localStorage.getItem('alumnex_interview_requests') || '[]');
-          mapped.forEach(dbReq => {
+          dedupedMapped.forEach(dbReq => {
             const idx = local.findIndex(l => l.id === dbReq.id);
             if (idx === -1) local.push(dbReq);
             else local[idx] = { ...local[idx], ...dbReq };
           });
           localStorage.setItem('alumnex_interview_requests', JSON.stringify(local));
-          setLiveRequests(mapped.filter(r => ['pending','accepted','slot_booked'].includes(r.status)));
+          setLiveRequests(dedupedMapped.filter(r => ['pending','accepted','slot_booked'].includes(r.status)));
           usedSupabase = true;
         }
       } catch (err) {
@@ -1086,7 +1114,7 @@ export default function AlumniDashboard() {
       }
       if (!usedSupabase) {
         const all = getRequests();
-        const mine = all.filter(r => r.alumniName === user.name || r.alumniId === user.id);
+        const mine = dedupeRequestsById(all.filter(r => r.alumniName === user.name || r.alumniId === user.id));
         setLiveRequests(mine.filter(r => ['pending','accepted','slot_booked'].includes(r.status)));
       }
     };
@@ -1768,10 +1796,11 @@ export default function AlumniDashboard() {
                 )}
                 {r.status === 'slot_booked' && (() => {
                   const now = Date.now();
-                  const scheduledMs = new Date(r.scheduledTime).getTime();
-                  const endMs = getEventEndMs(r.scheduledTime, 120);
+                  const scheduledTime = getRequestScheduledTime(r);
+                  const scheduledMs = new Date(scheduledTime).getTime();
+                  const endMs = getEventEndMs(scheduledTime, 120);
                   const isEnded = now > endMs;
-                  const canJoin = !isEnded && now >= scheduledMs - 5 * 60 * 1000;
+                  const canJoin = Number.isFinite(scheduledMs) && !isEnded && now >= scheduledMs - 5 * 60 * 1000;
                   const joinUrl = `/interview/${r.id}?name=${encodeURIComponent(user?.name || 'Alumni')}`;
                   const isGoogleMeet = r.roomId?.includes('meet.google.com');
                   return (
@@ -1796,7 +1825,7 @@ export default function AlumniDashboard() {
                       ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
                           <div style={{ padding: '0.35rem 0.75rem', background: 'rgba(78,222,163,0.1)', border: '1px solid rgba(78,222,163,0.2)', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, color: '#4edea3', textAlign: 'right' }}>
-                            📅 {new Date(r.scheduledTime).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            📅 {formatISTDateTime(scheduledTime)}
                           </div>
                           {isGoogleMeet && (
                             <a href={joinUrl} target="_blank" rel="noopener noreferrer"
@@ -1822,9 +1851,11 @@ export default function AlumniDashboard() {
               </div>
             )}
 
-            <div style={{ marginTop: 8, fontSize: '0.62rem', color: 'rgba(199,196,216,0.4)' }}>
-              Sent {new Date(r.createdAt).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-            </div>
+            {getRequestCreatedAt(r) && formatISTDateTime(getRequestCreatedAt(r)) && (
+              <div style={{ marginTop: 8, fontSize: '0.62rem', color: 'rgba(199,196,216,0.4)' }}>
+                Sent {formatISTDateTime(getRequestCreatedAt(r))}
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -1934,12 +1965,14 @@ export default function AlumniDashboard() {
                           <button onClick={() => setBookingRequest(r)} style={{ padding: '0.35rem 0.75rem', background: 'linear-gradient(135deg,#00a572,#4edea3)', color: '#003d29', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
                             <span className="material-symbols-outlined" style={{ fontSize: 13 }}>calendar_month</span> Book Slot
                           </button>
-                        )}                        {r.status === 'slot_booked' && (() => {
+                        )}
+                        {r.status === 'slot_booked' && (() => {
                           const now = Date.now();
-                          const scheduledMs = new Date(r.scheduledTime).getTime();
-                          const endMs = getEventEndMs(r.scheduledTime, 120);
+                          const scheduledTime = getRequestScheduledTime(r);
+                          const scheduledMs = new Date(scheduledTime).getTime();
+                          const endMs = getEventEndMs(scheduledTime, 120);
                           const isEnded = now > endMs;
-                          const canJoin = !isEnded && now >= scheduledMs - 5 * 60 * 1000;
+                          const canJoin = Number.isFinite(scheduledMs) && !isEnded && now >= scheduledMs - 5 * 60 * 1000;
                           const joinUrl = `/interview/${r.id}?name=${encodeURIComponent(user?.name || 'Alumni')}`;
                           return isEnded ? (
                             <div style={{ fontSize: '0.65rem', color: '#6b7280', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4, opacity: 0.7 }}>
@@ -1951,7 +1984,7 @@ export default function AlumniDashboard() {
                             </Link>
                           ) : (
                             <div style={{ fontSize: '0.65rem', color: '#4edea3', fontWeight: 600 }}>
-                              📅 {new Date(r.scheduledTime).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              📅 {formatISTDateTime(scheduledTime)}
                             </div>
                           );
                         })()}
