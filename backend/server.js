@@ -6,6 +6,15 @@ const dotenv  = require('dotenv');
 
 dotenv.config();
 
+// Auto-migrate: add asset_url and storage_path to profile_assets if not present
+// Safe to run on every deploy — uses IF NOT EXISTS / DROP NOT NULL is idempotent
+const prisma = require('./lib/prisma');
+prisma.$executeRawUnsafe(`ALTER TABLE profile_assets ADD COLUMN IF NOT EXISTS asset_url TEXT`)
+  .then(() => prisma.$executeRawUnsafe(`ALTER TABLE profile_assets ADD COLUMN IF NOT EXISTS storage_path TEXT`))
+  .then(() => prisma.$executeRawUnsafe(`ALTER TABLE profile_assets ALTER COLUMN file_data DROP NOT NULL`))
+  .then(() => console.log('[Migration] profile_assets columns up to date'))
+  .catch(e => console.warn('[Migration] profile_assets migration skipped:', e.message));
+
 const app = express();
 
 // Allow both production frontend and localhost dev
