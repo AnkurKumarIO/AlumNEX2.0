@@ -443,16 +443,18 @@ router.post('/bulk-students', async (req, res) => {
       try {
         const email = s.email.trim().toLowerCase();
         const rollNo = (s.rollNo || s.studentId || '').trim(); // accept both field names
-        const username = generateStudentUsername(rollNo, s.name, s.year);
+        let username = generateStudentUsername(rollNo, s.name, s.year);
 
         // In-memory duplicate check
         if (existingEmails.has(email)) {
           results.skipped.push({ skipped: true, email, username, reason: 'Email already exists' });
           continue;
         }
+        // If username taken, append a suffix instead of skipping
         if (existingUsernames.has(username)) {
-          results.skipped.push({ skipped: true, email, username, reason: 'Username already exists' });
-          continue;
+          let suffix = 2;
+          while (existingUsernames.has(`${username}.${suffix}`)) suffix++;
+          username = `${username}.${suffix}`;
         }
 
         const password = generatePassword(username);
@@ -568,16 +570,18 @@ router.post('/bulk-alumni', async (req, res) => {
       }
       try {
         const email = a.email.trim().toLowerCase();
-        const username = generateAlumniUsername(a.name, a.batchYear);
+        let username = generateAlumniUsername(a.name, a.batchYear);
 
         // In-memory duplicate check
         if (existingEmails.has(email)) {
           results.skipped.push({ skipped: true, email, username, reason: 'Email already exists' });
           continue;
         }
+        // If username taken, append a suffix instead of skipping
         if (existingUsernames.has(username)) {
-          results.skipped.push({ skipped: true, email, username, reason: 'Username already exists' });
-          continue;
+          let suffix = 2;
+          while (existingUsernames.has(`${username}.${suffix}`)) suffix++;
+          username = `${username}.${suffix}`;
         }
 
         const password = generatePassword(username);
