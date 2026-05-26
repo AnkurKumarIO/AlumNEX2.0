@@ -1106,7 +1106,30 @@ export default function AlumniDashboard() {
             else local[idx] = { ...local[idx], ...dbReq };
           });
           localStorage.setItem('alumnex_interview_requests', JSON.stringify(local));
-          setLiveRequests(dedupedMapped.filter(r => ['pending','accepted','slot_booked'].includes(r.status)));
+
+          // Merge DB results with current optimistic state — don't overwrite local
+          // status changes (accept/decline/book) that haven't propagated to DB yet.
+          setLiveRequests(prev => {
+            const prevMap = new Map(prev.map(r => [r.id, r]));
+            const merged = dedupedMapped
+              .filter(r => ['pending','accepted','slot_booked'].includes(r.status))
+              .map(dbReq => {
+                const existing = prevMap.get(dbReq.id);
+                if (!existing) return dbReq;
+                // If local state has a "more advanced" status, keep it
+                const statusOrder = { pending: 0, accepted: 1, slot_booked: 2 };
+                const localRank = statusOrder[existing.status] ?? -1;
+                const dbRank    = statusOrder[dbReq.status]    ?? -1;
+                return localRank > dbRank ? existing : { ...dbReq, ...existing, status: dbReq.status, scheduledTime: dbReq.scheduledTime || existing.scheduledTime, roomId: dbReq.roomId || existing.roomId };
+              });
+            // Keep any locally-added requests not yet in DB (e.g. socket-prepended)
+            prev.forEach(r => {
+              if (!merged.find(m => m.id === r.id) && ['pending','accepted','slot_booked'].includes(r.status)) {
+                merged.push(r);
+              }
+            });
+            return dedupeRequestsById(merged);
+          });
           usedSupabase = true;
         }
       } catch (err) {
