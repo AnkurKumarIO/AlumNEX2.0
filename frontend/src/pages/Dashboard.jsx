@@ -569,7 +569,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                   </div>
-                  {profileData.resumeUrl && (
+                  {(profileData.resumeUrl && profileData.resumeUrl !== '__stored_in_database__' && profileData.resumeUrl !== '__stored_locally__') && (
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button 
                         onClick={() => {
@@ -578,12 +578,14 @@ export default function Dashboard() {
                           if (url.startsWith('http')) {
                             window.open(url, '_blank', 'noopener,noreferrer');
                           } else if (url.startsWith('data:')) {
-                            const byteString = atob(url.split(',')[1]);
-                            const ab = new ArrayBuffer(byteString.length);
-                            const ia = new Uint8Array(ab);
-                            for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
-                            const blob = new Blob([ab], { type: 'application/pdf' });
-                            window.open(URL.createObjectURL(blob), '_blank', 'noopener,noreferrer');
+                            try {
+                              const byteString = atob(url.split(',')[1]);
+                              const ab = new ArrayBuffer(byteString.length);
+                              const ia = new Uint8Array(ab);
+                              for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+                              const blob = new Blob([ab], { type: 'application/pdf' });
+                              window.open(URL.createObjectURL(blob), '_blank', 'noopener,noreferrer');
+                            } catch (e) { console.error('Resume open failed:', e); }
                           }
                         }}
                         style={{ ...btnOutline, display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0.4rem 0.8rem', cursor: 'pointer' }}
@@ -591,15 +593,29 @@ export default function Dashboard() {
                         <span className="material-symbols-outlined" style={{ fontSize: 14 }}>visibility</span>
                         View
                       </button>
-                      <a 
-                        href={profileData.resumeUrl} 
-                        target={profileData.resumeUrl.startsWith('http') ? '_blank' : undefined}
-                        download={profileData.resumeUrl.startsWith('http') ? undefined : (profileData.resumeName || 'resume.pdf')} 
-                        rel="noreferrer"
-                        style={{ ...btnOutline, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0.4rem 0.8rem' }}>
+                      <button
+                        onClick={() => {
+                          const url = profileData.resumeUrl;
+                          if (!url) return;
+                          if (url.startsWith('http')) {
+                            fetch(url).then(r => r.blob()).then(blob => {
+                              const a = document.createElement('a');
+                              a.href = URL.createObjectURL(blob);
+                              a.download = profileData.resumeName || 'resume.pdf';
+                              a.click();
+                            }).catch(() => window.open(url, '_blank'));
+                          } else if (url.startsWith('data:')) {
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = profileData.resumeName || 'resume.pdf';
+                            a.click();
+                          }
+                        }}
+                        style={{ ...btnOutline, display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0.4rem 0.8rem', cursor: 'pointer' }}
+                      >
                         <span className="material-symbols-outlined" style={{ fontSize: 14 }}>download</span>
                         Download
-                      </a>
+                      </button>
                     </div>
                   )}
                 </div>

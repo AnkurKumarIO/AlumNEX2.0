@@ -754,64 +754,83 @@ export default function SettingsPage({ role }) {
             {!isAlumni && (
               <div style={{ marginBottom: '1.5rem' }}>
                 <label style={lbl}>Resume (PDF)</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <button onClick={() => resumeInputRef.current?.click()} style={{ padding: '0.65rem 1rem', background: 'rgba(195,192,255,0.1)', border: '1px solid rgba(195,192,255,0.2)', borderRadius: 10, color: '#c3c0ff', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>Upload Resume</button>
-                  {profile.resumeUrl && (
-                    <button 
-                      onClick={() => {
-                        const url = profile.resumeUrl;
-                        if (!url) return;
-                        if (url.startsWith('http')) {
-                          window.open(url, '_blank', 'noopener,noreferrer');
-                        } else if (url.startsWith('data:')) {
-                          // base64 — open in new tab via object URL
-                          const byteString = atob(url.split(',')[1]);
-                          const ab = new ArrayBuffer(byteString.length);
-                          const ia = new Uint8Array(ab);
-                          for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
-                          const blob = new Blob([ab], { type: 'application/pdf' });
-                          const blobUrl = URL.createObjectURL(blob);
-                          window.open(blobUrl, '_blank', 'noopener,noreferrer');
-                        }
-                      }}
-                      style={{ padding: '0.65rem 1rem', background: 'rgba(78,222,163,0.12)', border: '1px solid rgba(78,222,163,0.25)', borderRadius: 10, color: '#4edea3', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}
-                    >
-                      View Resume
-                    </button>
-                  )}
-                  {profile.resumeUrl && (
-                    <a
-                      href={profile.resumeUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      download={profile.resumeUrl.startsWith('data:') ? (profile.resumeName || 'resume.pdf') : undefined}
-                      style={{ padding: '0.65rem 1rem', background: 'rgba(195,192,255,0.08)', border: '1px solid rgba(195,192,255,0.2)', borderRadius: 10, color: '#c3c0ff', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}
-                    >
-                      Download
-                    </a>
-                  )}
-                  {profile.resumeUrl && (
-                    <button
-                      onClick={async () => {
-                        // Remove from local state immediately
-                        setProfile(p => ({ ...p, resumeName: '', resumeUrl: '' }));
-                        // Also delete from DB so it doesn't come back on reload
-                        if (user?.id) {
-                          try {
-                            const { deleteProfileAsset } = await import('../lib/profileAssetsAPI');
-                            await deleteProfileAsset(user.id, 'resume');
-                          } catch (e) {
-                            console.warn('[SettingsPage] Resume delete from DB failed:', e.message);
-                          }
-                        }
-                      }}
-                      style={{ padding: '0.65rem 1rem', background: 'rgba(255,180,171,0.1)', border: '1px solid rgba(255,180,171,0.25)', borderRadius: 10, color: '#ffb4ab', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
-                {profile.resumeName && <div style={{ marginTop: 8, fontSize: '0.78rem', color: '#c7c4d8' }}>Current: {profile.resumeName}</div>}
+                {(() => {
+                  const resumeUrl = (profile.resumeUrl && profile.resumeUrl !== '__stored_in_database__' && profile.resumeUrl !== '__stored_locally__') ? profile.resumeUrl : null;
+                  const openResume = () => {
+                    if (!resumeUrl) return;
+                    if (resumeUrl.startsWith('http')) {
+                      window.open(resumeUrl, '_blank', 'noopener,noreferrer');
+                    } else if (resumeUrl.startsWith('data:')) {
+                      try {
+                        const byteString = atob(resumeUrl.split(',')[1]);
+                        const ab = new ArrayBuffer(byteString.length);
+                        const ia = new Uint8Array(ab);
+                        for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+                        const blob = new Blob([ab], { type: 'application/pdf' });
+                        window.open(URL.createObjectURL(blob), '_blank', 'noopener,noreferrer');
+                      } catch (e) { console.error('Resume open failed:', e); }
+                    }
+                  };
+                  return (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <button onClick={() => resumeInputRef.current?.click()} style={{ padding: '0.65rem 1rem', background: 'rgba(195,192,255,0.1)', border: '1px solid rgba(195,192,255,0.2)', borderRadius: 10, color: '#c3c0ff', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>
+                        {resumeUrl ? 'Replace Resume' : 'Upload Resume'}
+                      </button>
+                      {resumeUrl && (
+                        <button onClick={openResume} style={{ padding: '0.65rem 1rem', background: 'rgba(78,222,163,0.12)', border: '1px solid rgba(78,222,163,0.25)', borderRadius: 10, color: '#4edea3', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>
+                          View
+                        </button>
+                      )}
+                      {resumeUrl && (
+                        <button
+                          onClick={() => {
+                            if (resumeUrl.startsWith('http')) {
+                              // For Storage URLs, fetch and trigger download
+                              fetch(resumeUrl)
+                                .then(r => r.blob())
+                                .then(blob => {
+                                  const a = document.createElement('a');
+                                  a.href = URL.createObjectURL(blob);
+                                  a.download = profile.resumeName || 'resume.pdf';
+                                  a.click();
+                                })
+                                .catch(() => window.open(resumeUrl, '_blank'));
+                            } else if (resumeUrl.startsWith('data:')) {
+                              const a = document.createElement('a');
+                              a.href = resumeUrl;
+                              a.download = profile.resumeName || 'resume.pdf';
+                              a.click();
+                            }
+                          }}
+                          style={{ padding: '0.65rem 1rem', background: 'rgba(195,192,255,0.08)', border: '1px solid rgba(195,192,255,0.2)', borderRadius: 10, color: '#c3c0ff', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}
+                        >
+                          Download
+                        </button>
+                      )}
+                      {resumeUrl && (
+                        <button
+                          onClick={async () => {
+                            setProfile(p => ({ ...p, resumeName: '', resumeUrl: '' }));
+                            if (user?.id) {
+                              try {
+                                const { deleteProfileAsset } = await import('../lib/profileAssetsAPI');
+                                await deleteProfileAsset(user.id, 'resume');
+                              } catch (e) {
+                                console.warn('[SettingsPage] Resume delete failed:', e.message);
+                              }
+                            }
+                          }}
+                          style={{ padding: '0.65rem 1rem', background: 'rgba(255,180,171,0.1)', border: '1px solid rgba(255,180,171,0.25)', borderRadius: 10, color: '#ffb4ab', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()}
+                {profile.resumeName && (profile.resumeUrl && profile.resumeUrl !== '__stored_in_database__') && (
+                  <div style={{ marginTop: 8, fontSize: '0.78rem', color: '#c7c4d8' }}>Current: {profile.resumeName}</div>
+                )}
                 <input ref={resumeInputRef} type="file" accept="application/pdf,.pdf" onChange={handleResumeUpload} style={{ display: 'none' }} />
               </div>
             )}
