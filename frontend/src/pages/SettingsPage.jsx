@@ -4,7 +4,7 @@ import { updateUserProfile } from '../lib/db';
 import { api } from '../api';
 import { emitRealtimeSync } from '../lib/realtimeSync';
 import { saveProfileToStorage, loadProfileFromStorage, verifyProfileIntegrity } from '../lib/profilePersistence';
-import { uploadProfileAsset, getProfileAsset, fileToBase64, compressImage } from '../lib/profileAssetsAPI';
+import { uploadProfileAsset, getProfileAsset, compressImageFile } from '../lib/profileAssetsAPI';
 
 const NOTIF_ITEMS = [
   { key: 'interview_requests', label: 'Interview Requests', desc: 'When a student sends you a booking request' },
@@ -264,49 +264,20 @@ export default function SettingsPage({ role }) {
 
   const removeSkill = (s) => setProfile(p => ({ ...p, skills: p.skills.filter(x => x !== s) }));
 
-  const toDataUrl = (file) => new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-
   const handleResumeUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.type !== 'application/pdf') { 
-      alert('Please upload a PDF resume.'); 
-      return; 
-    }
-    
+    if (file.type !== 'application/pdf') { alert('Please upload a PDF resume.'); return; }
     try {
-      console.log('[SettingsPage] Resume selected:', file.name, file.size);
-      
-      // Convert to base64
-      const dataUrl = await toDataUrl(file);
-      console.log('[SettingsPage] Resume converted, size:', (dataUrl.length / 1024).toFixed(2), 'KB');
-      
-      // Check size (max 10MB)
-      if (dataUrl.length > 10 * 1024 * 1024) {
-        alert('Resume file is too large. Maximum size is 10MB.');
-        return;
-      }
-      
-      // Update state immediately
-      setProfile(p => ({ ...p, resumeName: file.name, resumeUrl: dataUrl }));
-      
-      // Upload to database if user is logged in
-      if (user?.id) {
-        console.log('[SettingsPage] Uploading resume to database...');
-        await uploadProfileAsset(user.id, 'resume', dataUrl, file.name, file.type);
-        console.log('[SettingsPage] ✓ Resume uploaded to database');
-      }
-      
+      console.log('[SettingsPage] Uploading resume to Supabase Storage...');
+      const { url } = await uploadProfileAsset(user?.id, 'resume', file);
+      setProfile(p => ({ ...p, resumeName: file.name, resumeUrl: url }));
+      console.log('[SettingsPage] ✓ Resume uploaded:', url);
     } catch (err) {
       console.error('[SettingsPage] Resume upload error:', err);
       alert('Could not upload resume: ' + err.message);
-    } finally { 
-      if (e.target) e.target.value = ''; 
+    } finally {
+      if (e.target) e.target.value = '';
     }
   };
 
@@ -596,34 +567,15 @@ export default function SettingsPage({ role }) {
                 <input ref={photoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => { 
                   const f = e.target.files?.[0]; 
                   if (f) {
-                    console.log('[SettingsPage] Photo selected:', f.name, f.type, f.size);
-                    
+                    setPhotoPreview(URL.createObjectURL(f)); // optimistic preview
                     try {
-                      // Convert to base64
-                      const base64 = await fileToBase64(f);
-                      console.log('[SettingsPage] Photo converted, size:', (base64.length / 1024).toFixed(2), 'KB');
-                      
-                      // Compress if larger than 500KB
-                      let finalBase64 = base64;
-                      if (base64.length > 500 * 1024) {
-                        console.log('[SettingsPage] Compressing large image...');
-                        finalBase64 = await compressImage(base64, 800, 0.8);
-                        console.log('[SettingsPage] Compressed to:', (finalBase64.length / 1024).toFixed(2), 'KB');
-                      }
-                      
-                      // Show preview immediately
-                      setPhotoPreview(finalBase64);
-                      
-                      // Upload to database if user is logged in
-                      if (user?.id) {
-                        console.log('[SettingsPage] Uploading photo to database...');
-                        await uploadProfileAsset(user.id, 'photo', finalBase64, f.name, f.type);
-                        console.log('[SettingsPage] ✓ Photo uploaded to database');
-                      }
-                      
+                      const fileToUpload = f.size > 500 * 1024 ? await compressImageFile(f, 800, 0.8) : f;
+                      const { url } = await uploadProfileAsset(user?.id, 'photo', fileToUpload);
+                      setPhotoPreview(url); // replace blob URL with persistent Supabase URL
+                      console.log('[SettingsPage] ✓ Photo uploaded:', url);
                     } catch (err) {
                       console.error('[SettingsPage] Photo upload error:', err);
-                      alert('Failed to upload photo: ' + err.message);
+                      alert('Could not upload photo: ' + err.message);
                     }
                   }
                   e.target.value = ''; 

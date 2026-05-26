@@ -4,7 +4,7 @@ import { AuthContext } from '../context/AuthContext';
 import { updateUserProfile } from '../lib/db';
 import { api } from '../api';
 import { emitRealtimeSync } from '../lib/realtimeSync';
-import { uploadProfileAsset, fileToBase64, compressImage } from '../lib/profileAssetsAPI';
+import { uploadProfileAsset, compressImageFile } from '../lib/profileAssetsAPI';
 
 const STEPS = ['Personal Info', 'Skills & Academics', 'Resume & Projects', 'Career Goals', 'Review'];
 const DEPTS = ['Computer Science', 'Information Technology', 'Electronics & Communication', 'Mechanical Engineering', 'Civil Engineering', 'Electrical Engineering', 'MBA', 'Other'];
@@ -144,22 +144,17 @@ export default function ProfileSetup() {
   const handlePhotoChange = async (e) => {
     const f = e.target.files[0];
     if (f) {
-      setPhotoPreview(URL.createObjectURL(f)); // optimistic
+      setPhotoPreview(URL.createObjectURL(f)); // optimistic preview
       setPhotoFile(f);
       try {
-        const base64 = await fileToBase64(f);
-        let finalBase64 = base64;
-        if (base64.length > 500 * 1024) {
-          finalBase64 = await compressImage(base64, 800, 0.8);
-        }
-        setPhotoPreview(finalBase64);
-        
         const userId = user?.id || JSON.parse(localStorage.getItem('alumnex_pending_profile') || '{}')?.id;
-        if (userId && !userId.startsWith('stu-') && !userId.startsWith('alm-')) {
-          await uploadProfileAsset(userId, 'photo', finalBase64, f.name, f.type);
-        }
+        // Compress large images before upload
+        const fileToUpload = f.size > 500 * 1024 ? await compressImageFile(f, 800, 0.8) : f;
+        const { url } = await uploadProfileAsset(userId, 'photo', fileToUpload);
+        setPhotoPreview(url); // replace blob URL with persistent Supabase URL
       } catch (err) {
         console.error('Photo upload error:', err);
+        // Keep the blob URL preview — will be re-uploaded on profile save
       }
     }
     e.target.value = '';
@@ -261,20 +256,14 @@ export default function ProfileSetup() {
             const file = e.target.files?.[0];
             if (!file) return;
             set('resumeName', file.name);
-            const reader = new FileReader();
-            reader.onload = async () => {
-              const base64 = reader.result;
-              set('resumeUrl', base64);
+            try {
               const userId = user?.id || JSON.parse(localStorage.getItem('alumnex_pending_profile') || '{}')?.id;
-              if (userId && !userId.startsWith('stu-') && !userId.startsWith('alm-')) {
-                try {
-                  await uploadProfileAsset(userId, 'resume', base64, file.name, file.type);
-                } catch(err) {
-                  console.error('Resume upload error:', err);
-                }
-              }
-            };
-            reader.readAsDataURL(file);
+              const { url } = await uploadProfileAsset(userId, 'resume', file);
+              set('resumeUrl', url);
+            } catch (err) {
+              console.error('Resume upload error:', err);
+              alert('Could not upload resume. Please try again.');
+            }
             e.target.value = '';
           }}
         />
