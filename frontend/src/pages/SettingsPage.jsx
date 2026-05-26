@@ -74,20 +74,22 @@ export default function SettingsPage({ role }) {
       try {
         console.log('[SettingsPage] Loading assets from database for user:', user.id);
         
-        // Load photo
+        // Load photo — prefer assetUrl (Supabase Storage), fall back to fileData (base64)
         const photoAsset = await getProfileAsset(user.id, 'photo');
-        if (photoAsset && photoAsset.fileData) {
+        const photoSrc = photoAsset?.assetUrl || photoAsset?.fileData || null;
+        if (photoSrc) {
           console.log('[SettingsPage] ✓ Photo loaded from database');
-          setPhotoPreview(photoAsset.fileData);
+          setPhotoPreview(photoSrc);
         }
         
-        // Load resume
+        // Load resume — prefer assetUrl (Supabase Storage), fall back to fileData (base64)
         const resumeAsset = await getProfileAsset(user.id, 'resume');
-        if (resumeAsset && resumeAsset.fileData) {
+        const resumeSrc = resumeAsset?.assetUrl || resumeAsset?.fileData || null;
+        if (resumeSrc) {
           console.log('[SettingsPage] ✓ Resume loaded from database');
           setProfile(p => ({ 
             ...p, 
-            resumeUrl: resumeAsset.fileData,
+            resumeUrl: resumeSrc,
             resumeName: resumeAsset.fileName || 'resume.pdf'
           }));
         }
@@ -376,26 +378,29 @@ export default function SettingsPage({ role }) {
 
       console.log('[SettingsPage] Saving profile with photo:', merged.photoPreview ? `${merged.photoPreview.substring(0, 50)}...` : 'none');
 
-      // DB payload: strip base64 resume and photo (too large for DB)
+      // DB payload: strip base64 blobs (too large) but keep Supabase Storage URLs
       const dbPayload = { ...merged };
       if (dbPayload.resumeUrl && dbPayload.resumeUrl.startsWith('data:')) {
         dbPayload.resumeUrl = '';
         dbPayload.resumeStoredLocally = true;
       }
+      // Only replace photo with placeholder if it's a raw base64 blob
+      // Supabase Storage URLs (https://...) are fine to store in DB
       if (dbPayload.photoPreview && dbPayload.photoPreview.startsWith('data:')) {
         dbPayload.photoPreview = '__stored_in_database__';
-      }
-      if (dbPayload.resumeUrl && dbPayload.resumeUrl.startsWith('data:')) {
-        dbPayload.resumeUrl = '__stored_in_database__';
       }
 
       console.log('[SettingsPage] Saving profile (text data only, no binary)');
 
-      // 1. Save ONLY text data to localStorage (NO photos/resumes to avoid quota)
+      // 1. Save profile to localStorage — keep the actual URL/base64 for photo
+      //    but strip large base64 blobs (resume) to avoid quota issues
       const lightweightProfile = {
         ...merged,
-        photoPreview: '__stored_in_database__', // Don't store base64 in localStorage
-        resumeUrl: '__stored_in_database__',     // Don't store base64 in localStorage
+        // Keep photo URL (Supabase public URL is small); only strip base64 data URIs
+        photoPreview: (merged.photoPreview && merged.photoPreview.startsWith('data:'))
+          ? '__stored_in_database__'
+          : (merged.photoPreview || ''),
+        resumeUrl: '__stored_in_database__', // Resume base64 is always too large for localStorage
       };
       
       try {

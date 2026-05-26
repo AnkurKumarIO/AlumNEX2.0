@@ -384,8 +384,8 @@ export default function ProfileSetup() {
       department: finalDepartment,
       college: finalCollege,
       year: finalYear,
-      photoPreview: photoPreview ? '__stored_in_database__' : '',
-      resumeUrl: profile.resumeUrl ? '__stored_in_database__' : '',
+      photoPreview: photoPreview || '',
+      resumeUrl: profile.resumeUrl || '',
       profileComplete: true,
     };
     localStorage.setItem('alumnex_profile', JSON.stringify(fullProfile));
@@ -400,8 +400,8 @@ export default function ProfileSetup() {
       department: finalDepartment,
       college: finalCollege,
       year: finalYear,
-      photoPreview: photoPreview ? '__stored_in_database__' : '',
-      resumeUrl: profile.resumeUrl ? '__stored_in_database__' : '',
+      photoPreview: photoPreview || '',
+      resumeUrl: profile.resumeUrl || '',
       profileComplete: true,
       profileCompletedAt: new Date().toISOString(),
     };

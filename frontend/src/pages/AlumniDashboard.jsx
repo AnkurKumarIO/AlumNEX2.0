@@ -455,8 +455,9 @@ function StudentFullProfileModal({ request, onClose, onAccept, onDecline }) {
             if (!finalProfile.photoPreview || finalProfile.photoPreview === '__stored_in_database__' || finalProfile.photoPreview === '__stored_locally__') {
               console.log('[StudentFullProfileModal] Fetching photo from database...');
               const photoAsset = await getProfileAsset(request.studentId, 'photo');
-              if (photoAsset?.fileData) {
-                finalProfile.photoPreview = photoAsset.fileData;
+              const photoSrc = photoAsset?.assetUrl || photoAsset?.fileData || null;
+              if (photoSrc) {
+                finalProfile.photoPreview = photoSrc;
                 console.log('[StudentFullProfileModal] ✓ Photo loaded from database');
               } else {
                 console.log('[StudentFullProfileModal] No photo in database');
@@ -465,8 +466,9 @@ function StudentFullProfileModal({ request, onClose, onAccept, onDecline }) {
             if (!finalProfile.resumeUrl || finalProfile.resumeUrl === '__stored_in_database__' || finalProfile.resumeUrl === '__stored_locally__') {
               console.log('[StudentFullProfileModal] Fetching resume from database...');
               const resumeAsset = await getProfileAsset(request.studentId, 'resume');
-              if (resumeAsset?.fileData) {
-                finalProfile.resumeUrl = resumeAsset.fileData;
+              const resumeSrc = resumeAsset?.assetUrl || resumeAsset?.fileData || null;
+              if (resumeSrc) {
+                finalProfile.resumeUrl = resumeSrc;
                 finalProfile.resumeName = resumeAsset.fileName || finalProfile.resumeName;
                 console.log('[StudentFullProfileModal] ✓ Resume loaded from database');
               } else {
@@ -2263,9 +2265,10 @@ export default function AlumniDashboard() {
                 </div>
                 {(() => {
                   const lp = (() => { try { return JSON.parse(localStorage.getItem('alumnex_profile') || '{}'); } catch { return {}; } })();
+                  const photo = lp.photoPreview && lp.photoPreview !== '__stored_in_database__' && lp.photoPreview !== '__stored_locally__' ? lp.photoPreview : null;
                   return (
-                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: lp.photoPreview ? 'transparent' : 'linear-gradient(135deg,#4f46e5,#c3c0ff)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: '#1d00a5', fontSize: '0.85rem', border: showProfile ? '2px solid #c3c0ff' : '2px solid transparent', transition: 'border 0.2s', flexShrink: 0 }}>
-                      {lp.photoPreview ? <img src={lp.photoPreview} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : firstName[0]}
+                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: photo ? 'transparent' : 'linear-gradient(135deg,#4f46e5,#c3c0ff)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: '#1d00a5', fontSize: '0.85rem', border: showProfile ? '2px solid #c3c0ff' : '2px solid transparent', transition: 'border 0.2s', flexShrink: 0 }}>
+                      {photo ? <img src={photo} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : firstName[0]}
                     </div>
                   );
                 })()}
