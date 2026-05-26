@@ -574,20 +574,16 @@ export default function Dashboard() {
                       <button 
                         onClick={() => {
                           const url = profileData.resumeUrl;
+                          if (!url) return;
                           if (url.startsWith('http')) {
-                            window.open(url, '_blank');
-                          } else {
-                            const win = window.open('', '_blank');
-                            if (win) {
-                              win.document.write(`
-                              <html>
-                                <head><title>${profileData.resumeName || 'Resume'}</title></head>
-                                <body style="margin:0">
-                                  <iframe src="${url}" style="width:100%;height:100vh;border:none"></iframe>
-                                </body>
-                              </html>
-                            `);
-                            }
+                            window.open(url, '_blank', 'noopener,noreferrer');
+                          } else if (url.startsWith('data:')) {
+                            const byteString = atob(url.split(',')[1]);
+                            const ab = new ArrayBuffer(byteString.length);
+                            const ia = new Uint8Array(ab);
+                            for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+                            const blob = new Blob([ab], { type: 'application/pdf' });
+                            window.open(URL.createObjectURL(blob), '_blank', 'noopener,noreferrer');
                           }
                         }}
                         style={{ ...btnOutline, display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0.4rem 0.8rem', cursor: 'pointer' }}

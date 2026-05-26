@@ -760,20 +760,18 @@ export default function SettingsPage({ role }) {
                     <button 
                       onClick={() => {
                         const url = profile.resumeUrl;
+                        if (!url) return;
                         if (url.startsWith('http')) {
-                          window.open(url, '_blank');
-                        } else {
-                          const win = window.open('', '_blank');
-                          if (win) {
-                            win.document.write(`
-                            <html>
-                              <head><title>${profile.resumeName || 'Resume'}</title></head>
-                              <body style="margin:0">
-                                <iframe src="${url}" style="width:100%;height:100vh;border:none"></iframe>
-                              </body>
-                            </html>
-                          `);
-                          }
+                          window.open(url, '_blank', 'noopener,noreferrer');
+                        } else if (url.startsWith('data:')) {
+                          // base64 — open in new tab via object URL
+                          const byteString = atob(url.split(',')[1]);
+                          const ab = new ArrayBuffer(byteString.length);
+                          const ia = new Uint8Array(ab);
+                          for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+                          const blob = new Blob([ab], { type: 'application/pdf' });
+                          const blobUrl = URL.createObjectURL(blob);
+                          window.open(blobUrl, '_blank', 'noopener,noreferrer');
                         }
                       }}
                       style={{ padding: '0.65rem 1rem', background: 'rgba(78,222,163,0.12)', border: '1px solid rgba(78,222,163,0.25)', borderRadius: 10, color: '#4edea3', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}
@@ -781,7 +779,37 @@ export default function SettingsPage({ role }) {
                       View Resume
                     </button>
                   )}
-                  {profile.resumeUrl && <button onClick={() => setProfile(p => ({ ...p, resumeName: '', resumeUrl: '' }))} style={{ padding: '0.65rem 1rem', background: 'rgba(255,180,171,0.1)', border: '1px solid rgba(255,180,171,0.25)', borderRadius: 10, color: '#ffb4ab', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>Remove</button>}
+                  {profile.resumeUrl && (
+                    <a
+                      href={profile.resumeUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      download={profile.resumeUrl.startsWith('data:') ? (profile.resumeName || 'resume.pdf') : undefined}
+                      style={{ padding: '0.65rem 1rem', background: 'rgba(195,192,255,0.08)', border: '1px solid rgba(195,192,255,0.2)', borderRadius: 10, color: '#c3c0ff', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}
+                    >
+                      Download
+                    </a>
+                  )}
+                  {profile.resumeUrl && (
+                    <button
+                      onClick={async () => {
+                        // Remove from local state immediately
+                        setProfile(p => ({ ...p, resumeName: '', resumeUrl: '' }));
+                        // Also delete from DB so it doesn't come back on reload
+                        if (user?.id) {
+                          try {
+                            const { deleteProfileAsset } = await import('../lib/profileAssetsAPI');
+                            await deleteProfileAsset(user.id, 'resume');
+                          } catch (e) {
+                            console.warn('[SettingsPage] Resume delete from DB failed:', e.message);
+                          }
+                        }
+                      }}
+                      style={{ padding: '0.65rem 1rem', background: 'rgba(255,180,171,0.1)', border: '1px solid rgba(255,180,171,0.25)', borderRadius: 10, color: '#ffb4ab', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      Remove
+                    </button>
+                  )}
                 </div>
                 {profile.resumeName && <div style={{ marginTop: 8, fontSize: '0.78rem', color: '#c7c4d8' }}>Current: {profile.resumeName}</div>}
                 <input ref={resumeInputRef} type="file" accept="application/pdf,.pdf" onChange={handleResumeUpload} style={{ display: 'none' }} />
