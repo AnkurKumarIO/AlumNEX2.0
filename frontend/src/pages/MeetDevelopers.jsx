@@ -28,15 +28,15 @@ export default function MeetDevelopers() {
   const team = [
     {
       name: "Garv Khatri",
-      bio: "Passionate about building scalable web applications and intuitive user interfaces. Specializes in React and Node.js.",
-      email: "mailto:garv@example.com",
-      linkedin: "#"
+      bio: "I'm Garv, a Computer Science Undergraduate at VNIT Nagpur (Batch of 2029). I had the incredible opportunity to build this platform with an amazing team. We designed AlumNEX to simplify alumni-student connections and bring our campus network closer together. Loved using the site or want to talk tech? I’d love to connect on LinkedIn!",
+      email: "mailto:krishnakhatri1126@gmail.com",
+      linkedin: "https://www.linkedin.com/in/garv-khatri-89b780380/"
     },
     {
       name: "Ankur Kumar",
-      bio: "Database architect and API specialist. Loves optimizing queries and building robust server-side architectures.",
-      email: "mailto:ankur@example.com",
-      linkedin: "#"
+      bio: "I'm Ankur, a Computer Science Undergraduate at VNIT Nagpur (Batch of 2029). Building AlumNEX with the Tesseract team was an incredible experience. I enjoyed crafting the platform’s architecture to bridge the gap between students and alumni through intelligent systems. Looking for collaborators on AI projects or have questions about the platform? Let's connect on LinkedIn!",
+      email: "mailto:quantum.ankurkr@gmail.com",
+      linkedin: "https://www.linkedin.com/in/honestly-ankur/"
     },
     {
       name: "Chetana Gattani",
@@ -46,9 +46,9 @@ export default function MeetDevelopers() {
     },
     {
       name: "Pranjal Chaudhari",
-      bio: "Cloud computing and deployment expert. Ensures high availability and seamless integration of various platform services.",
-      email: "mailto:pranjal@example.com",
-      linkedin: "#"
+      bio: "I’m Pranjal, a Computer Science undergraduate at VNIT Nagpur (Batch 2029) passionate about building impactful and user-focused tech. Through AlumNEX, I worked on creating a platform that makes alumni-student connections more meaningful and accessible. I enjoy full-stack development, exploring new technologies, and turning ideas into real-world products that people genuinely use and enjoy.",
+      email: "mailto:pc125830@gmail.com",
+      linkedin: "https://www.linkedin.com/in/pranjal-chaudhari-5576993a5"
     }
   ];
 
