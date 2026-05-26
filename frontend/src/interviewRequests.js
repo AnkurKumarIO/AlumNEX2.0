@@ -340,6 +340,7 @@ export async function bookSlot(requestId, scheduledTime) {
     saveLocal(requests);
 
     const formatted = new Date(scheduledTime).toLocaleString('en-US', {
+      timeZone: 'Asia/Kolkata',
       weekday: 'long', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
     });
     const isInstant = Math.abs(new Date(scheduledTime).getTime() - Date.now()) < 60000;
@@ -420,6 +421,7 @@ export function isJoinable(scheduledTime) {
 export function formatScheduledTime(isoString) {
   if (!isoString) return '';
   return new Date(isoString).toLocaleString('en-US', {
+    timeZone: 'Asia/Kolkata',
     weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
   });
 }

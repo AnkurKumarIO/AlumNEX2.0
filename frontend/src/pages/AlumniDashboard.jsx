@@ -13,6 +13,19 @@ import SettingsPage from './SettingsPage';
 import LogoutConfirmModal from '../components/LogoutConfirmModal';
 import { subscribeRealtimeSync, emitRealtimeSync } from '../lib/realtimeSync';
 
+// Helper to parse dates and return components in Asia/Kolkata (IST) timezone
+const getISTComponents = (dateOrString) => {
+  const d = new Date(dateOrString);
+  const istDate = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
+  return {
+    year: istDate.getUTCFullYear(),
+    month: istDate.getUTCMonth(),
+    date: istDate.getUTCDate(),
+    day: istDate.getUTCDay(),
+    hours: istDate.getUTCHours(),
+    minutes: istDate.getUTCMinutes(),
+  };
+};
 
 // â”€â”€ Book Slot Calendar Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function BookSlotModal({ request, onClose, onBooked }) {
@@ -55,7 +68,8 @@ function BookSlotModal({ request, onClose, onBooked }) {
     setBooking(true);
     const time24 = to24h();
     const [h24, m24] = time24.split(':').map(Number);
-    const scheduledTime = new Date(viewYear, viewMonth, selectedDate, h24, m24).toISOString();
+    const utcTime = Date.UTC(viewYear, viewMonth, selectedDate, h24, m24) - 5.5 * 60 * 60 * 1000;
+    const scheduledTime = new Date(utcTime).toISOString();
     await bookSlot(request.id, scheduledTime);
     setBooking(false);
     setStep('done');
@@ -65,7 +79,7 @@ function BookSlotModal({ request, onClose, onBooked }) {
   const displayTime = () => `${String(timeHH).padStart(2,'0')}:${String(timeMM).padStart(2,'0')} ${ampm}`;
 
   const formattedSelected = selectedDate
-    ? new Date(viewYear, viewMonth, selectedDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+    ? new Date(viewYear, viewMonth, selectedDate).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
     : null;
 
   const inputStyle = {
@@ -211,7 +225,8 @@ function RescheduleModal({ request, onClose, onRescheduled }) {
     if (isNaN(m) || m < 0 || m > 59) { setTimeError('Minutes must be 00-59'); return; }
     setTimeError('');
     const [h24, m24] = to24h().split(':').map(Number);
-    const newTime = new Date(viewYear, viewMonth, selectedDate, h24, m24).toISOString();
+    const utcTime = Date.UTC(viewYear, viewMonth, selectedDate, h24, m24) - 5.5 * 60 * 60 * 1000;
+    const newTime = new Date(utcTime).toISOString();
     try {
       await rescheduleSlot(request.id, newTime);
     } catch (e) {
@@ -221,7 +236,7 @@ function RescheduleModal({ request, onClose, onRescheduled }) {
     setTimeout(() => { onRescheduled(newTime); onClose(); }, 1600);
   };
 
-  const formattedSelected = selectedDate ? new Date(viewYear, viewMonth, selectedDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : null;
+  const formattedSelected = selectedDate ? new Date(viewYear, viewMonth, selectedDate).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : null;
   const displayTime = () => `${String(timeHH).padStart(2, '0')}:${String(timeMM).padStart(2, '0')} ${ampm}`;
 
   const inputStyle = {
@@ -246,7 +261,7 @@ function RescheduleModal({ request, onClose, onRescheduled }) {
               <div>
                 <div style={{ fontSize: '0.6rem', fontWeight: 700, color: '#ffb95f', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 3 }}>Reschedule Interview</div>
                 <h3 style={{ fontWeight: 700, fontSize: '1rem', color: '#dae2fd' }}>with {request.studentName}</h3>
-                {request.scheduledTime && <div style={{ fontSize: '0.72rem', color: '#c7c4d8', marginTop: 2 }}>Current: {new Date(request.scheduledTime).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>}
+                {request.scheduledTime && <div style={{ fontSize: '0.72rem', color: '#c7c4d8', marginTop: 2 }}>Current: {new Date(request.scheduledTime).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>}
               </div>
               <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c7c4d8' }}>
                 <span className="material-symbols-outlined">close</span>
@@ -695,7 +710,7 @@ function AlumniSessionHistory({ userId, userName }) {
   const fmtLabel = (iso) => {
     try {
       const d = new Date(iso);
-      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      return d.toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric' });
     } catch { return ''; }
   };
 
@@ -829,7 +844,7 @@ function AlumniSessionHistory({ userId, userName }) {
                       <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{s.student_name || 'Student'}</div>
                       <div style={{ fontSize: '0.65rem', color: '#c7c4d8', marginTop: 2 }}>{s.topic || 'Mock Interview'}</div>
                       <div style={{ fontSize: '0.6rem', color: 'rgba(199,196,216,0.4)', marginTop: 2 }}>
-                        {new Date(s.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        {new Date(s.createdAt).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', year: 'numeric' })}
                       </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1148,7 +1163,8 @@ export default function AlumniDashboard() {
   const handleAddSlot = ({ date, time, duration }) => {
     const [y, m, d] = date.split('-').map(Number);
     const [hh, mm] = time.split(':').map(Number);
-    const isoTime = new Date(y, m - 1, d, hh, mm).toISOString();
+    const utcTime = Date.UTC(y, m - 1, d, hh, mm) - 5.5 * 60 * 60 * 1000;
+    const isoTime = new Date(utcTime).toISOString();
     setExtraSlots(s => [...s, {
       when: formatScheduledTime(isoTime),
       title: `Open Slot (${duration} min)`,
@@ -1388,17 +1404,21 @@ export default function AlumniDashboard() {
 
   const renderContent = () => {
     if (activeTab === 'schedule') {
-      const now = new Date();
+      const now = Date.now();
+      const nowInIST = new Date(now + 5.5 * 60 * 60 * 1000);
+      const dayOfWeek = nowInIST.getUTCDay();
 
-      // Build Mon–Sun week
-      const dayOfWeek = now.getDay();
-      const monday = new Date(now);
-      monday.setDate(now.getDate() - ((dayOfWeek + 6) % 7));
-      monday.setHours(0,0,0,0);
+      // Build Mon–Sun week in IST (represented by shifted dates)
+      const monday = new Date(nowInIST);
+      monday.setUTCDate(nowInIST.getUTCDate() - ((dayOfWeek + 6) % 7));
+      monday.setUTCHours(0,0,0,0);
+      
       const weekDays = Array.from({ length: 7 }, (_, i) => {
-        const d = new Date(monday); d.setDate(monday.getDate() + i); return d;
+        const d = new Date(monday);
+        d.setUTCDate(monday.getUTCDate() + i);
+        return d;
       });
-      const todayIdx = (now.getDay() + 6) % 7;
+      const todayIdx = (dayOfWeek + 6) % 7;
 
       // All events with ISO scheduledTime
       const bookedRequests = liveRequests.filter(r => r.status === 'slot_booked' && r.scheduledTime);
@@ -1420,28 +1440,28 @@ export default function AlumniDashboard() {
         })),
       ].sort((a, b) => new Date(a.scheduledTime) - new Date(b.scheduledTime));
 
-      const weekStart = new Date(monday);
-      const weekEnd   = new Date(monday); weekEnd.setDate(monday.getDate() + 7);
+      const weekStartVal = monday.getTime() - 5.5 * 60 * 60 * 1000;
+      const weekEndVal   = weekStartVal + 7 * 24 * 60 * 60 * 1000;
       const weekEvents = allEvents.filter(e => {
-        const d = new Date(e.scheduledTime);
-        return d >= weekStart && d < weekEnd;
+        const t = new Date(e.scheduledTime).getTime();
+        return t >= weekStartVal && t < weekEndVal;
       });
 
-      // Group by day index Mon=0
+      // Group by day index Mon=0 in IST
       const eventsByDay = Array.from({ length: 7 }, () => []);
       weekEvents.forEach(e => {
-        const d = new Date(e.scheduledTime);
-        eventsByDay[(d.getDay() + 6) % 7].push(e);
+        const ist = getISTComponents(e.scheduledTime);
+        eventsByDay[(ist.day + 6) % 7].push(e);
       });
 
-      const isEnded = (e) => Date.now() > new Date(e.scheduledTime).getTime() + (e.duration || 60) * 60000;
-      const fmtTime = (iso) => new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-      const fmtDate = (iso) => new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      const isEnded = (e) => Date.now() > new Date(e.scheduledTime).getTime() + (e.duration || 120) * 60000;
+      const fmtTime = (iso) => new Date(iso).toLocaleTimeString('en-US', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' });
+      const fmtDate = (iso) => new Date(iso).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'short', month: 'short', day: 'numeric' });
 
       // Unique sorted time labels for calendar rows
       const allTimes = [...new Set(weekEvents.map(e => {
-        const d = new Date(e.scheduledTime);
-        return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+        const ist = getISTComponents(e.scheduledTime);
+        return `${String(ist.hours).padStart(2,'0')}:${String(ist.minutes).padStart(2,'0')}`;
       }))].sort();
 
       return (
@@ -1458,7 +1478,7 @@ export default function AlumniDashboard() {
           <div style={{ display: 'flex', gap: 16, fontSize: '0.72rem', color: '#c7c4d8', flexWrap: 'wrap' }}>
             {[
               { color: 'rgba(195,192,255,0.2)', border: 'rgba(195,192,255,0.4)', label: 'Interview' },
-              { color: 'rgba(78,222,163,0.15)', border: 'rgba(78,222,163,0.4)',  label: 'Free Slot' },
+              { color: 'rgba(78,222,163,0.15)', border: 'rgba(78,222,163,0.35)',  label: 'Free Slot' },
               { color: 'rgba(100,100,100,0.15)',border: 'rgba(100,100,100,0.3)', label: 'Ended' },
               { color: 'rgba(78,222,163,0.06)', border: 'rgba(78,222,163,0.2)',  label: 'Today' },
             ].map(l => (
@@ -1481,7 +1501,7 @@ export default function AlumniDashboard() {
                     <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: isToday ? '#4edea3' : '#c7c4d8' }}>
                       {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i]}
                     </div>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: isToday ? '#4edea3' : '#dae2fd', marginTop: 2 }}>{d.getDate()}</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: isToday ? '#4edea3' : '#dae2fd', marginTop: 2 }}>{d.getUTCDate()}</div>
                     {eventsByDay[i].length > 0 && (
                       <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#c3c0ff', margin: '3px auto 0' }} />
                     )}
@@ -1501,8 +1521,8 @@ export default function AlumniDashboard() {
                 <div style={{ padding: '0.4rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.58rem', fontWeight: 700, color: 'rgba(199,196,216,0.5)', background: '#131b2e' }}>{timeStr}</div>
                 {weekDays.map((_, dayIdx) => {
                   const event = eventsByDay[dayIdx].find(e => {
-                    const d = new Date(e.scheduledTime);
-                    return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}` === timeStr;
+                    const ist = getISTComponents(e.scheduledTime);
+                    return `${String(ist.hours).padStart(2,'0')}:${String(ist.minutes).padStart(2,'0')}` === timeStr;
                   });
                   const ended = event && isEnded(event);
                   const isToday = dayIdx === todayIdx;
@@ -1708,7 +1728,7 @@ export default function AlumniDashboard() {
                       ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
                           <div style={{ padding: '0.35rem 0.75rem', background: 'rgba(78,222,163,0.1)', border: '1px solid rgba(78,222,163,0.2)', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, color: '#4edea3', textAlign: 'right' }}>
-                            📅 {new Date(r.scheduledTime).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            📅 {new Date(r.scheduledTime).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                           </div>
                           {isGoogleMeet && (
                             <a href={joinUrl} target="_blank" rel="noopener noreferrer"
@@ -1735,7 +1755,7 @@ export default function AlumniDashboard() {
             )}
 
             <div style={{ marginTop: 8, fontSize: '0.62rem', color: 'rgba(199,196,216,0.4)' }}>
-              Sent {new Date(r.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              Sent {new Date(r.createdAt).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
             </div>
           </div>
         ))}
@@ -1863,7 +1883,7 @@ export default function AlumniDashboard() {
                             </Link>
                           ) : (
                             <div style={{ fontSize: '0.65rem', color: '#4edea3', fontWeight: 600 }}>
-                              📅 {new Date(r.scheduledTime).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              📅 {new Date(r.scheduledTime).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                             </div>
                           );
                         })()}
@@ -2097,7 +2117,7 @@ export default function AlumniDashboard() {
                             <div style={{ fontWeight: 600, fontSize: '0.8rem', marginBottom: 3 }}>{n.title}</div>
                             <div style={{ fontSize: '0.72rem', color: '#c7c4d8', lineHeight: 1.4 }}>{n.desc}</div>
                             <div style={{ fontSize: '0.62rem', color: 'rgba(199,196,216,0.4)', marginTop: 4 }}>
-                              {new Date(n.time).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              {new Date(n.time).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                             </div>
                           </div>
                           {(n.type === 'request' || n.type === 'new_request') && (

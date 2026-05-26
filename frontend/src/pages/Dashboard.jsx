@@ -336,7 +336,7 @@ export default function Dashboard() {
                       </div>
                       <p style={{ fontSize: '0.8rem', color: '#c7c4d8', lineHeight: 1.6, marginBottom: 6 }}>{n.message}</p>
                       <div style={{ fontSize: '0.65rem', color: 'rgba(199,196,216,0.4)', fontWeight: 600 }}>
-                        {new Date(n.createdAt).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        {new Date(n.createdAt).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </div>
                       {/* Join Now button */}
                       {(n.type === 'slot_booked' || n.type === 'live') && (
@@ -380,7 +380,7 @@ export default function Dashboard() {
                               return (
                                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.4rem 0.875rem', background: 'rgba(78,222,163,0.08)', border: '1px solid rgba(78,222,163,0.2)', borderRadius: 8, fontSize: '0.75rem', color: '#4edea3', fontWeight: 600 }}>
                                   <span className="material-symbols-outlined" style={{ fontSize: 15 }}>schedule</span>
-                                  {new Date(scheduledTime).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                  {new Date(scheduledTime).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                 </div>
                               );
                             }
@@ -939,7 +939,7 @@ export default function Dashboard() {
                             <div style={{ fontWeight: 600, fontSize: '0.8rem', marginBottom: 3, color: !n.read ? '#dae2fd' : '#c7c4d8' }}>{n.title}</div>
                             <div style={{ fontSize: '0.72rem', color: '#c7c4d8', lineHeight: 1.5 }}>{n.message}</div>
                             <div style={{ fontSize: '0.62rem', color: 'rgba(199,196,216,0.4)', marginTop: 4 }}>
-                              {new Date(n.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              {new Date(n.createdAt).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                             </div>
                             {/* Join Now — instant meet */}
                             {n.type === 'live' && (() => {
@@ -974,7 +974,7 @@ export default function Dashboard() {
                               ) : (
                                 <div style={{ marginTop: 6, fontSize: '0.68rem', color: '#4edea3', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
                                   <span className="material-symbols-outlined" style={{ fontSize: 13 }}>schedule</span>
-                                  {scheduledTime ? new Date(scheduledTime).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Scheduled'}
+                                  {scheduledTime ? new Date(scheduledTime).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Scheduled'}
                                 </div>
                               );
                             })()}
