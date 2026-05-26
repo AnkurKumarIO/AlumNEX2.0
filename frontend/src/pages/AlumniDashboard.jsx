@@ -1099,13 +1099,6 @@ export default function AlumniDashboard() {
             })(),
           }));
           const dedupedMapped = dedupeRequestsById(mapped);
-          const local = JSON.parse(localStorage.getItem('alumnex_interview_requests') || '[]');
-          dedupedMapped.forEach(dbReq => {
-            const idx = local.findIndex(l => l.id === dbReq.id);
-            if (idx === -1) local.push(dbReq);
-            else local[idx] = { ...local[idx], ...dbReq };
-          });
-          localStorage.setItem('alumnex_interview_requests', JSON.stringify(local));
 
           // Merge DB results with current optimistic state — don't overwrite local
           // status changes (accept/decline/book) that haven't propagated to DB yet.
@@ -1217,7 +1210,11 @@ export default function AlumniDashboard() {
         socket.disconnect();
       }
     };
-  }, [user.name, user.id, localRefresh]);
+  // NOTE: localRefresh intentionally excluded — it fires on every localStorage write
+  // (via realtimeSync storage listener) causing an infinite re-fetch loop that wipes
+  // optimistic state. Supabase Realtime + socket handle live updates instead.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user.name, user.id]);
 
   // Build notifications list: combine real-time notifications from DB + upcoming meetings
   const allScheduled = [...SCHEDULE, ...extraSlots];
