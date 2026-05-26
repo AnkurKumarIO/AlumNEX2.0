@@ -258,8 +258,9 @@ export default function Dashboard() {
           if (!pd.photoPreview || pd.photoPreview === '__stored_in_database__' || pd.photoPreview === '__stored_locally__') {
             console.log('[Dashboard] Fetching photo from database...');
             const photoAsset = await getProfileAsset(user.id, 'photo');
-            if (photoAsset?.fileData) {
-              pd.photoPreview = photoAsset.fileData;
+            const photoSrc = photoAsset?.assetUrl || photoAsset?.fileData || null;
+            if (photoSrc) {
+              pd.photoPreview = photoSrc;
               console.log('[Dashboard] ✓ Photo loaded from database');
             } else {
               console.log('[Dashboard] No photo found in database');
@@ -268,8 +269,9 @@ export default function Dashboard() {
           if (!pd.resumeUrl || pd.resumeUrl === '__stored_in_database__' || pd.resumeUrl === '__stored_locally__') {
             console.log('[Dashboard] Fetching resume from database...');
             const resumeAsset = await getProfileAsset(user.id, 'resume');
-            if (resumeAsset?.fileData) {
-              pd.resumeUrl = resumeAsset.fileData;
+            const resumeSrc = resumeAsset?.assetUrl || resumeAsset?.fileData || null;
+            if (resumeSrc) {
+              pd.resumeUrl = resumeSrc;
               pd.resumeName = resumeAsset.fileName || pd.resumeName;
               console.log('[Dashboard] ✓ Resume loaded from database');
             } else {

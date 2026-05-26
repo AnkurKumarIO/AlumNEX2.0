@@ -2283,6 +2283,7 @@ export default function AlumniDashboard() {
                     {!editProfile ? (() => {
                       // Read fresh profile data on every render
                       const liveProfile = JSON.parse(localStorage.getItem('alumnex_profile') || '{}');
+                      const livePhoto = liveProfile.photoPreview && liveProfile.photoPreview !== '__stored_in_database__' && liveProfile.photoPreview !== '__stored_locally__' ? liveProfile.photoPreview : null;
                       return (
                         <>
                           {/* Profile view */}
@@ -2290,8 +2291,8 @@ export default function AlumniDashboard() {
                             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                               {(() => {
                                 return (
-                                  <div style={{ width: 48, height: 48, borderRadius: '50%', background: liveProfile.photoPreview ? 'transparent' : 'linear-gradient(135deg,#4f46e5,#c3c0ff)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '1.1rem', color: '#1d00a5', flexShrink: 0 }}>
-                                    {liveProfile.photoPreview ? <img src={liveProfile.photoPreview} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : firstName[0]}
+                                  <div style={{ width: 48, height: 48, borderRadius: '50%', background: livePhoto ? 'transparent' : 'linear-gradient(135deg,#4f46e5,#c3c0ff)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '1.1rem', color: '#1d00a5', flexShrink: 0 }}>
+                                    {livePhoto ? <img src={livePhoto} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : firstName[0]}
                                   </div>
                                 );
                               })()}
