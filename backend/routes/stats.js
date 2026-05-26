@@ -297,20 +297,33 @@ router.get('/analytics', async (req, res) => {
       ? Math.round((sessionsCompleted / totalRequests) * 100)
       : 0;
 
-    // ── 2. Weekly session volume (last 8 weeks) ───────────────────────────────
+    // ── 2. Weekly session volume (last 8 weeks) — IST-aligned ────────────────
+    const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
     const weeklySessions = [];
+
+    // Get IST day-of-week for 'now'
+    const istNow = new Date(now.getTime() + IST_OFFSET_MS);
+    const istDayOfWeek = istNow.getUTCDay(); // 0=Sun
+
+    // UTC timestamp of the most recent Sunday at 12:00 AM IST
+    const istSundayMidnightMs = now.getTime() + IST_OFFSET_MS - istDayOfWeek * 86400000;
+    const istSundayFlooredMs  = istSundayMidnightMs - (istSundayMidnightMs % 86400000);
+
     for (let i = 7; i >= 0; i--) {
-      const weekStart = new Date(now);
-      weekStart.setDate(now.getDate() - i * 7 - now.getDay());
-      weekStart.setHours(0, 0, 0, 0);
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekStart.getDate() + 7);
+      const weekStartUTC = new Date(istSundayFlooredMs - i * 7 * 86400000 - IST_OFFSET_MS);
+      const weekEndUTC   = new Date(weekStartUTC.getTime() + 7 * 86400000);
 
       const count = await prisma.sessionFeedback.count({
-        where: { createdAt: { gte: weekStart, lt: weekEnd } },
+        where: { createdAt: { gte: weekStartUTC, lt: weekEndUTC } },
       });
 
-      const label = weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      // Label in IST so the date matches what users see
+      const label = weekStartUTC.toLocaleDateString('en-US', {
+        timeZone: 'Asia/Kolkata',
+        month: 'short',
+        day: 'numeric',
+      });
+
       weeklySessions.push({ week: label, sessions: count });
     }
 
