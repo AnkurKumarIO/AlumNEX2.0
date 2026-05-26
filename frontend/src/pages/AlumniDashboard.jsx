@@ -35,8 +35,9 @@ function buildISTIsoString(year, monthIndex, day, hours24, minutes) {
 }
 
 function getEventEndMs(scheduledTime, durationMinutes = 120) {
+  if (!scheduledTime) return Number.POSITIVE_INFINITY;
   const startMs = new Date(scheduledTime).getTime();
-  if (!Number.isFinite(startMs)) return Number.POSITIVE_INFINITY;
+  if (!Number.isFinite(startMs) || startMs === 0) return Number.POSITIVE_INFINITY;
   return startMs + durationMinutes * 60 * 1000;
 }
 
@@ -1106,7 +1107,17 @@ export default function AlumniDashboard() {
             else local[idx] = { ...local[idx], ...dbReq };
           });
           localStorage.setItem('alumnex_interview_requests', JSON.stringify(local));
-          setLiveRequests(dedupedMapped.filter(r => ['pending','accepted','slot_booked'].includes(r.status)));
+          setLiveRequests(prev =>
+            dedupedMapped
+              .filter(r => ['pending','accepted','slot_booked'].includes(r.status))
+              .map(r => {
+                const existing = prev.find(p => p.id === r.id);
+                return {
+                  ...r,
+                  scheduledTime: r.scheduledTime || existing?.scheduledTime || null,
+                };
+              })
+          );
           usedSupabase = true;
         }
       } catch (err) {
@@ -2218,7 +2229,7 @@ export default function AlumniDashboard() {
                             <div style={{ fontWeight: 600, fontSize: '0.8rem', marginBottom: 3 }}>{n.title}</div>
                             <div style={{ fontSize: '0.72rem', color: '#c7c4d8', lineHeight: 1.4 }}>{n.desc}</div>
                             <div style={{ fontSize: '0.62rem', color: 'rgba(199,196,216,0.4)', marginTop: 4 }}>
-                              {new Date(n.time).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              {n.time ? new Date(n.time).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
                             </div>
                           </div>
                           {(n.type === 'request' || n.type === 'new_request') && (
