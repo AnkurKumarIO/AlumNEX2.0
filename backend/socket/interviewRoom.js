@@ -62,9 +62,17 @@ module.exports = (io) => {
               ];
 
               for (const notif of meetingLiveNotifs) {
-                await prisma.notification.create({ data: notif });
+                const created = await prisma.notification.create({ data: notif });
+                try {
+                  io.of('/notifications').to(notif.user_id).emit('notification', {
+                    ...created,
+                    room_id: request.room_id || roomId || null,
+                  });
+                } catch (e) {
+                  console.warn(`[${roomId}] Failed to emit meeting-live notification to ${notif.user_id}:`, e.message);
+                }
               }
-              console.log(`[${roomId}] Meeting live notifications created for both parties`);
+              console.log(`[${roomId}] Meeting live notifications created and emitted for both parties`);
             }
           }
         } catch (error) {

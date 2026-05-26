@@ -16,17 +16,7 @@ import { subscribeRealtimeSync } from '../lib/realtimeSync';
 import { loadProfileFromStorage } from '../lib/profilePersistence';
 import { getProfileAsset } from '../lib/profileAssetsAPI';
 import io from 'socket.io-client';
-
-// Ensure a DB timestamp (which may lack timezone info) is always parsed as UTC.
-// Supabase returns timestamps like "2026-05-26T00:33:07" (no Z / offset), which
-// new Date() would misread as local time (IST). Appending 'Z' forces UTC parsing.
-const toUtcDate = (ts) => {
-  if (!ts) return new Date(NaN);
-  const s = String(ts);
-  // Already has timezone info if it ends with Z, or contains + or - after the time part
-  if (/[Zz]$/.test(s) || /[+-]\d{2}:\d{2}$/.test(s)) return new Date(s);
-  return new Date(s + 'Z');
-};
+import { toUtcDate } from '../utils/dateUtils';
 
 // ── Inline BookModal for Recommended Mentor ─────────────────────────────────────────────────────────
 const TOPICS = [

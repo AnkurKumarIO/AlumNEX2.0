@@ -12,16 +12,7 @@ import { useNotifications } from '../hooks/useNotifications';
 import SettingsPage from './SettingsPage';
 import LogoutConfirmModal from '../components/LogoutConfirmModal';
 import { subscribeRealtimeSync, emitRealtimeSync } from '../lib/realtimeSync';
-
-// Ensure a DB timestamp (which may lack timezone info) is always parsed as UTC.
-// Supabase returns timestamps like "2026-05-26T00:33:07" (no Z / offset), which
-// new Date() would misread as local time (IST). Appending 'Z' forces UTC parsing.
-const toUtcDate = (ts) => {
-  if (!ts) return new Date(NaN);
-  const s = String(ts);
-  if (/[Zz]$/.test(s) || /[+-]\d{2}:\d{2}$/.test(s)) return new Date(s);
-  return new Date(s + 'Z');
-};
+import { toUtcDate } from '../utils/dateUtils';
 
 // Helper to parse dates and return components in Asia/Kolkata (IST) timezone
 const getISTComponents = (dateOrString) => {
