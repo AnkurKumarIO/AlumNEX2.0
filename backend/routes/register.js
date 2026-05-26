@@ -290,7 +290,7 @@ async function sendWelcomeEmail({ to, name, username, password, role, loginUrl }
           'Authorization': `Bearer ${process.env.RESEND_API_KEY}`
         },
         body: JSON.stringify({
-          from: 'AlumNEX <onboarding@resend.dev>',
+          from: process.env.RESEND_FROM_EMAIL || 'AlumNEX <onboarding@resend.dev>',
           to: to,
           subject: subject,
           html: html
@@ -300,10 +300,15 @@ async function sendWelcomeEmail({ to, name, username, password, role, loginUrl }
         console.log(`[EMAIL-DEBUG] ✅ Sent via Resend`);
         updateQueueStatus('sent', null);
         return { sent: true };
+      } else {
+        const errBody = await res.json().catch(() => ({}));
+        console.error(`[EMAIL-DEBUG] ❌ Resend API returned ${res.status}:`, JSON.stringify(errBody));
       }
     } catch (err) {
       console.error('[EMAIL-DEBUG] ❌ Resend error:', err.message);
     }
+  } else {
+    console.log('[EMAIL-DEBUG] ⚠️ RESEND_API_KEY not set — skipping Resend');
   }
 
   // 3. Fallback: SMTP (Nodemailer)
