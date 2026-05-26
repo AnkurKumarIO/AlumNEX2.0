@@ -15,24 +15,53 @@ import { subscribeRealtimeSync, emitRealtimeSync } from '../lib/realtimeSync';
 import { toUtcDate } from '../utils/dateUtils';
 
 // Helper to parse dates and return components in Asia/Kolkata (IST) timezone
+// Uses Intl.DateTimeFormat for correct timezone handling (avoids manual offset bugs)
 const getISTComponents = (dateOrString) => {
   const d = toUtcDate(dateOrString);
-  const istDate = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
-  return {
-    year: istDate.getUTCFullYear(),
-    month: istDate.getUTCMonth(),
-    date: istDate.getUTCDate(),
-    day: istDate.getUTCDay(),
-    hours: istDate.getUTCHours(),
-    minutes: istDate.getUTCMinutes(),
-  };
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    });
+    const parts = {};
+    formatter.formatToParts(d).forEach(p => { parts[p.type] = p.value; });
+    return {
+      year: parseInt(parts.year, 10),
+      month: parseInt(parts.month, 10) - 1,  // JS months are 0-indexed
+      date: parseInt(parts.day, 10),
+      day: d.getUTCDay(), // Day of week stays the same
+      hours: parseInt(parts.hour, 10),
+      minutes: parseInt(parts.minute, 10),
+    };
+  } catch (e) {
+    console.warn('[AlumniDashboard] getISTComponents failed:', e);
+    // Fallback: return UTC components (not ideal but prevents crashes)
+    return {
+      year: d.getUTCFullYear(),
+      month: d.getUTCMonth(),
+      date: d.getUTCDate(),
+      day: d.getUTCDay(),
+      hours: d.getUTCHours(),
+      minutes: d.getUTCMinutes(),
+    };
+  }
 };
 
 const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
 
 function buildISTIsoString(year, monthIndex, day, hours24, minutes) {
-  const utcTime = Date.UTC(year, monthIndex, day, hours24, minutes) - IST_OFFSET_MS;
-  return new Date(utcTime).toISOString();
+  // Create a date using IST components and convert to UTC ISO string
+  // We create a fake UTC date with the IST values, then subtract the offset to get the actual UTC time
+  const fakeUTC = Date.UTC(year, monthIndex, day, hours24, minutes);
+  const istOffsetMs = 5.5 * 60 * 60 * 1000;
+  const utcMs = fakeUTC - istOffsetMs;
+  return new Date(utcMs).toISOString();
 }
 
 function getEventEndMs(scheduledTime, durationMinutes = 120) {
@@ -108,10 +137,11 @@ function BookSlotModal({ request, onClose, onBooked }) {
     const time24 = to24h();
     const [h24, m24] = time24.split(':').map(Number);
     const scheduledTime = buildISTIsoString(viewYear, viewMonth, selectedDate, h24, m24);
-    await bookSlot(request.id, scheduledTime);
+    const result = await bookSlot(request.id, scheduledTime);
+    const roomId = result?.roomId || result?.room_id || null;
     setBooking(false);
     setStep('done');
-    setTimeout(() => { onBooked(scheduledTime); onClose(); }, 1800);
+    setTimeout(() => { onBooked(scheduledTime, roomId); onClose(); }, 1800);
   };
 
   const displayTime = () => `${String(timeHH).padStart(2,'0')}:${String(timeMM).padStart(2,'0')} ${ampm}`;
@@ -1314,11 +1344,10 @@ export default function AlumniDashboard() {
     }
   };
 
-  const handleSlotBooked = async (requestId, scheduledTime) => {
-    // bookSlot now returns the request with the real roomId (Google Meet URL or fallback)
-    // stored by the backend. Use that instead of recomputing a plain string.
-    const result = await bookSlot(requestId, scheduledTime);
-    const roomId = result?.roomId || `room-${requestId.replace(/[^a-z0-9]/gi, '').slice(-16).toLowerCase()}`;
+  const handleSlotBooked = (requestId, scheduledTime, bookedRoomId) => {
+    // bookSlot was already called inside BookSlotModal.handleBook — do NOT call it again.
+    // Just update local state with the roomId that bookSlot already returned.
+    const roomId = bookedRoomId || `room-${requestId.replace(/[^a-z0-9]/gi, '').slice(-16).toLowerCase()}`;
     setLiveRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: 'slot_booked', scheduledTime, roomId } : r));
     const formatted = formatScheduledTime(scheduledTime);
     const req = liveRequests.find(r => r.id === requestId);
@@ -2079,7 +2108,7 @@ export default function AlumniDashboard() {
         <BookSlotModal
           request={bookingRequest}
           onClose={() => setBookingRequest(null)}
-          onBooked={(scheduledTime) => handleSlotBooked(bookingRequest.id, scheduledTime)}
+          onBooked={(scheduledTime, roomId) => handleSlotBooked(bookingRequest.id, scheduledTime, roomId)}
         />
       )}
       {reschedulingRequest && (
