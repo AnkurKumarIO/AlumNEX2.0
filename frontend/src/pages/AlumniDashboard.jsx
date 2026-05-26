@@ -627,10 +627,13 @@ function StudentFullProfileModal({ request, onClose, onAccept, onDecline }) {
                     {resumeHref && (
                       <button 
                         onClick={() => {
-                          // Open base64 PDF in new window
-                          const win = window.open('', '_blank');
-                          if (win) {
-                            win.document.write(`
+                          if (resumeHref.startsWith('http')) {
+                            window.open(resumeHref, '_blank');
+                          } else {
+                            // base64 data URI — open in iframe
+                            const win = window.open('', '_blank');
+                            if (win) {
+                              win.document.write(`
                               <html>
                                 <head><title>${p.resumeName || 'Resume'}</title></head>
                                 <body style="margin:0">
@@ -638,6 +641,7 @@ function StudentFullProfileModal({ request, onClose, onAccept, onDecline }) {
                                 </body>
                               </html>
                             `);
+                            }
                           }
                         }}
                         style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0.4rem 0.875rem', background: 'rgba(78,222,163,0.1)', border: '1px solid rgba(78,222,163,0.25)', borderRadius: 8, color: '#4edea3', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}

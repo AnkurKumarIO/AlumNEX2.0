@@ -573,17 +573,21 @@ export default function Dashboard() {
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button 
                         onClick={() => {
-                          // Open base64 PDF in new window
-                          const win = window.open('', '_blank');
-                          if (win) {
-                            win.document.write(`
+                          const url = profileData.resumeUrl;
+                          if (url.startsWith('http')) {
+                            window.open(url, '_blank');
+                          } else {
+                            const win = window.open('', '_blank');
+                            if (win) {
+                              win.document.write(`
                               <html>
                                 <head><title>${profileData.resumeName || 'Resume'}</title></head>
                                 <body style="margin:0">
-                                  <iframe src="${profileData.resumeUrl}" style="width:100%;height:100vh;border:none"></iframe>
+                                  <iframe src="${url}" style="width:100%;height:100vh;border:none"></iframe>
                                 </body>
                               </html>
                             `);
+                            }
                           }
                         }}
                         style={{ ...btnOutline, display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0.4rem 0.8rem', cursor: 'pointer' }}
@@ -591,7 +595,12 @@ export default function Dashboard() {
                         <span className="material-symbols-outlined" style={{ fontSize: 14 }}>visibility</span>
                         View
                       </button>
-                      <a href={profileData.resumeUrl} download={profileData.resumeName || 'resume.pdf'} style={{ ...btnOutline, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0.4rem 0.8rem' }}>
+                      <a 
+                        href={profileData.resumeUrl} 
+                        target={profileData.resumeUrl.startsWith('http') ? '_blank' : undefined}
+                        download={profileData.resumeUrl.startsWith('http') ? undefined : (profileData.resumeName || 'resume.pdf')} 
+                        rel="noreferrer"
+                        style={{ ...btnOutline, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0.4rem 0.8rem' }}>
                         <span className="material-symbols-outlined" style={{ fontSize: 14 }}>download</span>
                         Download
                       </a>

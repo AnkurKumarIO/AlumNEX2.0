@@ -759,17 +759,21 @@ export default function SettingsPage({ role }) {
                   {profile.resumeUrl && (
                     <button 
                       onClick={() => {
-                        // Open base64 PDF in new window
-                        const win = window.open('', '_blank');
-                        if (win) {
-                          win.document.write(`
+                        const url = profile.resumeUrl;
+                        if (url.startsWith('http')) {
+                          window.open(url, '_blank');
+                        } else {
+                          const win = window.open('', '_blank');
+                          if (win) {
+                            win.document.write(`
                             <html>
                               <head><title>${profile.resumeName || 'Resume'}</title></head>
                               <body style="margin:0">
-                                <iframe src="${profile.resumeUrl}" style="width:100%;height:100vh;border:none"></iframe>
+                                <iframe src="${url}" style="width:100%;height:100vh;border:none"></iframe>
                               </body>
                             </html>
                           `);
+                          }
                         }
                       }}
                       style={{ padding: '0.65rem 1rem', background: 'rgba(78,222,163,0.12)', border: '1px solid rgba(78,222,163,0.25)', borderRadius: 10, color: '#4edea3', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}
