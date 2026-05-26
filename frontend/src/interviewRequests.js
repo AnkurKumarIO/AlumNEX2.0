@@ -4,6 +4,7 @@
 import { createRequest as dbCreateRequest, getRequestsForAlumni as dbGetRequestsForAlumni, getRequestsForStudent, updateRequest as dbUpdateRequest, createNotification } from './lib/db';
 import { emitRealtimeSync } from './lib/realtimeSync';
 import { api } from './api';
+import { getProfileAsset } from './lib/profileAssetsAPI';
 
 const STORAGE_KEY = 'alumnex_interview_requests';
 const NOTIF_KEY   = 'alumniconnect_student_notifications';
@@ -108,14 +109,92 @@ export async function sendRequest({ studentName, studentId, alumniName, alumniRo
   }
 
   let mergedStudentProfile = studentProfile || null;
+  console.log('[sendRequest] Initial studentProfile:', studentProfile ? 'provided' : 'null');
+  
   try {
+    // Merge with DB profile if available
     if (realStudentId && !String(realStudentId).startsWith('stu-') && !String(realStudentId).startsWith('alm-')) {
       const { getUserById } = await import('./lib/db');
       const user = await getUserById(realStudentId);
-      const dbProfile = user?.profile_data || {};
+      let dbProfile = user?.profile_data || {};
+      
+      // Parse if it's a JSON string
+      if (typeof dbProfile === 'string') {
+        try {
+          dbProfile = JSON.parse(dbProfile);
+        } catch (e) {
+          console.warn('[sendRequest] Failed to parse DB profile_data:', e);
+          dbProfile = {};
+        }
+      }
+      
+      console.log('[sendRequest] DB profile fetched, keys:', Object.keys(dbProfile).length);
       mergedStudentProfile = { ...dbProfile, ...(studentProfile || {}) };
     }
-  } catch {}
+    
+    // Also merge with localStorage profile (has latest text data)
+    try {
+      const localProfile = JSON.parse(localStorage.getItem('alumnex_profile') || '{}');
+      if (Object.keys(localProfile).length > 0) {
+        console.log('[sendRequest] Merging localStorage profile data');
+        mergedStudentProfile = { 
+          ...(mergedStudentProfile || {}), 
+          ...localProfile,
+          // Don't overwrite with placeholder values
+          photoPreview: mergedStudentProfile?.photoPreview || localProfile.photoPreview,
+          resumeUrl: mergedStudentProfile?.resumeUrl || localProfile.resumeUrl,
+        };
+      }
+    } catch (localErr) {
+      console.warn('[sendRequest] Could not read localStorage profile:', localErr);
+    }
+    
+    // CRITICAL: Fetch photo and resume from DATABASE (not localStorage)
+    if (realStudentId && !String(realStudentId).startsWith('stu-') && !String(realStudentId).startsWith('alm-')) {
+      console.log('[sendRequest] Fetching assets from database...');
+      
+      try {
+        // Fetch photo from database
+        const photoAsset = await getProfileAsset(realStudentId, 'photo');
+        if (photoAsset?.fileData) {
+          mergedStudentProfile = { 
+            ...(mergedStudentProfile || {}), 
+            photoPreview: photoAsset.fileData 
+          };
+          console.log('[sendRequest] ✓ Photo included from database, size:', (photoAsset.fileData.length / 1024).toFixed(2), 'KB');
+        } else {
+          console.warn('[sendRequest] ✗ No photo found in database');
+        }
+        
+        // Fetch resume from database
+        const resumeAsset = await getProfileAsset(realStudentId, 'resume');
+        if (resumeAsset?.fileData) {
+          mergedStudentProfile = { 
+            ...(mergedStudentProfile || {}), 
+            resumeUrl: resumeAsset.fileData,
+            resumeName: resumeAsset.fileName 
+          };
+          console.log('[sendRequest] ✓ Resume included from database, size:', (resumeAsset.fileData.length / 1024).toFixed(2), 'KB');
+        } else {
+          console.warn('[sendRequest] ✗ No resume found in database');
+        }
+      } catch (assetErr) {
+        console.error('[sendRequest] Error fetching assets from database:', assetErr);
+      }
+    }
+  } catch (err) {
+    console.error('[sendRequest] Error merging profile:', err);
+  }
+
+  console.log('[sendRequest] Final snapshot has photo:', !!mergedStudentProfile?.photoPreview);
+  console.log('[sendRequest] Final snapshot has resume:', !!mergedStudentProfile?.resumeUrl);
+  console.log('[sendRequest] Final snapshot profile data:', {
+    bio: !!mergedStudentProfile?.bio,
+    skills: mergedStudentProfile?.skills?.length || 0,
+    cgpa: !!mergedStudentProfile?.cgpa,
+    linkedin: !!mergedStudentProfile?.linkedin,
+    github: !!mergedStudentProfile?.github,
+  });
 
   const hasRealIds = realStudentId && finalAlumniId &&
     !String(realStudentId).startsWith('stu-') && !String(finalAlumniId).startsWith('alm-');

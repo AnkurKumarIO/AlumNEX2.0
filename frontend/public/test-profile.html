@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile Data Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #0b1326;
+      color: #dae2fd;
+    }
+    .card {
+      background: #131b2e;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      border: 1px solid rgba(70,69,85,0.15);
+    }
+    h1 { color: #c3c0ff; }
+    h2 { color: #4edea3; font-size: 1.2rem; margin-top: 0; }
+    button {
+      background: linear-gradient(135deg,#4f46e5,#c3c0ff);
+      color: #1d00a5;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 700;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    button:hover { opacity: 0.9; }
+    pre {
+      background: #0b1326;
+      padding: 15px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 12px;
+      border: 1px solid rgba(195,192,255,0.1);
+    }
+    .status { padding: 5px 10px; border-radius: 6px; display: inline-block; margin: 5px; }
+    .status.success { background: rgba(78,222,163,0.2); color: #4edea3; }
+    .status.error { background: rgba(255,180,171,0.2); color: #ffb4ab; }
+    .status.warning { background: rgba(255,185,95,0.2); color: #ffb95f; }
+    img { max-width: 200px; border-radius: 8px; border: 2px solid rgba(195,192,255,0.2); }
+  </style>
+</head>
+<body>
+  <h1>🔍 AlumNEX Profile Data Diagnostic Tool</h1>
+  
+  <div class="card">
+    <h2>Quick Actions</h2>
+    <button onclick="checkProfile()">Check Profile Data</button>
+    <button onclick="checkStorage()">Check Storage Usage</button>
+    <button onclick="verifyIntegrity()">Verify Integrity</button>
+    <button onclick="clearAll()">Clear All Data</button>
+  </div>
+
+  <div class="card">
+    <h2>Profile Status</h2>
+    <div id="status"></div>
+  </div>
+
+  <div class="card">
+    <h2>Profile Data</h2>
+    <pre id="profileData">Click "Check Profile Data" to view</pre>
+  </div>
+
+  <div class="card">
+    <h2>Profile Photo Preview</h2>
+    <div id="photoPreview">No photo data</div>
+  </div>
+
+  <div class="card">
+    <h2>Storage Information</h2>
+    <pre id="storageInfo">Click "Check Storage Usage" to view</pre>
+  </div>
+
+  <script>
+    function checkProfile() {
+      try {
+        const profile = JSON.parse(localStorage.getItem('alumnex_profile') || '{}');
+        const backup = JSON.parse(localStorage.getItem('alumnex_profile_backup') || '{}');
+        
+        const status = document.getElementById('status');
+        status.innerHTML = '';
+        
+        // Check main profile
+        if (Object.keys(profile).length === 0) {
+          status.innerHTML += '<span class="status error">❌ No profile data found</span>';
+        } else {
+          status.innerHTML += '<span class="status success">✓ Profile data exists</span>';
+        }
+        
+        // Check photo
+        if (profile.photoPreview) {
+          if (profile.photoPreview.startsWith('data:image/')) {
+            status.innerHTML += '<span class="status success">✓ Photo is valid base64</span>';
+          } else if (profile.photoPreview === '__stored_locally__') {
+            status.innerHTML += '<span class="status error">❌ Photo is placeholder</span>';
+          } else {
+            status.innerHTML += '<span class="status warning">⚠ Photo format unknown</span>';
+          }
+        } else {
+          status.innerHTML += '<span class="status warning">⚠ No photo</span>';
+        }
+        
+        // Check resume
+        if (profile.resumeUrl) {
+          if (profile.resumeUrl.startsWith('data:application/pdf')) {
+            status.innerHTML += '<span class="status success">✓ Resume is valid base64</span>';
+          } else {
+            status.innerHTML += '<span class="status warning">⚠ Resume format unknown</span>';
+          }
+        } else {
+          status.innerHTML += '<span class="status warning">⚠ No resume</span>';
+        }
+        
+        // Check backup
+        if (Object.keys(backup).length > 0) {
+          status.innerHTML += '<span class="status success">✓ Backup exists</span>';
+        } else {
+          status.innerHTML += '<span class="status warning">⚠ No backup</span>';
+        }
+        
+        // Display data
+        const display = {
+          ...profile,
+          photoPreview: profile.photoPreview ? `${profile.photoPreview.substring(0, 100)}... (${profile.photoPreview.length} chars)` : null,
+          resumeUrl: profile.resumeUrl ? `${profile.resumeUrl.substring(0, 100)}... (${profile.resumeUrl.length} chars)` : null,
+        };
+        document.getElementById('profileData').textContent = JSON.stringify(display, null, 2);
+        
+        // Show photo
+        if (profile.photoPreview && profile.photoPreview.startsWith('data:image/')) {
+          document.getElementById('photoPreview').innerHTML = `<img src="${profile.photoPreview}" alt="Profile Photo">`;
+        } else {
+          document.getElementById('photoPreview').textContent = 'No valid photo data';
+        }
+        
+      } catch (err) {
+        document.getElementById('status').innerHTML = `<span class="status error">❌ Error: ${err.message}</span>`;
+        document.getElementById('profileData').textContent = err.stack;
+      }
+    }
+    
+    function checkStorage() {
+      try {
+        let totalSize = 0;
+        const items = {};
+        
+        for (let key in localStorage) {
+          if (localStorage.hasOwnProperty(key)) {
+            const size = localStorage.getItem(key)?.length || 0;
+            totalSize += size;
+            items[key] = size;
+          }
+        }
+        
+        const estimatedQuota = 5 * 1024 * 1024; // 5MB
+        const usagePercent = (totalSize / estimatedQuota) * 100;
+        
+        const info = {
+          totalSize: `${(totalSize / 1024).toFixed(2)} KB`,
+          estimatedQuota: `${(estimatedQuota / 1024 / 1024).toFixed(2)} MB`,
+          usagePercent: `${usagePercent.toFixed(1)}%`,
+          itemCount: Object.keys(items).length,
+          largestItems: Object.entries(items)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10)
+            .map(([key, size]) => ({ key, size: `${(size / 1024).toFixed(2)} KB` }))
+        };
+        
+        document.getElementById('storageInfo').textContent = JSON.stringify(info, null, 2);
+        
+      } catch (err) {
+        document.getElementById('storageInfo').textContent = `Error: ${err.message}`;
+      }
+    }
+    
+    function verifyIntegrity() {
+      try {
+        const profile = JSON.parse(localStorage.getItem('alumnex_profile') || '{}');
+        
+        const checks = {
+          hasData: Object.keys(profile).length > 0,
+          hasName: !!profile.name,
+          hasEmail: !!profile.email,
+          hasPhoto: !!profile.photoPreview,
+          photoIsBase64: profile.photoPreview?.startsWith('data:image/'),
+          photoSize: profile.photoPreview?.length || 0,
+          hasResume: !!profile.resumeUrl,
+          resumeIsBase64: profile.resumeUrl?.startsWith('data:application/pdf'),
+          resumeSize: profile.resumeUrl?.length || 0,
+          hasSkills: Array.isArray(profile.skills) && profile.skills.length > 0,
+          hasBio: !!profile.bio,
+        };
+        
+        document.getElementById('profileData').textContent = JSON.stringify(checks, null, 2);
+        
+        const allGood = checks.hasData && checks.hasName && checks.hasEmail;
+        const status = document.getElementById('status');
+        if (allGood) {
+          status.innerHTML = '<span class="status success">✓ Profile integrity check passed</span>';
+        } else {
+          status.innerHTML = '<span class="status error">❌ Profile integrity check failed</span>';
+        }
+        
+      } catch (err) {
+        document.getElementById('status').innerHTML = `<span class="status error">❌ Error: ${err.message}</span>`;
+      }
+    }
+    
+    function clearAll() {
+      if (confirm('Are you sure you want to clear ALL profile data? This cannot be undone!')) {
+        localStorage.removeItem('alumnex_profile');
+        localStorage.removeItem('alumnex_profile_backup');
+        localStorage.removeItem('alumniconnect_profile');
+        alert('All profile data cleared!');
+        location.reload();
+      }
+    }
+    
+    // Auto-check on load
+    window.addEventListener('load', checkProfile);
+  </script>
+</body>
+</html>

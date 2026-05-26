@@ -11,7 +11,20 @@ export async function getUserByEmail(email) {
     .select('*')
     .eq('email', email)
     .single();
-  return data || null;
+  
+  if (!data) return null;
+  
+  // Parse profile_data JSON string if it exists
+  if (data.profile_data && typeof data.profile_data === 'string') {
+    try {
+      data.profile_data = JSON.parse(data.profile_data);
+    } catch (e) {
+      console.warn('getUserByEmail: Failed to parse profile_data:', e.message);
+      data.profile_data = {};
+    }
+  }
+  
+  return data;
 }
 
 export async function getUserById(id) {
@@ -20,7 +33,20 @@ export async function getUserById(id) {
     .select('*')
     .eq('id', id)
     .single();
-  return data || null;
+  
+  if (!data) return null;
+  
+  // Parse profile_data JSON string if it exists
+  if (data.profile_data && typeof data.profile_data === 'string') {
+    try {
+      data.profile_data = JSON.parse(data.profile_data);
+    } catch (e) {
+      console.warn('getUserById: Failed to parse profile_data:', e.message);
+      data.profile_data = {};
+    }
+  }
+  
+  return data;
 }
 
 export async function createUser({ id, role, name, email, department, college, year, username, password }) {
@@ -42,22 +68,38 @@ export async function createUser({ id, role, name, email, department, college, y
       email,
       department: department || 'General',
       verification_status: 'VERIFIED',
-      profile_data: { college, year, username },
+      profile_data: JSON.stringify({ college, year, username }),
       updatedAt: new Date().toISOString(),
     })
     .select()
     .single();
 
   if (error) throw error;
+  
+  // Parse profile_data before returning
+  if (data && data.profile_data && typeof data.profile_data === 'string') {
+    try {
+      data.profile_data = JSON.parse(data.profile_data);
+    } catch (e) {
+      console.warn('createUser: Failed to parse profile_data:', e.message);
+      data.profile_data = {};
+    }
+  }
+  
   return data;
 }
 
 export async function updateUserProfile(userId, profileData) {
-  // Try with current session first
+  // Ensure profile_data is stringified for database storage
+  const profileDataString = typeof profileData === 'string' 
+    ? profileData 
+    : JSON.stringify(profileData);
+  
+  // Try update first
   const { data, error } = await supabase
     .from('users')
     .update({ 
-      profile_data: profileData, 
+      profile_data: profileDataString, 
       ...(profileData.department ? { department: profileData.department } : {}),
       updatedAt: new Date().toISOString(),
     })
@@ -66,9 +108,45 @@ export async function updateUserProfile(userId, profileData) {
     .single();
 
   if (error) {
+    // If row doesn't exist, try upsert
+    if (error.code === 'PGRST116' || error.message?.includes('0 rows')) {
+      const { data: upserted, error: upsertError } = await supabase
+        .from('users')
+        .upsert({
+          id: userId,
+          profile_data: profileDataString,
+          name: profileData.name || 'User',
+          email: profileData.email || '',
+          role: profileData.role || 'STUDENT',
+          department: profileData.department || 'General',
+          verification_status: 'VERIFIED',
+          updatedAt: new Date().toISOString(),
+        })
+        .select()
+        .single();
+      if (upsertError) {
+        console.warn('updateUserProfile upsert error:', upsertError.message);
+        throw upsertError;
+      }
+      if (upserted?.profile_data && typeof upserted.profile_data === 'string') {
+        try { upserted.profile_data = JSON.parse(upserted.profile_data); } catch { upserted.profile_data = {}; }
+      }
+      return upserted;
+    }
     console.warn('updateUserProfile error:', error.message);
     throw error;
   }
+  
+  // Parse profile_data before returning
+  if (data && data.profile_data && typeof data.profile_data === 'string') {
+    try {
+      data.profile_data = JSON.parse(data.profile_data);
+    } catch (e) {
+      console.warn('updateUserProfile: Failed to parse returned profile_data:', e.message);
+      data.profile_data = {};
+    }
+  }
+  
   return data;
 }
 
@@ -115,6 +193,13 @@ export async function createRequest({ studentId, alumniId, topic, message, stude
     console.warn('createRequest: No active Supabase session — RLS may block insert');
   }
 
+  // Stringify student profile snapshot if it's an object
+  const profileSnapshotString = studentProfileSnapshot 
+    ? (typeof studentProfileSnapshot === 'string' 
+        ? studentProfileSnapshot 
+        : JSON.stringify(studentProfileSnapshot))
+    : null;
+
   const requestId = crypto.randomUUID();
   const { data, error } = await supabase
     .from('interview_requests')
@@ -124,7 +209,7 @@ export async function createRequest({ studentId, alumniId, topic, message, stude
       alumni_id:  alumniId,
       topic:      topic   || 'Mock Interview',
       message:    message || '',
-      student_profile_snapshot: studentProfileSnapshot || null,
+      student_profile_snapshot: profileSnapshotString,
       status: 'PENDING',
       updatedAt: new Date().toISOString(),
     })
@@ -135,6 +220,17 @@ export async function createRequest({ studentId, alumniId, topic, message, stude
     console.error('createRequest error:', error.message, error.details);
     throw error;
   }
+  
+  // Parse student_profile_snapshot before returning
+  if (data && data.student_profile_snapshot && typeof data.student_profile_snapshot === 'string') {
+    try {
+      data.student_profile_snapshot = JSON.parse(data.student_profile_snapshot);
+    } catch (e) {
+      console.warn('createRequest: Failed to parse student_profile_snapshot:', e.message);
+      data.student_profile_snapshot = null;
+    }
+  }
+  
   return data;
 }
 
@@ -148,10 +244,32 @@ export async function getRequestsForAlumni(alumniId) {
     .eq('alumni_id', alumniId)
     .order('createdAt', { ascending: false });
 
-  return (data || []).map(r => ({
-    ...r,
-    student_name: r.student?.name || '',
-  }));
+  return (data || []).map(r => {
+    // Parse student profile_data if it's a string
+    if (r.student?.profile_data && typeof r.student.profile_data === 'string') {
+      try {
+        r.student.profile_data = JSON.parse(r.student.profile_data);
+      } catch (e) {
+        console.warn('getRequestsForAlumni: Failed to parse student profile_data:', e.message);
+        r.student.profile_data = {};
+      }
+    }
+    
+    // Parse student_profile_snapshot if it's a string
+    if (r.student_profile_snapshot && typeof r.student_profile_snapshot === 'string') {
+      try {
+        r.student_profile_snapshot = JSON.parse(r.student_profile_snapshot);
+      } catch (e) {
+        console.warn('getRequestsForAlumni: Failed to parse student_profile_snapshot:', e.message);
+        r.student_profile_snapshot = null;
+      }
+    }
+    
+    return {
+      ...r,
+      student_name: r.student?.name || '',
+    };
+  });
 }
 
 export async function getRequestsForStudent(studentId) {
@@ -164,10 +282,32 @@ export async function getRequestsForStudent(studentId) {
     .eq('student_id', studentId)
     .order('createdAt', { ascending: false });
 
-  return (data || []).map(r => ({
-    ...r,
-    alumni_name: r.alumni?.name || '',
-  }));
+  return (data || []).map(r => {
+    // Parse alumni profile_data if it's a string
+    if (r.alumni?.profile_data && typeof r.alumni.profile_data === 'string') {
+      try {
+        r.alumni.profile_data = JSON.parse(r.alumni.profile_data);
+      } catch (e) {
+        console.warn('getRequestsForStudent: Failed to parse alumni profile_data:', e.message);
+        r.alumni.profile_data = {};
+      }
+    }
+    
+    // Parse student_profile_snapshot if it's a string
+    if (r.student_profile_snapshot && typeof r.student_profile_snapshot === 'string') {
+      try {
+        r.student_profile_snapshot = JSON.parse(r.student_profile_snapshot);
+      } catch (e) {
+        console.warn('getRequestsForStudent: Failed to parse student_profile_snapshot:', e.message);
+        r.student_profile_snapshot = null;
+      }
+    }
+    
+    return {
+      ...r,
+      alumni_name: r.alumni?.name || '',
+    };
+  });
 }
 
 export async function updateRequest(requestId, updates) {

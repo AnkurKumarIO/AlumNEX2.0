@@ -3,8 +3,8 @@ import { AuthContext } from '../context/AuthContext';
 import { updateUserProfile } from '../lib/db';
 import { api } from '../api';
 import { emitRealtimeSync } from '../lib/realtimeSync';
-import { uploadResume } from '../lib/resumeStorage';
-import { uploadProfilePicture } from '../lib/profilePictureStorage';
+import { saveProfileToStorage, loadProfileFromStorage, verifyProfileIntegrity } from '../lib/profilePersistence';
+import { uploadProfileAsset, getProfileAsset, fileToBase64, compressImage } from '../lib/profileAssetsAPI';
 
 const NOTIF_ITEMS = [
   { key: 'interview_requests', label: 'Interview Requests', desc: 'When a student sends you a booking request' },
@@ -44,12 +44,75 @@ export default function SettingsPage({ role }) {
   const photoInputRef = useRef(null);
   const userRole = role || user?.role || 'STUDENT';
   const isAlumni = userRole === 'ALUMNI';
-  const dbProfile = user?.profile_data || {};
-  const savedProfile = { ...dbProfile, ...JSON.parse(localStorage.getItem('alumnex_profile') || '{}') };
+
+  const savedProfile = loadProfileFromStorage();
   const savedNotifs  = JSON.parse(localStorage.getItem('alumnex_notifs')  || '{}');
 
-  // Photo state — loaded from savedProfile
-  const [photoPreview, setPhotoPreview] = useState(savedProfile.photoPreview || null);
+  // Verify profile integrity on mount
+  useEffect(() => {
+    const integrity = verifyProfileIntegrity();
+    if (!integrity.hasData) {
+      console.warn('[SettingsPage] No profile data found in storage');
+    }
+    if (integrity.hasPhoto && !integrity.photoIsBase64) {
+      console.warn('[SettingsPage] Photo exists but is not base64 - may be corrupted');
+    }
+  }, []);
+
+  // Photo state — loaded from savedProfile with logging
+  const [photoPreview, setPhotoPreview] = useState(() => {
+    const saved = savedProfile.photoPreview;
+    console.log('[SettingsPage] Initial photo from localStorage:', saved ? `${saved.substring(0, 50)}...` : 'none');
+    return saved || null;
+  });
+
+  // Add effect to reload photo/resume when user changes
+  useEffect(() => {
+    async function loadAssetsFromDatabase() {
+      if (!user?.id) return;
+      
+      try {
+        console.log('[SettingsPage] Loading assets from database for user:', user.id);
+        
+        // Load photo
+        const photoAsset = await getProfileAsset(user.id, 'photo');
+        if (photoAsset && photoAsset.fileData) {
+          console.log('[SettingsPage] ✓ Photo loaded from database');
+          setPhotoPreview(photoAsset.fileData);
+        }
+        
+        // Load resume
+        const resumeAsset = await getProfileAsset(user.id, 'resume');
+        if (resumeAsset && resumeAsset.fileData) {
+          console.log('[SettingsPage] ✓ Resume loaded from database');
+          setProfile(p => ({ 
+            ...p, 
+            resumeUrl: resumeAsset.fileData,
+            resumeName: resumeAsset.fileName || 'resume.pdf'
+          }));
+        }
+        
+      } catch (err) {
+        console.error('[SettingsPage] Error loading assets from database:', err);
+        // Fallback to localStorage
+        try {
+          const saved = JSON.parse(localStorage.getItem('alumnex_profile') || '{}');
+          if (saved.photoPreview && saved.photoPreview !== photoPreview && saved.photoPreview !== '__stored_in_database__') {
+            console.log('[SettingsPage] Fallback: Loading photo from localStorage');
+            setPhotoPreview(saved.photoPreview);
+          }
+          if (saved.resumeUrl && saved.resumeUrl !== profile.resumeUrl && saved.resumeUrl !== '__stored_in_database__') {
+            console.log('[SettingsPage] Fallback: Loading resume from localStorage');
+            setProfile(p => ({ ...p, resumeUrl: saved.resumeUrl, resumeName: saved.resumeName }));
+          }
+        } catch (localErr) {
+          console.error('[SettingsPage] localStorage fallback also failed:', localErr);
+        }
+      }
+    }
+    
+    loadAssetsFromDatabase();
+  }, [user?.id]); // Reload when user changes
 
   const [activeSection, setActiveSection] = useState('profile');
   const [saved, setSaved] = useState(false);
@@ -199,66 +262,230 @@ export default function SettingsPage({ role }) {
 
   const removeSkill = (s) => setProfile(p => ({ ...p, skills: p.skills.filter(x => x !== s) }));
 
+  const toDataUrl = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
   const handleResumeUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.type !== 'application/pdf') { alert('Please upload a PDF resume.'); return; }
+    if (file.type !== 'application/pdf') { 
+      alert('Please upload a PDF resume.'); 
+      return; 
+    }
+    
     try {
-      const { url } = await uploadResume(file, user?.id || `temp-${Date.now()}`);
-      setProfile(p => ({ ...p, resumeName: file.name, resumeUrl: url }));
-    } catch { alert('Could not upload resume.'); }
-    finally { if (e.target) e.target.value = ''; }
+      console.log('[SettingsPage] Resume selected:', file.name, file.size);
+      
+      // Convert to base64
+      const dataUrl = await toDataUrl(file);
+      console.log('[SettingsPage] Resume converted, size:', (dataUrl.length / 1024).toFixed(2), 'KB');
+      
+      // Check size (max 10MB)
+      if (dataUrl.length > 10 * 1024 * 1024) {
+        alert('Resume file is too large. Maximum size is 10MB.');
+        return;
+      }
+      
+      // Update state immediately
+      setProfile(p => ({ ...p, resumeName: file.name, resumeUrl: dataUrl }));
+      
+      // Upload to database if user is logged in
+      if (user?.id) {
+        console.log('[SettingsPage] Uploading resume to database...');
+        await uploadProfileAsset(user.id, 'resume', dataUrl, file.name, file.type);
+        console.log('[SettingsPage] ✓ Resume uploaded to database');
+      }
+      
+    } catch (err) {
+      console.error('[SettingsPage] Resume upload error:', err);
+      alert('Could not upload resume: ' + err.message);
+    } finally { 
+      if (e.target) e.target.value = ''; 
+    }
   };
 
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+
   const saveProfile = async () => {
-    const mergedProfileData = {
-      ...savedProfile,
-      ...profile,
-      name: user?.name || savedProfile.name || profile.name,
-      email: user?.email || savedProfile.email || profile.email,
-      department: user?.department || savedProfile.department || profile.department,
-      college: user?.profile_data?.college || savedProfile.college || profile.college,
-      year: user?.profile_data?.year || savedProfile.year || profile.year,
-      rollNo: user?.profile_data?.rollNo || user?.profile_data?.studentId || savedProfile.rollNo || savedProfile.studentId || profile.rollNo,
-      // For alumni:
-      company: user?.profile_data?.company || savedProfile.company || profile.company,
-      currentTitle: user?.profile_data?.currentTitle || user?.profile_data?.jobTitle || savedProfile.currentTitle || savedProfile.title || profile.currentTitle,
-      passOutYear: user?.profile_data?.passOutYear || user?.profile_data?.batchYear || savedProfile.passOutYear || profile.passOutYear,
-    };
-
-    const updated = { ...mergedProfileData, photoPreview };
-
-    const dbSafeProfile = { ...updated };
-
-    localStorage.setItem('alumnex_profile', JSON.stringify(updated));
-    localStorage.setItem('alumniconnect_profile', JSON.stringify(updated));
-    emitRealtimeSync({ type: 'profile_updated' });
-    const updatedUser = { 
-      ...user, 
-      name: mergedProfileData.name, 
-      department: mergedProfileData.department,
-      profile_data: {
-        ...(user?.profile_data || {}),
-        ...dbSafeProfile,
-      }
-    };
-    login(updatedUser, localStorage.getItem('alumnex_token'));
-    // Save to DB — try backend API first (Prisma), fall back to Supabase direct
-    if (user?.id && !user.id.startsWith('stu-') && !user.id.startsWith('alm-')) {
-      try {
-        await api.saveProfile(user.id, dbSafeProfile);
-      } catch (err) {
-        console.warn('Profile save via API failed, trying Supabase direct:', err.message);
-        await updateUserProfile(user.id, dbSafeProfile).catch(e => console.warn('Profile save:', e.message));
-      }
+    if (!user?.id) {
+      setSaveError('Not logged in — please refresh and try again.');
+      return;
     }
-    flashSaved();
+
+    setSaving(true);
+    setSaveError('');
+
+    try {
+      // Read localStorage fresh at save time
+      let currentSaved = {};
+      try { currentSaved = JSON.parse(localStorage.getItem('alumnex_profile') || '{}'); } catch {}
+
+      // Convert blob URL photo to persistent data URL before saving
+      let finalPhotoPreview = photoPreview;
+      if (photoPreview && photoPreview.startsWith('blob:')) {
+        try {
+          const blobRes = await fetch(photoPreview);
+          const blob = await blobRes.blob();
+          finalPhotoPreview = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+          setPhotoPreview(finalPhotoPreview);
+        } catch {
+          // keep blob URL as fallback
+        }
+      }
+
+      // Build merged profile — only plain serialisable values
+      const merged = {
+        name:               user?.name       || currentSaved.name       || profile.name       || '',
+        email:              user?.email      || currentSaved.email      || profile.email      || '',
+        department:         user?.department || currentSaved.department || profile.department || '',
+        phone:              profile.phone        || currentSaved.phone        || '',
+        bio:                profile.bio          || currentSaved.bio          || '',
+        linkedin:           profile.linkedin     || currentSaved.linkedin     || '',
+        github:             profile.github       || currentSaved.github       || '',
+        portfolio:          profile.portfolio    || currentSaved.portfolio    || '',
+        skills:             profile.skills       || currentSaved.skills       || [],
+        cgpa:               profile.cgpa         || currentSaved.cgpa         || '',
+        college:            user?.profile_data?.college     || currentSaved.college     || profile.college     || '',
+        year:               user?.profile_data?.year        || currentSaved.year        || profile.year        || '',
+        rollNo:             user?.profile_data?.rollNo      || user?.profile_data?.studentId || currentSaved.rollNo || profile.rollNo || '',
+        resumeName:         profile.resumeName   || currentSaved.resumeName   || '',
+        resumeUrl:          profile.resumeUrl    || currentSaved.resumeUrl    || '',
+        company:            user?.profile_data?.company      || currentSaved.company      || profile.company      || '',
+        currentTitle:       user?.profile_data?.currentTitle || user?.profile_data?.jobTitle || currentSaved.currentTitle || profile.currentTitle || '',
+        passOutYear:        user?.profile_data?.passOutYear  || user?.profile_data?.batchYear || currentSaved.passOutYear  || profile.passOutYear  || '',
+        experience:         profile.experience   || currentSaved.experience   || '',
+        domain:             profile.domain       || currentSaved.domain       || '',
+        projects:           profile.projects     || currentSaved.projects     || [],
+        targetRoles:        profile.targetRoles        || currentSaved.targetRoles        || [],
+        preferredCompanies: profile.preferredCompanies || currentSaved.preferredCompanies || [],
+        openTo:             profile.openTo       || currentSaved.openTo       || [],
+        gradMonth:          profile.gradMonth    || currentSaved.gradMonth    || '',
+        gradYear:           profile.gradYear     || currentSaved.gradYear     || '',
+        photoPreview:       finalPhotoPreview    || '',
+      };
+
+      console.log('[SettingsPage] Saving profile with photo:', merged.photoPreview ? `${merged.photoPreview.substring(0, 50)}...` : 'none');
+
+      // DB payload: strip base64 resume and photo (too large for DB)
+      const dbPayload = { ...merged };
+      if (dbPayload.resumeUrl && dbPayload.resumeUrl.startsWith('data:')) {
+        dbPayload.resumeUrl = '';
+        dbPayload.resumeStoredLocally = true;
+      }
+      if (dbPayload.photoPreview && dbPayload.photoPreview.startsWith('data:')) {
+        dbPayload.photoPreview = '__stored_in_database__';
+      }
+      if (dbPayload.resumeUrl && dbPayload.resumeUrl.startsWith('data:')) {
+        dbPayload.resumeUrl = '__stored_in_database__';
+      }
+
+      console.log('[SettingsPage] Saving profile (text data only, no binary)');
+
+      // 1. Save ONLY text data to localStorage (NO photos/resumes to avoid quota)
+      const lightweightProfile = {
+        ...merged,
+        photoPreview: '__stored_in_database__', // Don't store base64 in localStorage
+        resumeUrl: '__stored_in_database__',     // Don't store base64 in localStorage
+      };
+      
+      try {
+        localStorage.setItem('alumnex_profile', JSON.stringify(lightweightProfile));
+        localStorage.setItem('alumniconnect_profile', JSON.stringify(lightweightProfile));
+        console.log('[SettingsPage] ✓ Lightweight profile saved to localStorage');
+      } catch (storageErr) {
+        console.warn('[SettingsPage] localStorage save failed (non-critical):', storageErr);
+        // Continue anyway - data is in database
+      }
+
+      // 2. Update auth context with lightweight fields only (no base64 blobs)
+      login(
+        {
+          ...user,
+          name: merged.name,
+          department: merged.department,
+          profile_data: {
+            ...(user?.profile_data || {}),
+            bio: merged.bio, phone: merged.phone, linkedin: merged.linkedin,
+            github: merged.github, portfolio: merged.portfolio, skills: merged.skills,
+            cgpa: merged.cgpa, college: merged.college, year: merged.year,
+            rollNo: merged.rollNo, company: merged.company, currentTitle: merged.currentTitle,
+            passOutYear: merged.passOutYear, experience: merged.experience, domain: merged.domain,
+            projects: merged.projects, targetRoles: merged.targetRoles,
+            preferredCompanies: merged.preferredCompanies, openTo: merged.openTo,
+            gradMonth: merged.gradMonth, gradYear: merged.gradYear, resumeName: merged.resumeName,
+          },
+        },
+        localStorage.getItem('alumnex_token')
+      );
+      emitRealtimeSync({ type: 'profile_updated' });
+
+      // 3. Persist to DB — backend first, Supabase direct as fallback
+      let dbSaved = false;
+      let lastError = '';
+
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 8000);
+        const res = await fetch(
+          `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/users/${user.id}/profile`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dbPayload),
+            signal: controller.signal,
+          }
+        );
+        clearTimeout(timer);
+        if (res.ok) {
+          dbSaved = true;
+          console.log('[SettingsPage] Saved via backend ✓');
+        } else {
+          const errBody = await res.json().catch(() => ({}));
+          lastError = `Backend ${res.status}: ${errBody.error || errBody.message || 'unknown'}`;
+          console.warn('[SettingsPage]', lastError);
+        }
+      } catch (fetchErr) {
+        lastError = `Backend unreachable: ${fetchErr.message}`;
+        console.warn('[SettingsPage]', lastError);
+      }
+
+      if (!dbSaved) {
+        try {
+          await updateUserProfile(user.id, dbPayload);
+          dbSaved = true;
+          console.log('[SettingsPage] Saved via Supabase ✓');
+        } catch (supaErr) {
+          lastError = `Supabase: ${supaErr.message}`;
+          console.error('[SettingsPage]', lastError);
+          setSaveError(`Saved locally only — server error: ${lastError}`);
+        }
+      }
+
+      if (dbSaved) flashSaved();
+
+    } catch (unexpectedErr) {
+      console.error('[SettingsPage] saveProfile crash:', unexpectedErr);
+      setSaveError(`Error: ${unexpectedErr.message}`);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const saveNotifs = async () => {
     localStorage.setItem('alumnex_notifs', JSON.stringify(notifs));
     // Also persist to DB so preferences sync across devices
-    if (user?.id && !user.id.startsWith('stu-') && !user.id.startsWith('alm-') && !user.id.startsWith('tnp-')) {
+    // Save for all users (removed mock user check)
+    if (user?.id) {
       try {
         await api.saveProfile(user.id, {
           ...JSON.parse(localStorage.getItem('alumnex_profile') || '{}'),
@@ -364,11 +591,35 @@ export default function SettingsPage({ role }) {
                 <input ref={photoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => { 
                   const f = e.target.files?.[0]; 
                   if (f) {
-                    setPhotoPreview(URL.createObjectURL(f)); 
+                    console.log('[SettingsPage] Photo selected:', f.name, f.type, f.size);
+                    
                     try {
-                      const { url } = await uploadProfilePicture(f, user?.id || `temp-${Date.now()}`);
-                      setPhotoPreview(url);
-                    } catch { alert('Could not upload photo.'); }
+                      // Convert to base64
+                      const base64 = await fileToBase64(f);
+                      console.log('[SettingsPage] Photo converted, size:', (base64.length / 1024).toFixed(2), 'KB');
+                      
+                      // Compress if larger than 500KB
+                      let finalBase64 = base64;
+                      if (base64.length > 500 * 1024) {
+                        console.log('[SettingsPage] Compressing large image...');
+                        finalBase64 = await compressImage(base64, 800, 0.8);
+                        console.log('[SettingsPage] Compressed to:', (finalBase64.length / 1024).toFixed(2), 'KB');
+                      }
+                      
+                      // Show preview immediately
+                      setPhotoPreview(finalBase64);
+                      
+                      // Upload to database if user is logged in
+                      if (user?.id) {
+                        console.log('[SettingsPage] Uploading photo to database...');
+                        await uploadProfileAsset(user.id, 'photo', finalBase64, f.name, f.type);
+                        console.log('[SettingsPage] ✓ Photo uploaded to database');
+                      }
+                      
+                    } catch (err) {
+                      console.error('[SettingsPage] Photo upload error:', err);
+                      alert('Failed to upload photo: ' + err.message);
+                    }
                   }
                   e.target.value = ''; 
                 }} />
@@ -548,7 +799,27 @@ export default function SettingsPage({ role }) {
                 <label style={lbl}>Resume (PDF)</label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <button onClick={() => resumeInputRef.current?.click()} style={{ padding: '0.65rem 1rem', background: 'rgba(195,192,255,0.1)', border: '1px solid rgba(195,192,255,0.2)', borderRadius: 10, color: '#c3c0ff', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>Upload Resume</button>
-                  {profile.resumeUrl && <a href={profile.resumeUrl} target="_blank" rel="noreferrer" style={{ padding: '0.65rem 1rem', background: 'rgba(78,222,163,0.12)', border: '1px solid rgba(78,222,163,0.25)', borderRadius: 10, color: '#4edea3', fontSize: '0.8rem', fontWeight: 700, textDecoration: 'none' }}>View Resume</a>}
+                  {profile.resumeUrl && (
+                    <button 
+                      onClick={() => {
+                        // Open base64 PDF in new window
+                        const win = window.open('', '_blank');
+                        if (win) {
+                          win.document.write(`
+                            <html>
+                              <head><title>${profile.resumeName || 'Resume'}</title></head>
+                              <body style="margin:0">
+                                <iframe src="${profile.resumeUrl}" style="width:100%;height:100vh;border:none"></iframe>
+                              </body>
+                            </html>
+                          `);
+                        }
+                      }}
+                      style={{ padding: '0.65rem 1rem', background: 'rgba(78,222,163,0.12)', border: '1px solid rgba(78,222,163,0.25)', borderRadius: 10, color: '#4edea3', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      View Resume
+                    </button>
+                  )}
                   {profile.resumeUrl && <button onClick={() => setProfile(p => ({ ...p, resumeName: '', resumeUrl: '' }))} style={{ padding: '0.65rem 1rem', background: 'rgba(255,180,171,0.1)', border: '1px solid rgba(255,180,171,0.25)', borderRadius: 10, color: '#ffb4ab', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>Remove</button>}
                 </div>
                 {profile.resumeName && <div style={{ marginTop: 8, fontSize: '0.78rem', color: '#c7c4d8' }}>Current: {profile.resumeName}</div>}
@@ -621,9 +892,22 @@ export default function SettingsPage({ role }) {
               </>
             )}
 
-            <button onClick={saveProfile} style={{ padding: '0.75rem 2rem', background: 'linear-gradient(135deg,#4f46e5,#c3c0ff)', color: '#1d00a5', border: 'none', borderRadius: 12, fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer' }}>
-              Save Changes
-            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {saveError && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.75rem 1rem', background: 'rgba(255,180,171,0.1)', border: '1px solid rgba(255,180,171,0.3)', borderRadius: 10 }}>
+                  <span className="material-symbols-outlined" style={{ color: '#ffb4ab', fontSize: 18 }}>error</span>
+                  <span style={{ fontSize: '0.8rem', color: '#ffb4ab' }}>{saveError}</span>
+                </div>
+              )}
+              <button
+                onClick={saveProfile}
+                disabled={saving}
+                style={{ padding: '0.75rem 2rem', background: saving ? 'rgba(195,192,255,0.2)' : 'linear-gradient(135deg,#4f46e5,#c3c0ff)', color: saving ? '#c3c0ff' : '#1d00a5', border: 'none', borderRadius: 12, fontWeight: 700, fontSize: '0.875rem', cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 8, alignSelf: 'flex-start', transition: 'all 0.2s' }}
+              >
+                {saving && <span className="material-symbols-outlined" style={{ fontSize: 16, animation: 'spin 1s linear infinite' }}>progress_activity</span>}
+                {saving ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
           </div>
         )}
 

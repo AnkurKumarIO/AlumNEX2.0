@@ -405,26 +405,57 @@ function StudentFullProfileModal({ request, onClose, onAccept, onDecline }) {
     const load = async () => {
       setLoading(true);
       try {
-        // Try to fetch live profile from DB first
-        const sid = request.studentId;
-        if (sid && !String(sid).startsWith('alm-') && !String(sid).startsWith('stu-')) {
-          const dbUser = await getUserById(sid);
-          let pd = dbUser?.profile_data || {};
-          if (typeof pd === 'string') { try { pd = JSON.parse(pd); } catch { pd = {}; } }
-          if (pd && Object.keys(pd).length > 0) {
-            setProfile({ ...pd, name: pd.name || dbUser?.name || request.studentName });
-            setLoading(false);
-            return;
+        // Use snapshot directly - it has everything including photo and resume
+        let snap = request.studentProfile || request.student_profile_snapshot;
+        console.log('[StudentFullProfileModal] Raw snapshot exists:', !!snap);
+        
+        if (typeof snap === 'string') { 
+          try { 
+            snap = JSON.parse(snap); 
+          } catch (e) { 
+            console.error('[StudentFullProfileModal] Failed to parse snapshot:', e);
+            snap = null; 
+          } 
+        }
+        
+        // Use snapshot as-is
+        const finalProfile = snap || { name: request.studentName };
+        
+        // Fetch real photo/resume if stored in DB
+        if (request.studentId && !request.studentId.startsWith('stu-')) {
+          try {
+            const { getProfileAsset } = await import('../lib/profileAssetsAPI');
+            if (!finalProfile.photoPreview || finalProfile.photoPreview === '__stored_in_database__' || finalProfile.photoPreview === '__stored_locally__') {
+              console.log('[StudentFullProfileModal] Fetching photo from database...');
+              const photoAsset = await getProfileAsset(request.studentId, 'photo');
+              if (photoAsset?.fileData) {
+                finalProfile.photoPreview = photoAsset.fileData;
+                console.log('[StudentFullProfileModal] ✓ Photo loaded from database');
+              } else {
+                console.log('[StudentFullProfileModal] No photo in database');
+              }
+            }
+            if (!finalProfile.resumeUrl || finalProfile.resumeUrl === '__stored_in_database__' || finalProfile.resumeUrl === '__stored_locally__') {
+              console.log('[StudentFullProfileModal] Fetching resume from database...');
+              const resumeAsset = await getProfileAsset(request.studentId, 'resume');
+              if (resumeAsset?.fileData) {
+                finalProfile.resumeUrl = resumeAsset.fileData;
+                finalProfile.resumeName = resumeAsset.fileName || finalProfile.resumeName;
+                console.log('[StudentFullProfileModal] ✓ Resume loaded from database');
+              } else {
+                console.log('[StudentFullProfileModal] No resume in database');
+              }
+            }
+          } catch(e) {
+             console.error('[StudentFullProfileModal] Failed to load profile assets', e);
           }
         }
-        // Fallback to snapshot stored on the request
-        let snap = request.studentProfile;
-        if (typeof snap === 'string') { try { snap = JSON.parse(snap); } catch { snap = null; } }
-        setProfile(snap || { name: request.studentName });
-      } catch {
-        let snap = request.studentProfile;
-        if (typeof snap === 'string') { try { snap = JSON.parse(snap); } catch { snap = null; } }
-        setProfile(snap || { name: request.studentName });
+
+        console.log('[StudentFullProfileModal] Setting final profile, has photo:', !!finalProfile.photoPreview);
+        setProfile(finalProfile);
+      } catch (err) {
+        console.error('[StudentFullProfileModal] Error loading profile:', err);
+        setProfile({ name: request.studentName });
       } finally {
         setLoading(false);
       }
@@ -470,7 +501,20 @@ function StudentFullProfileModal({ request, onClose, onAccept, onDecline }) {
         <div style={{ padding: '1.25rem 1.5rem', background: 'linear-gradient(135deg,rgba(79,70,229,0.25),rgba(11,19,38,0.9))', borderBottom: '1px solid rgba(70,69,85,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <div style={{ width: 52, height: 52, borderRadius: '50%', background: p.photoPreview ? 'transparent' : 'linear-gradient(135deg,#4f46e5,#c3c0ff)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '1.3rem', color: '#1d00a5', flexShrink: 0, border: '2px solid rgba(195,192,255,0.2)' }}>
-              {p.photoPreview ? <img src={p.photoPreview} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (p.name || request.studentName || 'S').charAt(0).toUpperCase()}
+              {p.photoPreview ? (
+                <img 
+                  src={p.photoPreview} 
+                  alt="avatar" 
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={(e) => {
+                    console.error('[StudentFullProfileModal] Image failed to load');
+                    e.target.style.display = 'none';
+                    e.target.parentElement.innerHTML = `<span style="font-size: 1.3rem; font-weight: 700; color: #1d00a5;">${(p.name || request.studentName || 'S').charAt(0).toUpperCase()}</span>`;
+                  }}
+                />
+              ) : (
+                (p.name || request.studentName || 'S').charAt(0).toUpperCase()
+              )}
             </div>
             <div>
               <div style={{ fontSize: '0.55rem', fontWeight: 700, color: '#c3c0ff', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 3 }}>Student Profile</div>
@@ -552,9 +596,25 @@ function StudentFullProfileModal({ request, onClose, onAccept, onDecline }) {
                       </div>
                     </div>
                     {resumeHref && (
-                      <a href={resumeHref} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0.4rem 0.875rem', background: 'rgba(78,222,163,0.1)', border: '1px solid rgba(78,222,163,0.25)', borderRadius: 8, color: '#4edea3', fontSize: '0.7rem', fontWeight: 700, textDecoration: 'none' }}>
+                      <button 
+                        onClick={() => {
+                          // Open base64 PDF in new window
+                          const win = window.open('', '_blank');
+                          if (win) {
+                            win.document.write(`
+                              <html>
+                                <head><title>${p.resumeName || 'Resume'}</title></head>
+                                <body style="margin:0">
+                                  <iframe src="${resumeHref}" style="width:100%;height:100vh;border:none"></iframe>
+                                </body>
+                              </html>
+                            `);
+                          }
+                        }}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0.4rem 0.875rem', background: 'rgba(78,222,163,0.1)', border: '1px solid rgba(78,222,163,0.25)', borderRadius: 8, color: '#4edea3', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}
+                      >
                         <span className="material-symbols-outlined" style={{ fontSize: 14 }}>open_in_new</span> View
-                      </a>
+                      </button>
                     )}
                   </div>
                   {/* Social links */}

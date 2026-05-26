@@ -28,7 +28,8 @@ app.use(cors({
   },
   credentials: true,
 }));
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // ── Dev-only: clear interview data for testing ────────────────────────────────
 // DELETE /dev/clear-interviews  — remove after testing
@@ -71,6 +72,7 @@ app.use('/interview-records', require('./routes/interviewRecords')); // Alumni r
 app.use('/feedback',          require('./routes/feedback'));          // Session feedback
 app.use('/activity-logs',     require('./routes/activityLogs'));      // Activity feed data
 app.use('/platform-config',   require('./routes/platformConfig'));    // Platform configuration
+app.use('/profile-assets',    require('./routes/profileAssets'));     // Profile photos & resumes
 
 // ── Socket.io ─────────────────────────────────────────────────────────────────
 const server = http.createServer(app);

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Snapshot</title>
+</head>
+<body>
+  <h1>Check Interview Request Snapshot</h1>
+  <button onclick="checkSnapshot()">Check Latest Request</button>
+  <pre id="output"></pre>
+
+  <script type="module">
+    import { supabase } from './src/lib/supabaseClient.js';
+    
+    window.checkSnapshot = async function() {
+      const output = document.getElementById('output');
+      output.textContent = 'Loading...';
+      
+      try {
+        const { data, error } = await supabase
+          .from('interview_requests')
+          .select('*')
+          .order('createdAt', { ascending: false })
+          .limit(1)
+          .single();
+        
+        if (error) throw error;
+        
+        let result = '=== Latest Interview Request ===\n';
+        result += `ID: ${data.request_id}\n`;
+        result += `Student ID: ${data.student_id}\n`;
+        result += `Has snapshot: ${!!data.student_profile_snapshot}\n\n`;
+        
+        if (data.student_profile_snapshot) {
+          let snap;
+          if (typeof data.student_profile_snapshot === 'string') {
+            snap = JSON.parse(data.student_profile_snapshot);
+          } else {
+            snap = data.student_profile_snapshot;
+          }
+          
+          result += '=== Snapshot Contents ===\n';
+          result += `Has photoPreview: ${!!snap.photoPreview}\n`;
+          result += `Photo length: ${snap.photoPreview?.length || 0}\n`;
+          result += `Photo starts with: ${snap.photoPreview?.substring(0, 50)}\n`;
+          result += `Has resumeUrl: ${!!snap.resumeUrl}\n`;
+          result += `Resume length: ${snap.resumeUrl?.length || 0}\n`;
+          result += `Has name: ${!!snap.name}\n`;
+          result += `Has bio: ${!!snap.bio}\n`;
+          result += `Has skills: ${!!snap.skills}\n`;
+        } else {
+          result += 'No snapshot found!\n';
+        }
+        
+        output.textContent = result;
+      } catch (err) {
+        output.textContent = 'Error: ' + err.message;
+      }
+    };
+  </script>
+</body>
+</html>
