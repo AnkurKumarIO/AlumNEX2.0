@@ -1,6 +1,6 @@
 /**
  * profilePictureStorage.js
- * Handles uploading profile pictures to Supabase Storage and returning a public URL.
+ * Handles uploading profile pictures to Supabase Storage and persisting the URL to the backend.
  *
  * Bucket: "profile-pictures"  (public bucket — create it in Supabase Dashboard →
  *   Storage → New bucket → name: "profile-pictures" → Public: ON)
@@ -11,9 +11,10 @@
 import { supabase } from './supabaseClient';
 
 const BUCKET = 'profile-pictures';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 /**
- * Upload a profile picture File object to Supabase Storage.
+ * Upload a profile picture File object to Supabase Storage and persist the URL to the DB.
  * Returns { url, path } on success, throws on failure.
  *
  * @param {File}   file    - The image File object from an <input type="file">
@@ -39,7 +40,26 @@ export async function uploadProfilePicture(file, userId) {
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
   if (!data?.publicUrl) throw new Error('Could not get public URL for uploaded profile picture');
 
-  return { url: data.publicUrl, path };
+  const url = data.publicUrl;
+
+  // Persist URL to backend DB (best-effort — don't block on failure)
+  try {
+    await fetch(`${API_URL}/profile-assets/${userId}`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        assetType:   'photo',
+        fileName:    file.name,
+        mimeType:    file.type,
+        assetUrl:    url,
+        storagePath: path,
+      }),
+    });
+  } catch (e) {
+    console.warn('[profilePictureStorage] Failed to persist URL to backend (non-critical):', e.message);
+  }
+
+  return { url, path };
 }
 
 /**

@@ -1,6 +1,6 @@
 /**
  * resumeStorage.js
- * Handles uploading resume PDFs to Supabase Storage and returning a public URL.
+ * Handles uploading resume PDFs to Supabase Storage and persisting the URL to the backend.
  *
  * Bucket: "resumes"  (public bucket — create it in Supabase Dashboard →
  *   Storage → New bucket → name: "resumes" → Public: ON)
@@ -11,9 +11,10 @@
 import { supabase } from './supabaseClient';
 
 const BUCKET = 'resumes';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 /**
- * Upload a resume File object to Supabase Storage.
+ * Upload a resume File object to Supabase Storage and persist the URL to the DB.
  * Returns { url, path } on success, throws on failure.
  *
  * @param {File}   file    - The PDF File object from an <input type="file">
@@ -39,7 +40,26 @@ export async function uploadResume(file, userId) {
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
   if (!data?.publicUrl) throw new Error('Could not get public URL for uploaded resume');
 
-  return { url: data.publicUrl, path };
+  const url = data.publicUrl;
+
+  // Persist URL to backend DB (best-effort — don't block on failure)
+  try {
+    await fetch(`${API_URL}/profile-assets/${userId}`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        assetType:   'resume',
+        fileName:    file.name,
+        mimeType:    'application/pdf',
+        assetUrl:    url,
+        storagePath: path,
+      }),
+    });
+  } catch (e) {
+    console.warn('[resumeStorage] Failed to persist URL to backend (non-critical):', e.message);
+  }
+
+  return { url, path };
 }
 
 /**

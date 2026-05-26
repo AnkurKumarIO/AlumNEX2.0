@@ -188,7 +188,9 @@ model ProfileAsset {
   asset_type String   // 'photo' or 'resume'
   file_name  String?
   mime_type  String?
-  file_data  String   // Base64 encoded
+  file_data  String?  // Base64 encoded (legacy — nullable, prefer asset_url)
+  asset_url  String?  // Supabase Storage public URL (preferred)
+  storage_path String? // Supabase Storage path (for deletion)
   file_size  Int?
   
   user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
