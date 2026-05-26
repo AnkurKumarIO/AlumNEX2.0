@@ -38,8 +38,15 @@ function TagInput({ tags, onChange, placeholder }) {
 export default function ProfileSetup() {
   const navigate = useNavigate();
   const { user, login } = useContext(AuthContext);
+  const savedProfile = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('alumnex_profile') || localStorage.getItem('alumniconnect_profile') || '{}');
+    } catch {
+      return {};
+    }
+  })();
   const [step, setStep] = useState(0);
-  const [photoPreview, setPhotoPreview] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(savedProfile.photoPreview || user?.profile_data?.photoPreview || null);
   const [photoFile, setPhotoFile] = useState(null);
   const [profile, setProfile] = useState(() => {
     const pending = JSON.parse(localStorage.getItem('alumnex_pending_profile') || localStorage.getItem('alumniconnect_pending_profile') || '{}');
@@ -55,11 +62,11 @@ export default function ProfileSetup() {
     };
 
     return {
-      bio: '', linkedin: '', github: '', portfolio: '',
+      bio: savedProfile.bio || user?.profile_data?.bio || '', linkedin: savedProfile.linkedin || user?.profile_data?.linkedin || '', github: savedProfile.github || user?.profile_data?.github || '', portfolio: savedProfile.portfolio || user?.profile_data?.portfolio || '',
       department: getFieldVal('department'),
-      skills: [], cgpa: '',
-      resumeName: '', resumeUrl: '', projects: [{ title: '', desc: '', stack: '', link: '' }],
-      targetRoles: [], preferredCompanies: [], openTo: [], gradMonth: '', gradYear: '',
+      skills: savedProfile.skills || user?.profile_data?.skills || [], cgpa: savedProfile.cgpa || user?.profile_data?.cgpa || '',
+      resumeName: savedProfile.resumeName || user?.profile_data?.resumeName || '', resumeUrl: savedProfile.resumeUrl || user?.profile_data?.resumeUrl || '', projects: savedProfile.projects || user?.profile_data?.projects || [{ title: '', desc: '', stack: '', link: '' }],
+      targetRoles: savedProfile.targetRoles || user?.profile_data?.targetRoles || [], preferredCompanies: savedProfile.preferredCompanies || user?.profile_data?.preferredCompanies || [], openTo: savedProfile.openTo || user?.profile_data?.openTo || [], gradMonth: savedProfile.gradMonth || user?.profile_data?.gradMonth || '', gradYear: savedProfile.gradYear || user?.profile_data?.gradYear || '',
       name: getFieldVal('name'),
       email: getFieldVal('email'),
       rollNo: getFieldVal('rollNo'),
@@ -91,8 +98,11 @@ export default function ProfileSetup() {
           rollNo: p.rollNo || getFieldVal('rollNo'),
           college: p.college || getFieldVal('college'),
           year: p.year || getFieldVal('year'),
+          resumeName: p.resumeName || user?.profile_data?.resumeName || '',
+          resumeUrl: p.resumeUrl || user?.profile_data?.resumeUrl || '',
         };
       });
+      setPhotoPreview(prev => prev || user?.profile_data?.photoPreview || null);
     }
   }, [user]);
 

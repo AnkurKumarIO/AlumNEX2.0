@@ -3,6 +3,27 @@ const router = express.Router();
 const prisma = require('../lib/prisma');
 const { createGoogleMeetLink, generateJitsiFallback } = require('../services/googleMeetService');
 
+function parseJsonField(value) {
+  if (!value) return null;
+  if (typeof value === 'object') return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
+function formatScheduledTimeIST(value) {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Kolkata',
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value));
+}
+
 // GET /requests?alumniId=&studentId=&roomId=
 router.get('/', async (req, res) => {
   try {
@@ -32,7 +53,7 @@ router.get('/', async (req, res) => {
       student_name: r.student?.name || '',
       alumni_name:  r.alumni?.name   || '',
       scheduled_time: r.scheduled_time ? (new Date(r.scheduled_time).toISOString()) : null,
-      student_profile_snapshot: r.student_profile_snapshot ? JSON.parse(r.student_profile_snapshot) : (r.student?.profile_data ? JSON.parse(r.student.profile_data) : null),
+      student_profile_snapshot: parseJsonField(r.student_profile_snapshot) || parseJsonField(r.student?.profile_data),
     }));
 
     res.json(result);
@@ -88,13 +109,7 @@ router.post('/', async (req, res) => {
         scheduledTime: null,
         roomId:        null,
         createdAt:     request.createdAt,
-        studentProfile: request.student_profile_snapshot
-          ? JSON.parse(request.student_profile_snapshot)
-          : (request.student?.profile_data
-              ? (typeof request.student.profile_data === 'string'
-                  ? JSON.parse(request.student.profile_data)
-                  : request.student.profile_data)
-              : null),
+        studentProfile: parseJsonField(request.student_profile_snapshot) || parseJsonField(request.student?.profile_data),
       });
     }
 
@@ -190,10 +205,7 @@ router.patch('/:id', async (req, res) => {
         request_id: id,
       });
     } else if (status === 'SLOT_BOOKED') {
-      const formatted = new Date(scheduledTime).toLocaleString('en-US', {
-        timeZone: 'Asia/Kolkata',
-        weekday: 'long', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
-      });
+      const formatted = formatScheduledTimeIST(scheduledTime);
       const meetLinkStored = request.room_id || '';
       const meetInfo = meetLinkStored.startsWith('http') ? ` Join: ${meetLinkStored}` : '';
 

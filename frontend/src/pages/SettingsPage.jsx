@@ -44,8 +44,8 @@ export default function SettingsPage({ role }) {
   const photoInputRef = useRef(null);
   const userRole = role || user?.role || 'STUDENT';
   const isAlumni = userRole === 'ALUMNI';
-
-  const savedProfile = JSON.parse(localStorage.getItem('alumnex_profile') || '{}');
+  const dbProfile = user?.profile_data || {};
+  const savedProfile = { ...dbProfile, ...JSON.parse(localStorage.getItem('alumnex_profile') || '{}') };
   const savedNotifs  = JSON.parse(localStorage.getItem('alumnex_notifs')  || '{}');
 
   // Photo state — loaded from savedProfile

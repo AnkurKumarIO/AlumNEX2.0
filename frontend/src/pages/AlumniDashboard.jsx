@@ -27,6 +27,17 @@ const getISTComponents = (dateOrString) => {
   };
 };
 
+const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+
+function buildISTIsoString(year, monthIndex, day, hours24, minutes) {
+  const utcTime = Date.UTC(year, monthIndex, day, hours24, minutes) - IST_OFFSET_MS;
+  return new Date(utcTime).toISOString();
+}
+
+function getEventEndMs(scheduledTime, durationMinutes = 120) {
+  return new Date(scheduledTime).getTime() + durationMinutes * 60 * 1000;
+}
+
 // â”€â”€ Book Slot Calendar Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function BookSlotModal({ request, onClose, onBooked }) {
   const today = new Date();
@@ -68,8 +79,7 @@ function BookSlotModal({ request, onClose, onBooked }) {
     setBooking(true);
     const time24 = to24h();
     const [h24, m24] = time24.split(':').map(Number);
-    const utcTime = Date.UTC(viewYear, viewMonth, selectedDate, h24, m24) - 5.5 * 60 * 60 * 1000;
-    const scheduledTime = new Date(utcTime).toISOString();
+    const scheduledTime = buildISTIsoString(viewYear, viewMonth, selectedDate, h24, m24);
     await bookSlot(request.id, scheduledTime);
     setBooking(false);
     setStep('done');
@@ -225,8 +235,7 @@ function RescheduleModal({ request, onClose, onRescheduled }) {
     if (isNaN(m) || m < 0 || m > 59) { setTimeError('Minutes must be 00-59'); return; }
     setTimeError('');
     const [h24, m24] = to24h().split(':').map(Number);
-    const utcTime = Date.UTC(viewYear, viewMonth, selectedDate, h24, m24) - 5.5 * 60 * 60 * 1000;
-    const newTime = new Date(utcTime).toISOString();
+    const newTime = buildISTIsoString(viewYear, viewMonth, selectedDate, h24, m24);
     try {
       await rescheduleSlot(request.id, newTime);
     } catch (e) {
@@ -1163,8 +1172,7 @@ export default function AlumniDashboard() {
   const handleAddSlot = ({ date, time, duration }) => {
     const [y, m, d] = date.split('-').map(Number);
     const [hh, mm] = time.split(':').map(Number);
-    const utcTime = Date.UTC(y, m - 1, d, hh, mm) - 5.5 * 60 * 60 * 1000;
-    const isoTime = new Date(utcTime).toISOString();
+    const isoTime = buildISTIsoString(y, m - 1, d, hh, mm);
     setExtraSlots(s => [...s, {
       when: formatScheduledTime(isoTime),
       title: `Open Slot (${duration} min)`,
@@ -1454,7 +1462,7 @@ export default function AlumniDashboard() {
         eventsByDay[(ist.day + 6) % 7].push(e);
       });
 
-      const isEnded = (e) => Date.now() > new Date(e.scheduledTime).getTime() + (e.duration || 120) * 60000;
+      const isEnded = (e) => Date.now() > getEventEndMs(e.scheduledTime, e.duration || 120);
       const fmtTime = (iso) => new Date(iso).toLocaleTimeString('en-US', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' });
       const fmtDate = (iso) => new Date(iso).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'short', month: 'short', day: 'numeric' });
 
@@ -1701,7 +1709,7 @@ export default function AlumniDashboard() {
                 {r.status === 'slot_booked' && (() => {
                   const now = Date.now();
                   const scheduledMs = new Date(r.scheduledTime).getTime();
-                  const endMs = scheduledMs + 2 * 60 * 60 * 1000;
+                  const endMs = getEventEndMs(r.scheduledTime, 120);
                   const isEnded = now > endMs;
                   const canJoin = !isEnded && now >= scheduledMs - 5 * 60 * 1000;
                   const joinUrl = `/interview/${r.id}?name=${encodeURIComponent(user?.name || 'Alumni')}`;
@@ -1869,7 +1877,7 @@ export default function AlumniDashboard() {
                         )}                        {r.status === 'slot_booked' && (() => {
                           const now = Date.now();
                           const scheduledMs = new Date(r.scheduledTime).getTime();
-                          const endMs = scheduledMs + 2 * 60 * 60 * 1000;
+                          const endMs = getEventEndMs(r.scheduledTime, 120);
                           const isEnded = now > endMs;
                           const canJoin = !isEnded && now >= scheduledMs - 5 * 60 * 1000;
                           const joinUrl = `/interview/${r.id}?name=${encodeURIComponent(user?.name || 'Alumni')}`;
@@ -2282,5 +2290,3 @@ export default function AlumniDashboard() {
 
 const glass = { background: 'rgba(23,31,51,0.7)', backdropFilter: 'blur(20px)', boxShadow: '0 20px 40px rgba(0,0,0,0.4)', borderRadius: 16 };
 const btnOutline = { padding: '0.5rem 1.25rem', background: 'transparent', border: '1px solid rgba(195,192,255,0.2)', color: '#c3c0ff', borderRadius: 999, fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer' };
-
-
