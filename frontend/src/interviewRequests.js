@@ -17,7 +17,7 @@ function saveLocal(requests) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(requests));
   emitRealtimeSync({ type: 'requests_updated' });
 }
-async function pushNotif({ studentName, studentId, type, title, message, requestId, roomId }) {
+async function pushNotif({ studentName, studentId, type, title, message, requestId, roomId, persistToDb = true }) {
   // 1. Always write to localStorage for immediate local display
   try {
     const all = JSON.parse(localStorage.getItem(NOTIF_KEY) || '[]');
@@ -40,7 +40,7 @@ async function pushNotif({ studentName, studentId, type, title, message, request
       const { getUserByEmail } = await import('./lib/db');
       // fallback: skip DB write if we can't resolve the ID
     }
-    if (realStudentId && !String(realStudentId).startsWith('stu-') && !String(realStudentId).startsWith('alm-')) {
+    if (persistToDb && realStudentId && !String(realStudentId).startsWith('stu-') && !String(realStudentId).startsWith('alm-')) {
       await createNotification({
         userId:    realStudentId,
         type:      type.toUpperCase(),
@@ -418,21 +418,6 @@ export async function bookSlot(requestId, scheduledTime) {
     requests[idx] = { ...requests[idx], status: 'slot_booked', scheduledTime, roomId: placeholderRoomId };
     saveLocal(requests);
 
-    const formatted = new Date(scheduledTime).toLocaleString('en-US', {
-      weekday: 'long', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
-    });
-    const isInstant = Math.abs(new Date(scheduledTime).getTime() - Date.now()) < 60000;
-    pushNotif({
-      studentName: requests[idx].studentName,
-      studentId:   requests[idx].studentId,
-      type:        isInstant ? 'live' : 'slot_booked',
-      title:       isInstant ? '🔴 Interview is Live Now!' : 'Interview Slot Confirmed! 📅',
-      message:     isInstant
-        ? 'Your mock interview is starting now. Click Join to enter the room.'
-        : `Your interview is scheduled for ${formatted}.`,
-      requestId,
-      roomId: placeholderRoomId,
-    });
     return requests[idx];
   }
 }
@@ -499,6 +484,7 @@ export function isJoinable(scheduledTime) {
 export function formatScheduledTime(isoString) {
   if (!isoString) return '';
   return new Date(isoString).toLocaleString('en-US', {
+    timeZone: 'Asia/Kolkata',
     weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
   });
 }

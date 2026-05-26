@@ -98,8 +98,8 @@ function UserDetailModal({ user, onClose }) {
             </div>
           )}
           <div style={{ fontSize: '0.65rem', color: 'rgba(199,196,216,0.4)', textAlign: 'right', marginTop: 4 }}>
-            Registered {new Date(user.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-            {user.updatedAt && user.updatedAt !== user.createdAt && ` · Updated ${new Date(user.updatedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}`}
+            Registered {new Date(user.createdAt).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', year: 'numeric', month: 'short', day: 'numeric' })}
+            {user.updatedAt && user.updatedAt !== user.createdAt && ` · Updated ${new Date(user.updatedAt).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', year: 'numeric', month: 'short', day: 'numeric' })}`}
           </div>
         </div>
       </div>

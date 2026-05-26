@@ -167,6 +167,14 @@ async function callOrMock(realFn, mockFn) {
   return await mockFn();
 }
 
+async function parseJsonOrThrow(response) {
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data?.error || data?.message || `HTTP ${response.status}`);
+  }
+  return data;
+}
+
 // ─── Public API ─────────────────────────────────────────────────────────────
 
 export const api = {
@@ -333,7 +341,7 @@ export const api = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
-    }).then(r => r.json()),
+    }).then(parseJsonOrThrow),
     () => MOCK_API.createRequest(payload)
   ),
 
@@ -342,7 +350,7 @@ export const api = {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates),
-    }).then(r => r.json()),
+    }).then(parseJsonOrThrow),
     () => MOCK_API.updateRequest(id, updates)
   ),
 
@@ -365,7 +373,7 @@ export const api = {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(profileData),
-    }).then(r => r.json()),
+    }).then(parseJsonOrThrow),
     async () => { await mockDelay(400); return { message: 'Profile saved (mock)' }; }
   ),
 

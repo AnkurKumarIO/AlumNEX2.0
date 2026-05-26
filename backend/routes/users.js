@@ -3,6 +3,16 @@ const router = express.Router();
 const prisma = require('../lib/prisma');
 const supabase = require('../supabase');
 
+function parseProfileData(value) {
+  if (!value) return {};
+  if (typeof value === 'object') return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return {};
+  }
+}
+
 // DELETE /users/bulk — delete multiple users
 router.delete('/bulk', async (req, res) => {
   try {
@@ -68,7 +78,7 @@ router.patch('/:id/profile', async (req, res) => {
 
     const isVerified = existingUser.verification_status === 'VERIFIED';
     const isAlumni = existingUser.role === 'ALUMNI';
-    const existingProfileData = JSON.parse(existingUser.profile_data || '{}');
+    const existingProfileData = parseProfileData(existingUser.profile_data);
 
     // Determine final name, email, department (columns on user table)
     let finalName = existingUser.name;
@@ -158,7 +168,7 @@ router.get('/:id', async (req, res) => {
 
     const result = {
       ...user,
-      profile_data: JSON.parse(user.profile_data || '{}')
+      profile_data: parseProfileData(user.profile_data)
     };
 
     res.json(result);
@@ -180,7 +190,7 @@ router.get('/by-email/:email', async (req, res) => {
 
     const result = {
       ...user,
-      profile_data: JSON.parse(user.profile_data || '{}')
+      profile_data: parseProfileData(user.profile_data)
     };
 
     res.json(result);
@@ -224,7 +234,7 @@ router.post('/:id/rating', async (req, res) => {
 
     if (user) {
       // Append rating to profile_data
-      const profileData = JSON.parse(user.profile_data || '{}');
+      const profileData = parseProfileData(user.profile_data);
       if (!profileData.ratings) profileData.ratings = [];
       profileData.ratings.unshift(ratingEntry);
 
