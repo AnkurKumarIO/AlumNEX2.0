@@ -397,13 +397,10 @@ export async function acceptRequestOnly(requestId) {
 // ── Book slot (alumni) ────────────────────────────────────────────────────────
 
 export async function bookSlot(requestId, scheduledTime) {
-  const requests = loadLocal();
-  const idx = requests.findIndex(r => r.id === requestId);
-  if (idx === -1) return null;
-
   // Let the backend handle Google Meet link creation (it has the alumni's token).
   // We pass a placeholder; the backend replaces it with the real meet URL.
   const placeholderRoomId = `room-${requestId.slice(-8)}`;
+  let finalResult = null;
 
   try {
     const result = await api.updateRequest(requestId, {
@@ -413,35 +410,50 @@ export async function bookSlot(requestId, scheduledTime) {
     });
     // Use the room_id the backend actually stored (may be a Google Meet URL)
     const finalRoomId = result?.room_id || result?.roomId || placeholderRoomId;
-
-    requests[idx] = normalizeRequestRow({
-      ...requests[idx],
+    finalResult = {
+      ...result,
+      id: requestId,
       status: 'slot_booked',
       scheduledTime: result?.scheduled_time || result?.scheduledTime || scheduledTime,
       roomId: finalRoomId,
-      createdAt: requests[idx].createdAt || result?.createdAt || result?.created_at,
-    });
-    saveLocal(requests);
-
-    return requests[idx];
+    };
   } catch (e) {
     console.warn('bookSlot Backend error, trying Supabase:', e.message);
     try {
-      await dbUpdateRequest(requestId, { status: 'SLOT_BOOKED', scheduledTime, roomId: placeholderRoomId });
+      const result = await dbUpdateRequest(requestId, { status: 'SLOT_BOOKED', scheduledTime, roomId: placeholderRoomId });
+      finalResult = {
+        ...result,
+        id: requestId,
+        status: 'slot_booked',
+        scheduledTime: scheduledTime,
+        roomId: placeholderRoomId,
+      };
     } catch (dbErr) {
       console.warn('bookSlot Supabase error:', dbErr.message);
+      // Even if both fail, we should at least try to update local state if possible
+      finalResult = {
+        id: requestId,
+        status: 'slot_booked',
+        scheduledTime: scheduledTime,
+        roomId: placeholderRoomId,
+      };
     }
+  }
 
+  // Sync local storage if the request exists there
+  const requests = loadLocal();
+  const idx = requests.findIndex(r => r.id === requestId);
+  if (idx !== -1) {
     requests[idx] = normalizeRequestRow({
       ...requests[idx],
-      status: 'slot_booked',
-      scheduledTime,
-      roomId: placeholderRoomId,
+      ...finalResult,
+      createdAt: requests[idx].createdAt || finalResult.createdAt || finalResult.created_at,
     });
     saveLocal(requests);
-
     return requests[idx];
   }
+
+  return finalResult;
 }
 
 // ── Reschedule (alumni) ───────────────────────────────────────────────────────
