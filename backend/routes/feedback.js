@@ -56,6 +56,16 @@ router.post('/', async (req, res) => {
       session = await prisma.sessionFeedback.create({ data });
     }
 
+    // Also update the associated InterviewRequest to COMPLETED status
+    try {
+      await prisma.interviewRequest.updateMany({
+        where: { room_id: roomId },
+        data: { status: 'COMPLETED' }
+      });
+    } catch (e) {
+      console.warn('[Feedback] Could not update InterviewRequest status:', e.message);
+    }
+
     res.json({ success: true, session });
   } catch (error) {
     console.error('[Feedback] Error saving feedback:', error);
