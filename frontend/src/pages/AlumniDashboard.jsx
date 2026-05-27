@@ -1364,33 +1364,33 @@ export default function AlumniDashboard() {
   // ── Instant Meet — start right now, notify student ────────────────────────
   const handleInstantMeet = async (req) => {
     const now = new Date().toISOString();
-    // bookSlot returns the request with the real roomId from the backend
-    const result = await bookSlot(req.id, now);
-    const roomId = result?.roomId || result?.room_id || result?.id || req.id;
-    setLiveRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'slot_booked', scheduledTime: now, roomId } : r));
-    // Also push local notification so it works even without Supabase Realtime
-    try {
-      const NOTIF_KEY = 'alumniconnect_student_notifications';
-      const all = JSON.parse(localStorage.getItem(NOTIF_KEY) || '[]');
-      const alreadyExists = all.some(n => n.requestId === req.id && n.type === 'live');
-      if (!alreadyExists) {
-        all.unshift({
-          id: `live-${req.id}`,
-          studentName: req.studentName,
-          type: 'live',
-          title: '🔴 Interview is Live Now!',
-          message: `${user.name} has started a mock interview session. Join now!`,
-          requestId: req.id,
-          roomId,
-          read: false,
-          createdAt: now,
-        });
-        localStorage.setItem(NOTIF_KEY, JSON.stringify(all));
-      }
-    } catch {}
 
-    // Always navigate alumni to the internal interview room
-    navigate(`/interview/${req.id}?name=${encodeURIComponent(user?.name || 'Alumni')}`);
+    // 1. Update request status to LIVE in backend
+    // This triggers a real database-persisted notification for the student
+    try {
+      const result = await api.updateRequest(req.id, {
+        status: 'LIVE',
+        scheduledTime: now,
+      });
+
+      const roomId = result?.room_id || result?.roomId || result?.id || req.id;
+
+      // 2. Update local state
+      setLiveRequests(prev => prev.map(r => r.id === req.id ? {
+        ...r,
+        status: 'slot_booked', // Keep status 'slot_booked' locally for UI consistency
+        scheduledTime: now,
+        roomId
+      } : r));
+
+      // 3. Always navigate alumni to the internal interview room
+      // Use the requestId as the base for the internal route
+      navigate(`/interview/${req.id}?name=${encodeURIComponent(user?.name || 'Alumni')}`);
+    } catch (err) {
+      console.error('[AlumniDashboard] Instant meet failed:', err.message);
+      // Fallback: navigation only
+      navigate(`/interview/${req.id}?name=${encodeURIComponent(user?.name || 'Alumni')}`);
+    }
   };
 
   const handleRescheduled = (requestId, newScheduledTime) => {
