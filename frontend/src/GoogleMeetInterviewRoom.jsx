@@ -101,13 +101,8 @@ export default function GoogleMeetInterviewRoom() {
     if (rating === 0) return;
     setSubmitting(true);
     try {
-      // Auth is stored in sessionStorage — always read from there first
-      let authUser = {};
-      try {
-        const raw = sessionStorage.getItem('alumnex_user') || sessionStorage.getItem('alumniconnect_user');
-        if (raw) authUser = JSON.parse(raw);
-      } catch {}
-      const myRealId = authUser.id || user?.id || '';
+      // Auth is stored in localStorage — use the context's user or fall back to localStorage
+      const myRealId = user?.id || JSON.parse(localStorage.getItem('alumnex_user') || '{}').id || '';
 
       // Look up the request record to get real student/alumni UUIDs and names.
       // The backend is the source of truth — fetch the request by roomId.

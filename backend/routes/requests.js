@@ -203,28 +203,36 @@ router.patch('/:id', async (req, res) => {
         title: 'Interview Request Accepted! 🎉',
         message: `${request.alumni?.name || 'The alumni'} has accepted your request. Waiting for slot confirmation.`,
         request_id: id,
+        room_id: request.room_id || null,
       });
-    } else if (status === 'SLOT_BOOKED') {
-      const formatted = formatScheduledTimeIST(scheduledTime);
+    } else if (status === 'SLOT_BOOKED' || status === 'LIVE') {
+      const formatted = formatScheduledTimeIST(scheduledTime || new Date());
       const meetLinkStored = request.room_id || '';
       const meetInfo = meetLinkStored.startsWith('http') ? ` Join: ${meetLinkStored}` : '';
+      const isLive = status === 'LIVE';
 
       // Notify student of confirmed slot
       notificationsToCreate.push({
         user_id: request.student_id,
-        type: 'SLOT_BOOKED',
-        title: 'Interview Slot Confirmed! 📅',
-        message: `Your interview with ${request.alumni?.name || 'the alumni'} is scheduled for ${formatted}.${meetInfo}`,
+        type: isLive ? 'LIVE' : 'SLOT_BOOKED',
+        title: isLive ? '🔴 Interview is Live Now!' : 'Interview Slot Confirmed! 📅',
+        message: isLive
+          ? `${request.alumni?.name || 'The alumni'} has started a mock interview session. Join now!${meetInfo}`
+          : `Your interview with ${request.alumni?.name || 'the alumni'} is scheduled for ${formatted}.${meetInfo}`,
         request_id: id,
+        room_id: request.room_id || null,
       });
 
       // Notify alumni of confirmed slot
       notificationsToCreate.push({
         user_id: request.alumni_id,
-        type: 'SLOT_BOOKED_ALUMNI',
-        title: 'Interview Slot Confirmed! 📅',
-        message: `Your interview with ${request.student?.name || 'the student'} is scheduled for ${formatted}.${meetInfo}`,
+        type: isLive ? 'LIVE_ALUMNI' : 'SLOT_BOOKED_ALUMNI',
+        title: isLive ? '🔴 Session Started' : 'Interview Slot Confirmed! 📅',
+        message: isLive
+          ? `You have started a live interview session with ${request.student?.name || 'the student'}.`
+          : `Your interview with ${request.student?.name || 'the student'} is scheduled for ${formatted}.${meetInfo}`,
         request_id: id,
+        room_id: request.room_id || null,
       });
 
       // Notify TNP coordinator — show both student and alumni names
@@ -233,10 +241,15 @@ router.patch('/:id', async (req, res) => {
         const tnpId = tnpUser?.id || 'tnp-001'; // fallback to hardcoded ID if not in DB yet
         notificationsToCreate.push({
           user_id: tnpId,
-          type: 'SLOT_BOOKED',
-          title: `Session Booked: ${request.student?.name || 'Student'} ↔ ${request.alumni?.name || 'Alumni'}`,
-          message: `${request.student?.name || 'A student'} booked a "${request.topic || 'Mock Interview'}" session with ${request.alumni?.name || 'an alumni'} on ${formatted}.`,
+          type: isLive ? 'LIVE' : 'SLOT_BOOKED',
+          title: isLive
+            ? `🔴 Live Session: ${request.student?.name || 'Student'} ↔ ${request.alumni?.name || 'Alumni'}`
+            : `Session Booked: ${request.student?.name || 'Student'} ↔ ${request.alumni?.name || 'Alumni'}`,
+          message: isLive
+            ? `${request.student?.name || 'A student'} is having a live session with ${request.alumni?.name || 'an alumni'}.`
+            : `${request.student?.name || 'A student'} booked a "${request.topic || 'Mock Interview'}" session with ${request.alumni?.name || 'an alumni'} on ${formatted}.`,
           request_id: id,
+          room_id: request.room_id || null,
         });
       } catch (tnpErr) {
         console.warn('[Notify TNP] Could not find TNP user:', tnpErr.message);

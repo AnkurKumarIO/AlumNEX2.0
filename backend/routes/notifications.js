@@ -23,7 +23,7 @@ router.get('/', async (req, res) => {
 // POST /notifications — create a new notification
 router.post('/', async (req, res) => {
   try {
-    const { user_id, type, title, message, request_id } = req.body;
+    const { user_id, type, title, message, request_id, room_id } = req.body;
     
     if (!user_id || !type || !title) {
       return res.status(400).json({ error: 'user_id, type, and title are required.' });
@@ -36,6 +36,7 @@ router.post('/', async (req, res) => {
         title,
         message: message || '',
         request_id: request_id || null,
+        room_id: room_id || null,
         read: false
       }
     });

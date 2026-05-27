@@ -19,6 +19,7 @@ function normalizeNotification(n) {
     message: n.message,
     read: n.read ?? false,
     request_id: n.request_id,
+    room_id: n.room_id || n.roomId,
     // Support both snake_case and camelCase
     created_at: n.created_at || n.createdAt,
     createdAt: n.createdAt || n.created_at,
