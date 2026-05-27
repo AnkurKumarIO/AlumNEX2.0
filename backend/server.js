@@ -101,6 +101,8 @@ const io = new Server(server, {
 });
 require('./socket/interviewRoom')(io);
 require('./socket/notificationHandler')(io);
+const { startReminderService } = require('./services/reminderService');
+startReminderService(io);
 
 app.set('io', io);
 

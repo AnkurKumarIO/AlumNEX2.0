@@ -200,6 +200,15 @@ export default function Dashboard() {
 
   useEffect(() => subscribeRealtimeSync(() => setLocalRefresh(v => v + 1)), []);
 
+  // Trigger re-render every minute to update "Join Now" button visibility
+  // (activates 5 minutes before scheduled start time)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLocalRefresh(v => v + 1);
+    }, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Listen for session_ended socket events so we can mark sessions as ended
   // without relying on a time-based check.
   useEffect(() => {
@@ -355,15 +364,15 @@ export default function Dashboard() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {allNotifs.map(n => {
                 const req = myRequests.find(r => r.id === n.requestId);
-                const isLive = n.type === 'live' || n.type === 'live_now';
+                const isLive = n.type === 'live' || n.type === 'live_now' || n.type === 'reminder' || n.type === 'meeting_live';
                 const joinRoomId = req?.roomId || n.roomId || n.requestId || req?.id;
                 const scheduledTime = req?.scheduledTime;
                 const isSessionEnded = endedSessions[joinRoomId] || endedSessions[n.requestId];
-                const canJoin = !isSessionEnded && (n.type === 'slot_booked' || isLive) && joinRoomId &&
+                const canJoin = !isSessionEnded && (n.type === 'slot_booked' || n.type === 'reminder' || isLive) && joinRoomId &&
                   (scheduledTime ? Date.now() >= toUtcDate(scheduledTime).getTime() - 5 * 60 * 1000 : true);
-                const iconMap = { slot_booked: 'event_available', accepted: 'check_circle', declined: 'cancel', live: 'videocam', live_now: 'videocam', default: 'notifications' };
-                const colorMap = { slot_booked: '#4edea3', accepted: '#c3c0ff', declined: '#ffb4ab', live: '#ff4444', live_now: '#ff4444', default: '#c7c4d8' };
-                const bgMap = { slot_booked: 'rgba(78,222,163,0.1)', accepted: 'rgba(195,192,255,0.1)', declined: 'rgba(255,180,171,0.1)', live: 'rgba(255,68,68,0.1)', live_now: 'rgba(255,68,68,0.1)', default: 'rgba(70,69,85,0.1)' };
+                const iconMap = { slot_booked: 'event_available', accepted: 'check_circle', declined: 'cancel', live: 'videocam', live_now: 'videocam', reminder: 'schedule', meeting_live: 'videocam', default: 'notifications' };
+                const colorMap = { slot_booked: '#4edea3', accepted: '#c3c0ff', declined: '#ffb4ab', live: '#ff4444', live_now: '#ff4444', reminder: '#ffb95f', meeting_live: '#ff4444', default: '#c7c4d8' };
+                const bgMap = { slot_booked: 'rgba(78,222,163,0.1)', accepted: 'rgba(195,192,255,0.1)', declined: 'rgba(255,180,171,0.1)', live: 'rgba(255,68,68,0.1)', live_now: 'rgba(255,68,68,0.1)', reminder: 'rgba(255,185,95,0.1)', meeting_live: 'rgba(255,68,68,0.1)', default: 'rgba(70,69,85,0.1)' };
                 const type = n.type || 'default';
                 return (
                   <div key={n.id} style={{ background: !n.read ? '#171f33' : '#131b2e', borderRadius: 14, padding: '1.25rem', border: `1px solid ${!n.read ? 'rgba(195,192,255,0.12)' : 'rgba(70,69,85,0.12)'}`, display: 'flex', gap: 14, alignItems: 'flex-start', transition: 'all 0.2s' }}>
@@ -394,7 +403,7 @@ export default function Dashboard() {
                                 </div>
                               );
                             }
-                            if ((n.type === 'live' || n.type === 'live_now') && joinRoomId) {
+                            if ((n.type === 'live' || n.type === 'live_now' || n.type === 'reminder' || n.type === 'meeting_live') && joinRoomId) {
                               return (
                                 <Link to={joinUrl}
                                   style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.35rem 0.75rem', background: 'linear-gradient(135deg,#ff4444,#ff6b6b)', color: '#fff', borderRadius: 8, fontSize: '0.72rem', fontWeight: 700, textDecoration: 'none', width: 'fit-content', animation: 'pulse 1.5s ease-in-out infinite' }}>
@@ -1021,8 +1030,8 @@ export default function Dashboard() {
                             <div style={{ fontSize: '0.62rem', color: 'rgba(199,196,216,0.4)', marginTop: 4 }}>
                               {toUtcDate(n.createdAt).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                             </div>
-                            {/* Join Now — instant meet */}
-                            {(n.type === 'live' || n.type === 'live_now') && (() => {
+                            {/* Join Now — instant meet or reminder */}
+                            {(n.type === 'live' || n.type === 'live_now' || n.type === 'reminder' || n.type === 'meeting_live') && (() => {
                               const req = myRequests.find(r => r.id === n.requestId);
                               const joinRoomId = n.roomId || req?.roomId || n.requestId || req?.id;
                               if (!joinRoomId) return null;
