@@ -28,7 +28,7 @@ export default function ProgressAnalytics() {
   const ratedSessions = sessions
     .filter(s => (myRole === 'STUDENT' ? s.alumni_rating : s.student_rating) != null &&
                  (myRole === 'STUDENT' ? s.alumni_rating : s.student_rating) > 0)
-    .slice(-10);
+    .slice(0, 10).reverse(); // API returns newest-first; we want 10 newest in chronological order
 
   const chartW = 800, chartH = 220, padL = 40, padR = 20, padT = 20, padB = 40;
   const innerW = chartW - padL - padR;

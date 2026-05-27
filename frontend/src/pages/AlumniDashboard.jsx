@@ -806,7 +806,7 @@ function AlumniSessionHistory({ userId, userName }) {
 
   // ── Improved Rating Chart ─────────────────────────────────────────────────
   // Use last 10 rated sessions, map to date labels
-  const ratedSessions = sessions.filter(s => s.student_rating != null && s.student_rating > 0).slice(-10);
+  const ratedSessions = sessions.filter(s => s.student_rating != null && s.student_rating > 0).slice(0, 10).reverse();
   const chartW = 800, chartH = 220, padL = 40, padR = 20, padT = 20, padB = 40;
   const innerW = chartW - padL - padR;
   const innerH = chartH - padT - padB;
