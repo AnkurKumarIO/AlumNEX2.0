@@ -113,9 +113,18 @@ module.exports = (io) => {
     });
 
     // ── Session ended — notify other participants ────────────────────────
-    socket.on('session_ended', (roomId, userId) => {
+    socket.on('session_ended', async (roomId, userId) => {
       socket.to(roomId).emit('session_ended', userId);
       console.log(`[${roomId}] Session ended by ${userId}`);
+
+      try {
+        await prisma.interviewRequest.updateMany({
+          where: { room_id: roomId, status: { not: 'COMPLETED' } },
+          data: { status: 'COMPLETED' }
+        });
+      } catch (err) {
+        console.error(`[${roomId}] Error updating request status to COMPLETED:`, err);
+      }
     });
   });
 };

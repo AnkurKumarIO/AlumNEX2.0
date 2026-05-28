@@ -367,7 +367,7 @@ export default function Dashboard() {
                 const isLive = n.type === 'live' || n.type === 'live_now' || n.type === 'reminder' || n.type === 'meeting_live';
                 const joinRoomId = req?.roomId || n.roomId || n.requestId || req?.id;
                 const scheduledTime = req?.scheduledTime;
-                const isSessionEnded = endedSessions[joinRoomId] || endedSessions[n.requestId];
+                const isSessionEnded = endedSessions[joinRoomId] || endedSessions[n.requestId] || req?.status === 'COMPLETED' || req?.status === 'completed';
                 const canJoin = !isSessionEnded && (n.type === 'slot_booked' || n.type === 'reminder' || isLive) && joinRoomId &&
                   (scheduledTime ? Date.now() >= toUtcDate(scheduledTime).getTime() - 5 * 60 * 1000 : true);
                 const iconMap = { slot_booked: 'event_available', accepted: 'check_circle', declined: 'cancel', live: 'videocam', live_now: 'videocam', reminder: 'schedule', meeting_live: 'videocam', default: 'notifications' };
