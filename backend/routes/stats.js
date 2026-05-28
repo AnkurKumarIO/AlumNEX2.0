@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../lib/prisma');
+const { authenticate, verifyRole } = require('../lib/authMiddleware');
+
+// Protected administrative routes (require TNP role)
+const tnpOnly = [authenticate, verifyRole('TNP')];
 
 // GET /stats/platform — TNP dashboard overview stats
 router.get('/platform', async (req, res) => {
@@ -62,7 +66,7 @@ router.get('/mentorship', async (req, res) => {
 });
 
 // GET /stats/directory — full user directory for TNP Admin (students + alumni)
-router.get('/directory', async (req, res) => {
+router.get('/directory', tnpOnly, async (req, res) => {
   try {
     const users = await prisma.user.findMany({
       where: {
@@ -77,6 +81,7 @@ router.get('/directory', async (req, res) => {
         username: true,
         department: true,
         profile_data: true,
+        is_banned: true,
         createdAt: true,
         updatedAt: true,
         // Include relation counts for interview activity
@@ -109,6 +114,7 @@ router.get('/directory', async (req, res) => {
         department: u.department,
         createdAt: u.createdAt,
         updatedAt: u.updatedAt,
+        is_banned: u.is_banned,
         profile,
       };
 
@@ -146,15 +152,18 @@ router.get('/directory', async (req, res) => {
 });
 
 // GET /stats/directory/user/:id — single user detail for TNP drill-down
-router.get('/directory/user/:id', async (req, res) => {
+router.get('/directory/user/:id', tnpOnly, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.params.id },
       include: {
-        sent_requests:      { orderBy: { createdAt: 'desc' }, take: 10 },
-        received_requests:  { orderBy: { createdAt: 'desc' }, take: 10 },
-        student_interviews: { orderBy: { createdAt: 'desc' }, take: 10 },
-        alumni_interviews:  { orderBy: { createdAt: 'desc' }, take: 10 },
+        sent_requests:      { orderBy: { createdAt: 'desc' } },
+        received_requests:  { orderBy: { createdAt: 'desc' } },
+        student_interviews: { orderBy: { createdAt: 'desc' }, include: { student: true, alumni: true } },
+        alumni_interviews:  { orderBy: { createdAt: 'desc' }, include: { student: true, alumni: true } },
+        student_sessions:   { orderBy: { createdAt: 'desc' } },
+        alumni_sessions:    { orderBy: { createdAt: 'desc' } },
+        profile_assets:     true
       },
     });
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -162,7 +171,16 @@ router.get('/directory/user/:id', async (req, res) => {
     let profile = {};
     try { profile = JSON.parse(user.profile_data || '{}'); } catch {}
 
-    res.json({ ...user, profile_data: profile });
+    // Combine sessions into a unified list
+    const sessions = user.role === 'STUDENT' ? user.student_sessions : user.alumni_sessions;
+    const interviews = user.role === 'STUDENT' ? user.student_interviews : user.alumni_interviews;
+
+    res.json({
+      ...user,
+      profile_data: profile,
+      unified_sessions: sessions,
+      unified_interviews: interviews
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -265,7 +283,7 @@ router.get('/recent-activity', async (req, res) => {
 });
 
 // GET /stats/analytics — full analytics data for the TNP Analytics tab
-router.get('/analytics', async (req, res) => {
+router.get('/analytics', tnpOnly, async (req, res) => {
   try {
     const now = new Date();
 
@@ -444,6 +462,30 @@ router.get('/pending-users', async (req, res) => {
       orderBy: { createdAt: 'desc' },
     });
     res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /stats/live-sessions — list all currently active interview rooms
+router.get('/live-sessions', tnpOnly, async (req, res) => {
+  try {
+    const liveSessions = await prisma.interviewRequest.findMany({
+      where: {
+        status: { in: ['SLOT_BOOKED', 'MEETING_LIVE'] },
+        scheduled_time: {
+          // Heuristic: scheduled within last 2 hours or next 30 mins
+          gte: new Date(Date.now() - 2 * 60 * 60 * 1000),
+          lte: new Date(Date.now() + 30 * 60 * 1000),
+        }
+      },
+      include: {
+        student: { select: { name: true, email: true } },
+        alumni:  { select: { name: true, email: true, department: true } },
+      },
+      orderBy: { scheduled_time: 'asc' }
+    });
+    res.json(liveSessions);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

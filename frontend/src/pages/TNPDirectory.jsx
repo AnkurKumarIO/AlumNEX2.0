@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+import { exportToCSV } from '../utils/exportUtils';
+import { API_BASE } from '../api';
 
 // ── Sortable header helper ────────────────────────────────────────────────────
 function SortHeader({ label, field, sortField, sortDir, onSort }) {
@@ -21,94 +21,277 @@ function SortHeader({ label, field, sortField, sortDir, onSort }) {
 }
 
 // ── User detail modal ─────────────────────────────────────────────────────────
-function UserDetailModal({ user, onClose }) {
-  if (!user) return null;
-  const profile = user.profile || {};
-  const isStudent = !user.company && !user.jobTitle;
+function UserDetailModal({ userId, onClose, token }) {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('profile');
+
+  useEffect(() => {
+    if (!userId) return;
+    setLoading(true);
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    fetch(`${API_BASE}/stats/directory/user/${userId}`, { headers })
+      .then(r => r.json())
+      .then(data => {
+        setUser(data);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [userId]);
+
+  if (!userId) return null;
 
   return (
     <>
-      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 998 }} />
-      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: '90%', maxWidth: 540, maxHeight: '80vh', overflowY: 'auto', background: '#171f33', borderRadius: 20, border: '1px solid rgba(195,192,255,0.15)', boxShadow: '0 30px 80px rgba(0,0,0,0.5)', zIndex: 999, padding: 0 }}>
-        {/* Header */}
-        <div style={{ background: 'linear-gradient(135deg,rgba(79,70,229,0.2),rgba(11,19,38,0.9))', padding: '1.5rem 2rem', borderBottom: '1px solid rgba(70,69,85,0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'linear-gradient(135deg,#4f46e5,#c3c0ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.2rem', color: '#1d00a5', flexShrink: 0 }}>
-              {user.name?.[0]?.toUpperCase() || '?'}
-            </div>
-            <div>
-              <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#dae2fd' }}>{user.name}</div>
-              <div style={{ fontSize: '0.75rem', color: '#c7c4d8', marginTop: 2 }}>{user.email}</div>
-              <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
-                <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: '0.6rem', fontWeight: 700, background: isStudent ? 'rgba(195,192,255,0.15)' : 'rgba(78,222,163,0.15)', color: isStudent ? '#c3c0ff' : '#4edea3', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                  {isStudent ? 'Student' : 'Alumni'}
-                </span>
-                {user.department && (
-                  <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: '0.6rem', fontWeight: 600, background: '#222a3d', color: '#c7c4d8' }}>{user.department}</span>
-                )}
-              </div>
-            </div>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 998, backdropFilter: 'blur(4px)' }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: '95%', maxWidth: 800, height: '90vh', background: '#0b1326', borderRadius: 24, border: '1px solid rgba(195,192,255,0.15)', boxShadow: '0 30px 80px rgba(0,0,0,0.8)', zIndex: 999, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+
+        {loading ? (
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c7c4d8' }}>
+             <span className="material-symbols-outlined" style={{ fontSize: 40, animation: 'spin 1s linear infinite' }}>progress_activity</span>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
-            <span className="material-symbols-outlined" style={{ color: '#c7c4d8', fontSize: 20 }}>close</span>
-          </button>
-        </div>
-        {/* Details */}
-        <div style={{ padding: '1.5rem 2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {/* Info grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-            {[
-              { label: 'Username', value: user.username },
-              { label: isStudent ? 'Roll No' : 'Company', value: isStudent ? user.rollNo : user.company },
-              { label: isStudent ? 'College' : 'Job Title', value: isStudent ? user.college : user.jobTitle },
-              { label: isStudent ? 'Year' : 'Batch', value: isStudent ? user.year : user.batchYear },
-              { label: 'Sessions', value: user.sessions || 0 },
-              { label: 'Interviews', value: user.interviews || 0 },
-            ].filter(i => i.value !== undefined && i.value !== '').map(item => (
-              <div key={item.label} style={{ background: '#131b2e', borderRadius: 10, padding: '0.75rem 1rem' }}>
-                <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#c7c4d8', marginBottom: 4 }}>{item.label}</div>
-                <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#dae2fd' }}>{item.value}</div>
+        ) : !user ? (
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffb4ab' }}>User not found</div>
+        ) : (
+          <>
+            {/* Header */}
+            <div style={{ background: 'linear-gradient(135deg,#131b2e,#0b1326)', padding: '1.5rem 2rem', borderBottom: '1px solid rgba(195,192,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg,#4f46e5,#c3c0ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.4rem', color: '#1d00a5', boxShadow: '0 8px 20px rgba(79,70,229,0.3)' }}>
+                  {user.name?.[0]?.toUpperCase() || '?'}
+                </div>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: '1.25rem', color: '#dae2fd', letterSpacing: '-0.02em' }}>{user.name}</div>
+                  <div style={{ fontSize: '0.85rem', color: '#c3c0ff', opacity: 0.8 }}>{user.email}</div>
+                </div>
               </div>
-            ))}
-          </div>
-          {/* Skills */}
-          {isStudent && Array.isArray(profile.skills) && profile.skills.length > 0 && (
-            <div>
-              <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#c7c4d8', marginBottom: 8 }}>Skills</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {profile.skills.map(s => (
-                  <span key={s} style={{ padding: '3px 10px', borderRadius: 6, fontSize: '0.7rem', fontWeight: 600, background: 'rgba(195,192,255,0.1)', color: '#c3c0ff', border: '1px solid rgba(195,192,255,0.2)' }}>{s}</span>
-                ))}
-              </div>
+              <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', cursor: 'pointer', width: 36, height: 36, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c7c4d8', transition: 'all 0.2s' }} onMouseEnter={e => e.currentTarget.style.background='rgba(255,255,255,0.1)'} onMouseLeave={e => e.currentTarget.style.background='rgba(255,255,255,0.05)'}>
+                <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
+              </button>
             </div>
-          )}
-          {/* Bio */}
-          {profile.bio && (
-            <div>
-              <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#c7c4d8', marginBottom: 6 }}>Bio</div>
-              <div style={{ fontSize: '0.8rem', color: '#c7c4d8', lineHeight: 1.6, background: '#131b2e', borderRadius: 10, padding: '0.75rem 1rem' }}>{profile.bio}</div>
+
+            {/* Modal Tabs */}
+            <div style={{ display: 'flex', gap: 24, padding: '0 2rem', borderBottom: '1px solid rgba(195,192,255,0.08)', background: '#131b2e' }}>
+              {[
+                { id: 'profile', label: 'Overview', icon: 'person' },
+                { id: 'sessions', label: 'Session History', icon: 'history' },
+                { id: 'assets', label: 'Documents & Assets', icon: 'folder_open' }
+              ].map(t => (
+                <button key={t.id} onClick={() => setActiveTab(t.id)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '1rem 0', background: 'none', border: 'none', borderBottom: activeTab === t.id ? '2px solid #c3c0ff' : '2px solid transparent', color: activeTab === t.id ? '#c3c0ff' : '#c7c4d8', fontWeight: activeTab === t.id ? 700 : 500, fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.2s' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>{t.icon}</span>
+                  {t.label}
+                </button>
+              ))}
             </div>
-          )}
-          {/* Rating (alumni) */}
-          {!isStudent && user.averageRating && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span className="material-symbols-outlined" style={{ color: '#ffb95f', fontSize: 18, fontVariationSettings: "'FILL' 1" }}>star</span>
-              <span style={{ fontWeight: 700, color: '#ffb95f', fontSize: '1rem' }}>{user.averageRating}</span>
-              <span style={{ fontSize: '0.72rem', color: '#c7c4d8' }}>({user.totalRatings} reviews)</span>
+
+            {/* Scrollable Content */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '2rem' }}>
+              {activeTab === 'profile' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                   {/* Info Cards */}
+                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1rem' }}>
+                    {[
+                      { label: 'Role', value: user.role, icon: user.role === 'STUDENT' ? 'school' : 'psychology' },
+                      { label: 'Department', value: user.department, icon: 'account_tree' },
+                      { label: user.role === 'STUDENT' ? 'Roll Number' : 'Company', value: user.role === 'STUDENT' ? (user.profile_data?.rollNo || user.username) : user.profile_data?.company, icon: 'badge' },
+                      { label: user.role === 'STUDENT' ? 'Year' : 'Batch', value: user.role === 'STUDENT' ? user.profile_data?.year : user.profile_data?.batchYear, icon: 'calendar_month' },
+                      { label: 'Account Status', value: user.verification_status, icon: 'verified_user', color: user.verification_status === 'VERIFIED' ? '#4edea3' : '#ffb95f' },
+                      { label: 'Member Since', value: new Date(user.createdAt).toLocaleDateString(), icon: 'history' },
+                    ].map(i => (
+                      <div key={i.label} style={{ background: '#171f33', padding: '1.25rem', borderRadius: 16, border: '1px solid rgba(195,192,255,0.05)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, color: '#c7c4d8', opacity: 0.7 }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{i.icon}</span>
+                          <span style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{i.label}</span>
+                        </div>
+                        <div style={{ fontSize: '1rem', fontWeight: 700, color: i.color || '#dae2fd' }}>{i.value || 'N/A'}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Bio / About */}
+                  <div style={{ background: '#171f33', padding: '1.5rem', borderRadius: 16, border: '1px solid rgba(195,192,255,0.05)' }}>
+                    <h4 style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c3c0ff', marginBottom: 12 }}>About User</h4>
+                    <p style={{ fontSize: '0.9rem', lineHeight: 1.7, color: '#c7c4d8', margin: 0 }}>{user.profile_data?.bio || 'No bio provided.'}</p>
+                  </div>
+
+                  {/* Skills */}
+                  {user.role === 'STUDENT' && user.profile_data?.skills?.length > 0 && (
+                    <div>
+                      <h4 style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c3c0ff', marginBottom: 12 }}>Technical Skills</h4>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                        {user.profile_data.skills.map(s => (
+                          <span key={s} style={{ padding: '6px 14px', borderRadius: 10, background: 'rgba(195,192,255,0.1)', color: '#c3c0ff', fontSize: '0.8rem', fontWeight: 600, border: '1px solid rgba(195,192,255,0.1)' }}>{s}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'sessions' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                  <h4 style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c3c0ff', marginBottom: 8 }}>Unified Session Log</h4>
+                  {user.unified_sessions?.length === 0 && user.unified_interviews?.length === 0 ? (
+                    <div style={{ padding: '3rem', textAlign: 'center', background: '#171f33', borderRadius: 16, color: '#c7c4d8', opacity: 0.6 }}>No sessions recorded yet.</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      {/* Sessions from feedback table */}
+                      {user.unified_sessions?.map(s => (
+                        <details key={s.id} style={{ background: '#171f33', borderRadius: 16, border: '1px solid rgba(195,192,255,0.05)', overflow: 'hidden' }}>
+                          <summary style={{ padding: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', listStyle: 'none' }}>
+                            <div>
+                              <div style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                {s.topic || 'General Interview'}
+                                <span style={{ fontSize: '0.6rem', padding: '2px 6px', borderRadius: 4, background: 'rgba(78,222,163,0.1)', color: '#4edea3' }}>FEEDBACK</span>
+                              </div>
+                              <div style={{ display: 'flex', gap: 16, fontSize: '0.75rem', color: '#c7c4d8' }}>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span className="material-symbols-outlined" style={{ fontSize: 14 }}>calendar_today</span> {new Date(s.createdAt).toLocaleDateString()}</span>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span className="material-symbols-outlined" style={{ fontSize: 14 }}>schedule</span> {s.duration_minutes || '—'} mins</span>
+                              </div>
+                            </div>
+                            <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: 12 }}>
+                              <div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#ffb95f', fontWeight: 700, fontSize: '0.9rem' }}>
+                                  {s.student_rating ? <><span className="material-symbols-outlined" style={{ fontSize: 18, fontVariationSettings: "'FILL' 1" }}>star</span> {s.student_rating}/5</> : 'No rating'}
+                                </div>
+                                <div style={{ fontSize: '0.7rem', color: '#4edea3', fontWeight: 700, textTransform: 'uppercase', marginTop: 4 }}>{s.status}</div>
+                              </div>
+                              <span className="material-symbols-outlined" style={{ color: '#c7c4d8', opacity: 0.5 }}>expand_more</span>
+                            </div>
+                          </summary>
+                          <div style={{ padding: '1rem 1.25rem', borderTop: '1px solid rgba(195,192,255,0.05)', background: 'rgba(0,0,0,0.2)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                            <div>
+                              <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#c3c0ff', textTransform: 'uppercase', marginBottom: 8 }}>Student Feedback</div>
+                              <div style={{ fontSize: '0.85rem', color: '#dae2fd', background: '#0b1326', padding: '0.75rem', borderRadius: 10 }}>{s.student_feedback || 'No feedback provided by student.'}</div>
+                            </div>
+                            <div>
+                              <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#4edea3', textTransform: 'uppercase', marginBottom: 8 }}>Alumni Feedback</div>
+                              <div style={{ fontSize: '0.85rem', color: '#dae2fd', background: '#0b1326', padding: '0.75rem', borderRadius: 10 }}>{s.alumni_feedback || 'No feedback provided by alumni.'}</div>
+                            </div>
+                          </div>
+                        </details>
+                      ))}
+
+                      {/* Interviews from records table (AI Transcripts) */}
+                      {user.unified_interviews?.map(i => (
+                        <details key={i.interview_id} style={{ background: '#171f33', borderRadius: 16, border: '1px solid rgba(195,192,255,0.05)', overflow: 'hidden' }}>
+                           <summary style={{ padding: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', listStyle: 'none' }}>
+                            <div>
+                              <div style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                Mentorship Session
+                                <span style={{ fontSize: '0.6rem', padding: '2px 6px', borderRadius: 4, background: 'rgba(96,165,250,0.1)', color: '#60a5fa' }}>AI INSIGHTS</span>
+                              </div>
+                              <div style={{ display: 'flex', gap: 16, fontSize: '0.75rem', color: '#c7c4d8' }}>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span className="material-symbols-outlined" style={{ fontSize: 14 }}>calendar_today</span> {new Date(i.createdAt).toLocaleDateString()}</span>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span className="material-symbols-outlined" style={{ fontSize: 14 }}>person</span> {user.role === 'STUDENT' ? i.alumni?.name : i.student?.name}</span>
+                              </div>
+                            </div>
+                            <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: 12 }}>
+                              <span style={{ fontSize: '0.7rem', color: '#60a5fa', fontWeight: 700, textTransform: 'uppercase' }}>{i.status}</span>
+                              <span className="material-symbols-outlined" style={{ color: '#c7c4d8', opacity: 0.5 }}>expand_more</span>
+                            </div>
+                          </summary>
+                          <div style={{ padding: '1rem 1.25rem', borderTop: '1px solid rgba(195,192,255,0.05)', background: 'rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                            <div>
+                              <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#c3c0ff', textTransform: 'uppercase', marginBottom: 8 }}>AI Analysis & Action Items</div>
+                              <div style={{ fontSize: '0.85rem', color: '#dae2fd', background: '#0b1326', padding: '1rem', borderRadius: 12, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{i.ai_action_items || 'Analysis in progress...'}</div>
+                            </div>
+                            <div>
+                              <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 8 }}>Full Transcript</div>
+                              <div style={{ fontSize: '0.8rem', color: '#c7c4d8', background: '#0b1326', padding: '1rem', borderRadius: 12, maxHeight: '200px', overflowY: 'auto', fontStyle: 'italic', lineHeight: 1.6 }}>{i.transcript || 'No transcript available for this session.'}</div>
+                            </div>
+                          </div>
+                        </details>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'assets' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                  <h4 style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c3c0ff', marginBottom: 8 }}>Documents & Portfolio</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                    {/* Resume */}
+                    <div style={{ background: '#171f33', padding: '1.5rem', borderRadius: 20, border: '1px solid rgba(195,192,255,0.05)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(255,87,34,0.1)', color: '#ff5722', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: 24 }}>description</span>
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>Professional Resume</div>
+                          <div style={{ fontSize: '0.72rem', color: '#c7c4d8' }}>PDF Document</div>
+                        </div>
+                      </div>
+                      {user.profile_assets?.find(a => a.asset_type === 'resume') ? (
+                        <a href={user.profile_assets.find(a => a.asset_type === 'resume').asset_url} target="_blank" rel="noreferrer" style={{ width: '100%', marginTop: 8, padding: '0.75rem', borderRadius: 10, background: '#4f46e5', color: '#fff', textAlign: 'center', textDecoration: 'none', fontSize: '0.8rem', fontWeight: 700, display: 'block' }}>View Resume</a>
+                      ) : (
+                        <div style={{ marginTop: 8, padding: '0.75rem', borderRadius: 10, background: 'rgba(255,255,255,0.03)', color: '#c7c4d8', textAlign: 'center', fontSize: '0.8rem', opacity: 0.5 }}>No resume uploaded</div>
+                      )}
+                    </div>
+
+                    {/* LinkedIn / Portfolio */}
+                    <div style={{ background: '#171f33', padding: '1.5rem', borderRadius: 20, border: '1px solid rgba(195,192,255,0.05)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(10,102,194,0.1)', color: '#0a66c2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: 24 }}>link</span>
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>Social & Portfolio</div>
+                          <div style={{ fontSize: '0.72rem', color: '#c7c4d8' }}>External Links</div>
+                        </div>
+                      </div>
+                      {user.profile_data?.linkedin ? (
+                        <a href={user.profile_data.linkedin.startsWith('http') ? user.profile_data.linkedin : `https://${user.profile_data.linkedin}`} target="_blank" rel="noreferrer" style={{ width: '100%', marginTop: 8, padding: '0.75rem', borderRadius: 10, background: '#0a66c2', color: '#fff', textAlign: 'center', textDecoration: 'none', fontSize: '0.8rem', fontWeight: 700, display: 'block' }}>Visit LinkedIn</a>
+                      ) : (
+                        <div style={{ marginTop: 8, padding: '0.75rem', borderRadius: 10, background: 'rgba(255,255,255,0.03)', color: '#c7c4d8', textAlign: 'center', fontSize: '0.8rem', opacity: 0.5 }}>No links provided</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-          <div style={{ fontSize: '0.65rem', color: 'rgba(199,196,216,0.4)', textAlign: 'right', marginTop: 4 }}>
-            Registered {new Date(user.createdAt).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', year: 'numeric', month: 'short', day: 'numeric' })}
-            {user.updatedAt && user.updatedAt !== user.createdAt && ` · Updated ${new Date(user.updatedAt).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', year: 'numeric', month: 'short', day: 'numeric' })}`}
-          </div>
-        </div>
+
+            {/* Footer / Actions */}
+            <div style={{ padding: '1.25rem 2rem', background: '#131b2e', borderTop: '1px solid rgba(195,192,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+               <button
+                 onClick={async () => {
+                    const action = user.is_banned ? 'Restore Access' : 'Suspend Account';
+                    if(!window.confirm(`Are you sure you want to ${action.toLowerCase()} for ${user.name}?`)) return;
+                    try {
+                      const headers = { 'Content-Type': 'application/json' };
+                      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+                      const res = await fetch(`${API_BASE}/users/ban`, {
+                        method: 'PATCH',
+                        headers,
+                        body: JSON.stringify({ userId: user.id, isBanned: !user.is_banned })
+                      });
+                      if (res.ok) {
+                        onClose();
+                        // Trigger a re-fetch of the directory instead of reload
+                        if (typeof window.refreshTNPDirectory === 'function') {
+                          window.refreshTNPDirectory();
+                        }
+                      }
+                    } catch(err) { alert('Failed to update status'); }
+                 }}
+                 style={{ padding: '0.6rem 1.25rem', borderRadius: 10, background: user.is_banned ? 'rgba(78,222,163,0.1)' : 'rgba(255,180,171,0.1)', color: user.is_banned ? '#4edea3' : '#ffb4ab', border: 'none', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
+               >
+                 {user.is_banned ? 'Restore Account' : 'Suspend Account'}
+               </button>
+               <button onClick={onClose} style={{ padding: '0.75rem 1.5rem', borderRadius: 12, background: 'rgba(195,192,255,0.05)', color: '#dae2fd', border: '1px solid rgba(195,192,255,0.1)', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}>Close Inspector</button>
+            </div>
+          </>
+        )}
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     </>
   );
 }
 
 // ── Main Directory Component ──────────────────────────────────────────────────
-export default function DirectoryTab() {
+export default function DirectoryTab({ token }) {
   const [loading, setLoading] = useState(true);
   const [students, setStudents] = useState([]);
   const [alumni, setAlumni]     = useState([]);
@@ -116,15 +299,15 @@ export default function DirectoryTab() {
   const [search, setSearch]     = useState('');
   const [sortField, setSortField] = useState('name');
   const [sortDir, setSortDir]     = useState('asc');
-  const [selectedUser, setSelectedUser] = useState(null);
+  const [selectedUserId, setSelectedUserId] = useState(null);
   const [selectedIds, setSelectedIds]   = useState(new Set());
   const [isDeleting, setIsDeleting]     = useState(false);
   const [error, setError]       = useState('');
 
-  // Fetch directory data
-  useEffect(() => {
+  const fetchDirectory = () => {
     setLoading(true);
-    fetch(`${API_BASE}/stats/directory`)
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    fetch(`${API_BASE}/stats/directory`, { headers })
       .then(r => r.json())
       .then(data => {
         if (data.error) throw new Error(data.error);
@@ -134,12 +317,24 @@ export default function DirectoryTab() {
       })
       .catch(err => setError(err.message))
       .finally(() => setLoading(false));
-  }, []);
+  };
+
+  // Expose fetch globally for the modal to call
+  useEffect(() => {
+    window.refreshTNPDirectory = fetchDirectory;
+    return () => { delete window.refreshTNPDirectory; };
+  }, [token]);
+
+  // Fetch directory data
+  useEffect(() => {
+    fetchDirectory();
+  }, [token]);
 
   // Auto-refresh every 30s for live sync
   useEffect(() => {
     const interval = setInterval(() => {
-      fetch(`${API_BASE}/stats/directory`)
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      fetch(`${API_BASE}/stats/directory`, { headers })
         .then(r => r.json())
         .then(data => {
           if (!data.error) {
@@ -224,15 +419,33 @@ export default function DirectoryTab() {
     setSelectedIds(newSet);
   };
 
+  const handleExport = () => {
+    const dataToExport = filtered.map(u => ({
+      Name: u.name,
+      Email: u.email,
+      Department: u.department,
+      [activeTab === 'students' ? 'Roll No' : 'Company']: activeTab === 'students' ? u.rollNo : u.company,
+      [activeTab === 'students' ? 'Year' : 'Batch']: activeTab === 'students' ? u.year : u.batchYear,
+      Role: u.role,
+      Requests: u.sessions,
+      Interviews: u.interviews,
+      Registered: new Date(u.createdAt).toLocaleDateString()
+    }));
+    exportToCSV(dataToExport, `AlumNex_${activeTab}_Directory`);
+  };
+
   const handleDeleteSelected = async () => {
     if (selectedIds.size === 0) return;
     if (!window.confirm(`Are you sure you want to permanently delete ${selectedIds.size} selected ${activeTab}? This cannot be undone.`)) return;
 
     setIsDeleting(true);
     try {
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
       const res = await fetch(`${API_BASE}/users/bulk`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ ids: Array.from(selectedIds) })
       });
       const data = await res.json();
@@ -253,7 +466,7 @@ export default function DirectoryTab() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', fontFamily: 'Inter, sans-serif', color: '#dae2fd' }}>
-      {selectedUser && <UserDetailModal user={selectedUser} onClose={() => setSelectedUser(null)} />}
+      {selectedUserId && <UserDetailModal userId={selectedUserId} onClose={() => setSelectedUserId(null)} token={token} />}
 
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 12 }}>
@@ -310,6 +523,13 @@ export default function DirectoryTab() {
               Delete Selected ({selectedIds.size})
             </button>
           )}
+          <button
+            onClick={handleExport}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.6rem 1rem', borderRadius: 10, border: '1px solid rgba(195,192,255,0.2)', background: 'rgba(195,192,255,0.05)', color: '#c3c0ff', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>download</span>
+            Export CSV
+          </button>
           <div style={{ position: 'relative' }}>
             <span className="material-symbols-outlined" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 18, color: '#464555' }}>search</span>
             <input
@@ -368,7 +588,7 @@ export default function DirectoryTab() {
               <div key={user.id} style={{ padding: '0.75rem 1.5rem', display: 'grid', gridTemplateColumns: gridTemplate, gap: 8, borderTop: '1px solid rgba(70,69,85,0.08)', background: selectedIds.has(user.id) ? 'rgba(96,165,250,0.08)' : (i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)'), alignItems: 'center', cursor: 'pointer', transition: 'background 0.15s' }}
                 onMouseEnter={e => !selectedIds.has(user.id) && (e.currentTarget.style.background = 'rgba(195,192,255,0.04)')}
                 onMouseLeave={e => !selectedIds.has(user.id) && (e.currentTarget.style.background = i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)')}
-                onClick={() => setSelectedUser(user)}
+                onClick={() => setSelectedUserId(user.id)}
               >
                 <div onClick={e => toggleSelect(user.id, e)} style={{ display: 'flex', alignItems: 'center' }}>
                   <div style={{ width: 16, height: 16, border: '2px solid #60a5fa', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', background: selectedIds.has(user.id) ? '#60a5fa' : 'transparent' }}>
@@ -376,13 +596,16 @@ export default function DirectoryTab() {
                   </div>
                 </div>
                 {cols.map(c => (
-                  <div key={c.field} style={{ fontSize: '0.8rem', color: c.field === 'name' ? '#dae2fd' : '#c7c4d8', fontWeight: c.field === 'name' ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div key={c.field} style={{ fontSize: '0.8rem', color: user.is_banned ? '#ffb4ab' : (c.field === 'name' ? '#dae2fd' : '#c7c4d8'), fontWeight: c.field === 'name' ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', opacity: user.is_banned ? 0.7 : 1 }}>
                     {c.field === 'name' ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#4f46e5,#c3c0ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: '#1d00a5', fontSize: '0.7rem', flexShrink: 0 }}>
+                        <div style={{ width: 28, height: 28, borderRadius: '50%', background: user.is_banned ? '#ffb4ab' : 'linear-gradient(135deg,#4f46e5,#c3c0ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: user.is_banned ? '#690005' : '#1d00a5', fontSize: '0.7rem', flexShrink: 0 }}>
                           {user.name?.[0]?.toUpperCase() || '?'}
                         </div>
-                        <span>{user.name}</span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          {user.name}
+                          {user.is_banned && <span className="material-symbols-outlined" style={{ fontSize: 14, color: '#ffb4ab' }} title="Suspended">block</span>}
+                        </span>
                       </div>
                     ) : (
                       user[c.field] || <span style={{ color: '#464555' }}>—</span>
@@ -391,7 +614,7 @@ export default function DirectoryTab() {
                 ))}
                 <div style={{ textAlign: 'center' }}>
                   <button
-                    onClick={e => { e.stopPropagation(); setSelectedUser(user); }}
+                    onClick={e => { e.stopPropagation(); setSelectedUserId(user.id); }}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
                   >
                     <span className="material-symbols-outlined" style={{ fontSize: 16, color: '#c3c0ff' }}>open_in_new</span>

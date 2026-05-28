@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+import { exportToCSV } from '../utils/exportUtils';
+import { API_BASE } from '../api';
 
 // ── Demo fallback data (shown when DB has no real data yet) ───────────────────
 const DEMO = {
@@ -106,7 +106,7 @@ function Spinner() {
   );
 }
 
-export default function AnalyticsTab() {
+export default function AnalyticsTab({ token }) {
   const [activeSection, setActiveSection] = useState('overview');
   const [displayData, setDisplayData] = useState(null);
   const [isDemo, setIsDemo]             = useState(false);
@@ -114,7 +114,8 @@ export default function AnalyticsTab() {
   const [error, setError]               = useState(null);
 
   const fetchAnalytics = () => {
-    fetch(`${API_BASE}/stats/analytics`)
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    fetch(`${API_BASE}/stats/analytics`, { headers })
       .then(r => r.json())
       .then(real => {
         if (real.error) throw new Error(real.error);
@@ -143,6 +144,24 @@ export default function AnalyticsTab() {
   if (loading) return <Spinner />;
 
   const { kpis, weekly_sessions, domain_data, top_mentors, rating_dist, student_progress, totals } = displayData;
+
+  const handleExportAnalytics = () => {
+    let data = [];
+    let filename = '';
+
+    if (activeSection === 'overview') {
+      data = domain_data.map(d => ({ Topic: d.domain, Sessions: d.sessions, Popularity: `${d.pct}%` }));
+      filename = 'AlumNex_Topic_Demand';
+    } else if (activeSection === 'mentors') {
+      data = top_mentors.map(m => ({ Mentor: m.name, Company: m.company, Sessions: m.sessions, Rating: m.rating || 'N/A', Domain: m.domain }));
+      filename = 'AlumNex_Top_Mentors';
+    } else if (activeSection === 'students') {
+      data = student_progress.map(s => ({ Range: s.range, StudentCount: s.count }));
+      filename = 'AlumNex_Student_Engagement';
+    }
+
+    exportToCSV(data, filename);
+  };
   const maxWeekly   = Math.max(...weekly_sessions.map(w => w.sessions), 1);
   const maxStudents = Math.max(...student_progress.map(s => s.count), 1);
 
@@ -175,7 +194,14 @@ export default function AnalyticsTab() {
             </p>
           )}
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button
+            onClick={handleExportAnalytics}
+            style={{ marginRight: 8, background: 'rgba(195,192,255,0.05)', border: '1px solid rgba(195,192,255,0.1)', color: '#c3c0ff', padding: '0.5rem 1rem', borderRadius: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem', fontWeight: 700 }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>download</span>
+            Export Report
+          </button>
           {[
             { id: 'overview', label: 'Overview' },
             { id: 'mentors',  label: 'Top Mentors' },

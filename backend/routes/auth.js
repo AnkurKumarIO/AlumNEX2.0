@@ -106,6 +106,10 @@ router.post('/student/login', async (req, res) => {
       if (user.password !== password) {
         return res.status(401).json({ error: 'Invalid credentials.' });
       }
+
+    if (user.is_banned) {
+      return res.status(403).json({ error: 'Your account has been suspended by the TNP department for compliance reasons. Please contact support.' });
+    }
       // Password is correct in Prisma - login successful
       console.log(`[Student Login] User ${user.id} authenticated via Prisma`);
     } else if (supabase) {
@@ -202,6 +206,10 @@ router.post('/alumni/login', async (req, res) => {
     // Fetch from Prisma first
     const user = await prisma.user.findUnique({ where: { email: userEmail } });
     if (!user || user.role !== 'ALUMNI') return res.status(401).json({ error: 'Not an alumni account.' });
+
+    if (user.is_banned) {
+      return res.status(403).json({ error: 'Your account has been suspended by the TNP department for compliance reasons. Please contact support.' });
+    }
 
     // Validate password against Prisma database (PRIMARY SOURCE OF TRUTH)
     if (user.password) {
