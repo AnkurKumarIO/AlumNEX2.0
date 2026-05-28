@@ -17,6 +17,7 @@ model User {
   email               String   @unique
   department          String?
   verification_status String   @default("PENDING")
+  is_banned           Boolean  @default(false)
   profile_data        String?
   google_refresh_token String?
 

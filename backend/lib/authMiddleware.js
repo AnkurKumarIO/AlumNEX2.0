@@ -57,4 +57,23 @@ function optionalAuth(req, res, next) {
   next();
 }
 
-module.exports = { authenticate, optionalAuth };
+/**
+ * Role-based access control.
+ * Ensures the authenticated user has the required role.
+ * Must be used AFTER authenticate middleware.
+ */
+function verifyRole(allowedRoles) {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required.' });
+    }
+
+    const roles = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({ error: 'Forbidden: Insufficient permissions.' });
+    }
+    next();
+  };
+}
+
+module.exports = { authenticate, optionalAuth, verifyRole };

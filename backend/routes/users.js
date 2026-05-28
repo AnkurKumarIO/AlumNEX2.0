@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../lib/prisma');
 const supabase = require('../supabase');
+const { authenticate, verifyRole } = require('../lib/authMiddleware');
+
+const tnpOnly = [authenticate, verifyRole('TNP')];
 
 function parseProfileData(value) {
   if (!value) return {};
@@ -14,7 +17,7 @@ function parseProfileData(value) {
 }
 
 // DELETE /users/bulk — delete multiple users
-router.delete('/bulk', async (req, res) => {
+router.delete('/bulk', tnpOnly, async (req, res) => {
   try {
     const { ids } = req.body;
     if (!Array.isArray(ids) || ids.length === 0) {
@@ -39,6 +42,36 @@ router.delete('/bulk', async (req, res) => {
     res.json({ message: 'Users deleted successfully', count: deleted.count });
   } catch (err) {
     console.error('Bulk delete error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /users/ban — ban or unban a user
+router.patch('/ban', tnpOnly, async (req, res) => {
+  try {
+    const { userId, isBanned } = req.body;
+    if (!userId) return res.status(400).json({ error: 'userId required' });
+
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: { is_banned: !!isBanned }
+    });
+
+    res.json({ success: true, user: updated });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /users/banned — list all banned users
+router.get('/banned', tnpOnly, async (req, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      where: { is_banned: true },
+      orderBy: { updatedAt: 'desc' }
+    });
+    res.json(users);
+  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });

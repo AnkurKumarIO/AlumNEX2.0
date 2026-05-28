@@ -8,10 +8,10 @@ import AnalyticsTab from './TNPAnalytics';
 import BulkUploadTab from './TNPBulkUpload';
 import DirectoryTab from './TNPDirectory';
 import TNPMeetingTools from './TNPMeetingTools';
+import ComplianceTab from './TNPCompliance';
+import LiveSessionsTab from './TNPLiveSessions';
 import { subscribeRealtimeSync } from '../lib/realtimeSync';
-import { api } from '../api';
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+import { api, API_BASE } from '../api';
 
 // ── Default category colors (fallback if DB config not loaded) ────────────────
 const DEFAULT_CATEGORY_COLORS = {
@@ -22,7 +22,7 @@ const DEFAULT_CATEGORY_COLORS = {
   System:     '#94a3b8',
 };
 
-function ActivityFeedTab() {
+function ActivityFeedTab({ token }) {
   const [filter, setFilter] = React.useState('All');
   const [feedData, setFeedData] = React.useState([]);
   const [categoryColors, setCategoryColors] = React.useState(DEFAULT_CATEGORY_COLORS);
@@ -31,8 +31,9 @@ function ActivityFeedTab() {
 
   React.useEffect(() => {
     const fetchLogs = () => {
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
       Promise.all([
-        fetch(`${API_BASE}/stats/recent-activity`).then(r => r.json()).catch(() => []),
+        fetch(`${API_BASE}/stats/recent-activity`, { headers }).then(r => r.json()).catch(() => []),
         api.getPlatformConfigKey('category_colors').catch(() => null),
       ]).then(([logs, colors]) => {
         if (Array.isArray(logs)) {
@@ -121,7 +122,7 @@ function ActivityFeedTab() {
 }
 
 export default function TNPDashboard() {
-  const { user, logout } = useContext(AuthContext);
+  const { user, token, logout } = useContext(AuthContext);
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('home');
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -137,7 +138,8 @@ export default function TNPDashboard() {
   const [stats, setStats] = useState({ total_students: 0, active_mentors: 0, mock_interviews: 0, scheduled_today: 0 });
 
   const refreshStats = () => {
-    fetch(`${API_BASE}/stats/platform`)
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    fetch(`${API_BASE}/stats/platform`, { headers })
       .then(r => r.json())
       .then(d => { if (!d.error) setStats(d); })
       .catch(() => {});
@@ -145,12 +147,13 @@ export default function TNPDashboard() {
 
   useEffect(() => {
     refreshStats();
-  }, []);
+  }, [token]);
 
   // Notifications — live from API
   useEffect(() => {
     const fetchNotifs = () => {
-      fetch(`${API_BASE}/stats/recent-activity`)
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      fetch(`${API_BASE}/stats/recent-activity`, { headers })
         .then(r => r.json())
         .then(data => {
           if (Array.isArray(data) && data.length > 0) {
@@ -195,14 +198,18 @@ export default function TNPDashboard() {
     { icon: 'analytics',        label: 'Analytics',    tab: 'analytics' },
     { icon: 'dynamic_feed',     label: 'Activity Feed',tab: 'activity' },
     { icon: 'video_call',       label: 'Meeting Tools',tab: 'meeting' },
+    { icon: 'sensors',          label: 'Live Monitor', tab: 'live' },
+    { icon: 'gpp_maybe',        label: 'Compliance',   tab: 'compliance' },
   ];
 
   const renderContent = () => {
     if (activeTab === 'upload')     return <BulkUploadTab onUploadSuccess={refreshStats} />;
-    if (activeTab === 'directory')  return <DirectoryTab />;
-    if (activeTab === 'analytics')  return <AnalyticsTab />;
-    if (activeTab === 'activity')   return <ActivityFeedTab />;
+    if (activeTab === 'directory')  return <DirectoryTab token={token} />;
+    if (activeTab === 'analytics')  return <AnalyticsTab token={token} />;
+    if (activeTab === 'activity')   return <ActivityFeedTab token={token} />;
     if (activeTab === 'meeting')    return <TNPMeetingTools />;
+    if (activeTab === 'live')       return <LiveSessionsTab token={token} />;
+    if (activeTab === 'compliance') return <ComplianceTab token={token} />;
     return null; // home rendered inline
   };
 
@@ -378,12 +385,13 @@ export default function TNPDashboard() {
 }
 
 // ── Home Dashboard ────────────────────────────────────────────────────────────
-function HomeDashboard({ stats, setActiveTab }) {
+function HomeDashboard({ stats, setActiveTab, token }) {
   const [feedPreview, setFeedPreview] = React.useState([]);
 
   React.useEffect(() => {
     const fetchFeed = () => {
-      fetch(`${API_BASE}/stats/recent-activity`)
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      fetch(`${API_BASE}/stats/recent-activity`, { headers })
         .then(r => r.json())
         .then(data => {
           if (Array.isArray(data)) {
