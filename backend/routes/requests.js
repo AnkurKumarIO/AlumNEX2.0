@@ -31,7 +31,13 @@ router.get('/', async (req, res) => {
     const where = {};
     if (alumniId)  where.alumni_id = alumniId;
     if (studentId) where.student_id = studentId;
-    if (roomId)    where.room_id = roomId;
+    if (roomId) {
+      // roomId from the frontend may be a request_id UUID or a meet link URL
+      where.OR = [
+        { room_id: roomId },
+        { request_id: roomId },
+      ];
+    }
 
     const data = await prisma.interviewRequest.findMany({
       where,

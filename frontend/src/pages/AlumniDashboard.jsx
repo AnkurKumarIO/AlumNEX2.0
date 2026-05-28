@@ -795,10 +795,61 @@ function AlumniSessionHistory({ userId, userName }) {
 
   useEffect(() => {
     if (!userId) { setLoading(false); return; }
-    api.getUserFeedback(userId).then(data => {
-      if (Array.isArray(data)) setSessions(data);
+    
+    Promise.all([
+      api.getUserFeedback(userId).catch(() => []),
+      getRequestsForAlumni(userId).catch(() => [])
+    ]).then(([feedbackData, requestsData]) => {
+      const fbList = Array.isArray(feedbackData) ? feedbackData : [];
+      const reqList = (Array.isArray(requestsData) ? requestsData : []).filter(r => r.status?.toUpperCase() === 'COMPLETED');
+      
+      const mergedMap = new Map();
+      
+      // Seed with completed requests
+      reqList.forEach(r => {
+         mergedMap.set(r.request_id, {
+            id: r.request_id, // we use request_id as the canonical ID
+            room_id: r.room_id,
+            student_name: r.student?.name || r.student_name || 'Student',
+            student_id: r.student_id,
+            topic: r.topic,
+            createdAt: r.scheduled_time || r.created_at,
+            student_rating: null,
+            student_feedback: null,
+            alumni_rating: null,
+            alumni_feedback: null
+         });
+      });
+      
+      // Merge feedback in
+      fbList.forEach(fb => {
+         let matchedKey = fb.id;
+         
+         // Try to find the matching request: either by request_id OR meet link
+         const matchingReq = reqList.find(r => r.request_id === fb.room_id || r.room_id === fb.room_id);
+         
+         if (matchingReq) {
+            matchedKey = matchingReq.request_id;
+         } else if (mergedMap.has(fb.room_id)) {
+            matchedKey = fb.room_id;
+         }
+         
+         const existing = mergedMap.get(matchedKey) || {};
+         mergedMap.set(matchedKey, {
+            ...fb,
+            ...existing, // Prefer request data for names/topic
+            student_rating: fb.student_rating || existing.student_rating,
+            student_feedback: fb.student_feedback || existing.student_feedback,
+            alumni_rating: fb.alumni_rating || existing.alumni_rating,
+            alumni_feedback: fb.alumni_feedback || existing.alumni_feedback,
+            id: matchedKey, // ensure ID doesn't get overridden
+         });
+      });
+      
+      const finalList = Array.from(mergedMap.values()).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      setSessions(finalList);
       setLoading(false);
-    }).catch(() => setLoading(false));
+    });
   }, [userId]);
 
   const myRatings = sessions.map(s => s.student_rating).filter(r => r != null && r > 0);
@@ -1095,6 +1146,35 @@ export default function AlumniDashboard() {
   if (!user) return <Navigate to="/" replace />;
   const firstName = (user?.name || user?.role || 'Alumni').split(' ')[0];
 
+  // Sync profile data to resolve __stored_in_database__ and populate localStorage
+  useEffect(() => {
+    if (!user?.id) return;
+    const fetchSelfProfile = async () => {
+      try {
+        const { getUserById } = await import('../lib/db');
+        const { getProfileAsset } = await import('../lib/profileAssetsAPI');
+        const { saveProfileToStorage } = await import('../lib/profilePersistence');
+        const u = await getUserById(user.id);
+        let rawPd = u?.profile_data;
+        if (rawPd) {
+          if (!rawPd.photoPreview || rawPd.photoPreview === '__stored_in_database__' || rawPd.photoPreview === '__stored_locally__') {
+            const photoAsset = await getProfileAsset(user.id, 'photo');
+            const photoSrc = photoAsset?.assetUrl || photoAsset?.fileData || null;
+            if (photoSrc) rawPd.photoPreview = photoSrc;
+          }
+          if (!rawPd.resumeUrl || rawPd.resumeUrl === '__stored_in_database__' || rawPd.resumeUrl === '__stored_locally__') {
+            const resumeAsset = await getProfileAsset(user.id, 'resume');
+            const resumeSrc = resumeAsset?.assetUrl || resumeAsset?.fileData || null;
+            if (resumeSrc) rawPd.resumeUrl = resumeSrc;
+          }
+          saveProfileToStorage({ ...rawPd, name: u.name, email: u.email, role: u.role, department: u.department });
+          setLocalRefresh(v => v + 1);
+        }
+      } catch (e) {}
+    };
+    fetchSelfProfile();
+  }, [user?.id]);
+
   // Load requests for this alumni from Supabase directly
   useEffect(() => {
     const load = async () => {
@@ -1137,19 +1217,19 @@ export default function AlumniDashboard() {
           setLiveRequests(prev => {
             const prevMap = new Map(prev.map(r => [r.id, r]));
             const merged = dedupedMapped
-              .filter(r => ['pending','accepted','slot_booked'].includes(r.status))
+              .filter(r => ['pending','accepted','slot_booked','completed'].includes(r.status))
               .map(dbReq => {
                 const existing = prevMap.get(dbReq.id);
                 if (!existing) return dbReq;
                 // If local state has a "more advanced" status, keep it
-                const statusOrder = { pending: 0, accepted: 1, slot_booked: 2 };
+                const statusOrder = { pending: 0, accepted: 1, slot_booked: 2, completed: 3 };
                 const localRank = statusOrder[existing.status] ?? -1;
                 const dbRank    = statusOrder[dbReq.status]    ?? -1;
                 return localRank > dbRank ? existing : { ...dbReq, ...existing, status: dbReq.status, scheduledTime: dbReq.scheduledTime || existing.scheduledTime, roomId: dbReq.roomId || existing.roomId };
               });
             // Keep any locally-added requests not yet in DB (e.g. socket-prepended)
             prev.forEach(r => {
-              if (!merged.find(m => m.id === r.id) && ['pending','accepted','slot_booked'].includes(r.status)) {
+              if (!merged.find(m => m.id === r.id) && ['pending','accepted','slot_booked','completed'].includes(r.status)) {
                 merged.push(r);
               }
             });
@@ -1163,7 +1243,7 @@ export default function AlumniDashboard() {
       if (!usedSupabase) {
         const all = getRequests();
         const mine = dedupeRequestsById(all.filter(r => r.alumniName === user.name || r.alumniId === user.id));
-        setLiveRequests(mine.filter(r => ['pending','accepted','slot_booked'].includes(r.status)));
+        setLiveRequests(mine.filter(r => ['pending','accepted','slot_booked','completed'].includes(r.status)));
       }
     };
     load();
@@ -1568,7 +1648,7 @@ export default function AlumniDashboard() {
       const todayIdx = (dayOfWeek + 6) % 7;
 
       // All events with ISO scheduledTime
-      const bookedRequests = liveRequests.filter(r => r.status === 'slot_booked' && r.scheduledTime);
+      const bookedRequests = liveRequests.filter(r => (r.status === 'slot_booked' || r.status === 'completed') && r.scheduledTime);
       const allEvents = [
         ...bookedRequests.map(r => ({
           scheduledTime: r.scheduledTime,
@@ -1577,6 +1657,7 @@ export default function AlumniDashboard() {
           isFreeSlot: false,
           duration: 120,
           roomId: r.roomId,
+          isCompleted: r.status === 'completed',
         })),
         ...extraSlots.filter(s => s.scheduledTime).map(s => ({
           scheduledTime: s.scheduledTime,
@@ -1601,7 +1682,7 @@ export default function AlumniDashboard() {
         eventsByDay[(ist.day + 6) % 7].push(e);
       });
 
-      const isEnded = (e) => Date.now() > getEventEndMs(e.scheduledTime, e.duration || 120);
+      const isEnded = (e) => e.isCompleted || Date.now() > getEventEndMs(e.scheduledTime, e.duration || 120);
       const fmtTime = (iso) => toUtcDate(iso).toLocaleTimeString('en-US', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' });
       const fmtDate = (iso) => toUtcDate(iso).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'short', month: 'short', day: 'numeric' });
 
@@ -1760,6 +1841,11 @@ export default function AlumniDashboard() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Interview Requests</h2>
+          {liveRequests.filter(r => r.status === 'completed').length > 0 && (
+            <span style={{ background: 'rgba(100,100,100,0.15)', color: '#6b7280', padding: '0.2rem 0.6rem', borderRadius: 6, fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+              {liveRequests.filter(r => r.status === 'completed').length} Completed
+            </span>
+          )}
           <span style={{ background: 'rgba(195,192,255,0.1)', color: '#c3c0ff', padding: '0.2rem 0.6rem', borderRadius: 6, fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
             {liveRequests.filter(r => r.status === 'pending').length} Pending
           </span>
@@ -1805,10 +1891,10 @@ export default function AlumniDashboard() {
                   >{r.studentName}</span>
                   {/* Status badge */}
                   <span style={{ padding: '0.15rem 0.5rem', borderRadius: 999, fontSize: '0.58rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em',
-                    background: r.status === 'accepted' ? 'rgba(255,185,95,0.15)' : r.status === 'slot_booked' ? 'rgba(78,222,163,0.15)' : 'rgba(195,192,255,0.1)',
-                    color: r.status === 'accepted' ? '#ffb95f' : r.status === 'slot_booked' ? '#4edea3' : '#c3c0ff',
+                    background: r.status === 'completed' ? 'rgba(100,100,100,0.15)' : r.status === 'accepted' ? 'rgba(255,185,95,0.15)' : r.status === 'slot_booked' ? 'rgba(78,222,163,0.15)' : 'rgba(195,192,255,0.1)',
+                    color: r.status === 'completed' ? '#6b7280' : r.status === 'accepted' ? '#ffb95f' : r.status === 'slot_booked' ? '#4edea3' : '#c3c0ff',
                   }}>
-                    {r.status === 'slot_booked' ? '📅 Booked' : r.status === 'accepted' ? '✓ Accepted' : 'Pending'}
+                    {r.status === 'completed' ? '✓ Completed' : r.status === 'slot_booked' ? '📅 Booked' : r.status === 'accepted' ? '✓ Accepted' : 'Pending'}
                   </span>
                 </div>
                 <div style={{ fontSize: '0.72rem', color: '#c7c4d8' }}>{r.topic}</div>
@@ -1844,6 +1930,18 @@ export default function AlumniDashboard() {
                       <span className="material-symbols-outlined" style={{ fontSize: 14 }}>videocam</span> Instant Meet
                     </button>
                   </>
+                )}
+                {r.status === 'completed' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
+                    <div style={{ padding: '0.45rem 1rem', background: 'rgba(100,100,100,0.12)', color: '#6b7280', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 14 }}>check_circle</span> Session Complete
+                    </div>
+                    {r.scheduledTime && (
+                      <div style={{ fontSize: '0.6rem', color: 'rgba(199,196,216,0.4)' }}>
+                        {formatISTDateTime(r.scheduledTime)}
+                      </div>
+                    )}
+                  </div>
                 )}
                 {r.status === 'slot_booked' && (() => {
                   const now = Date.now();
@@ -1974,7 +2072,7 @@ export default function AlumniDashboard() {
                 <p style={{ fontSize: '0.75rem', opacity: 0.6, marginTop: 4 }}>Students can find you in the Alumni Directory</p>
               </div>
             ) : liveRequests.slice(0, 2).map(r => (
-              <div key={r.id} style={{ background: '#171f33', borderRadius: 16, padding: '1.25rem 1.5rem', border: `1px solid ${r.status === 'accepted' || r.status === 'slot_booked' ? 'rgba(78,222,163,0.15)' : 'rgba(70,69,85,0.2)'}` }}>
+              <div key={r.id} style={{ background: '#171f33', borderRadius: 16, padding: '1.25rem 1.5rem', border: `1px solid ${r.status === 'completed' ? 'rgba(100,100,100,0.2)' : r.status === 'accepted' || r.status === 'slot_booked' ? 'rgba(78,222,163,0.15)' : 'rgba(70,69,85,0.2)'}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                   <div style={{ width: 48, height: 48, borderRadius: '50%', background: r.studentProfile?.photoPreview ? 'transparent' : 'linear-gradient(135deg,#222a3d,#2d3449)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', fontWeight: 700, color: '#c3c0ff', flexShrink: 0, border: '1px solid rgba(195,192,255,0.1)' }}>
                     {r.studentProfile?.photoPreview ? (
@@ -2002,16 +2100,21 @@ export default function AlumniDashboard() {
                         </button>
                       </>
                     )}
-                    {(r.status === 'accepted' || r.status === 'slot_booked') && (
+                    {(r.status === 'accepted' || r.status === 'slot_booked' || r.status === 'completed') && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        {/* ✓ Accepted badge */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '0.35rem 0.75rem', background: 'rgba(78,222,163,0.12)', border: '1px solid rgba(78,222,163,0.25)', borderRadius: 8 }}>
-                          <span className="material-symbols-outlined" style={{ fontSize: 14, color: '#4edea3', fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-                          <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#4edea3', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                            {r.status === 'slot_booked' ? 'Booked' : 'Accepted'}
+                        {/* Status badge */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '0.35rem 0.75rem', background: r.status === 'completed' ? 'rgba(100,100,100,0.12)' : 'rgba(78,222,163,0.12)', border: `1px solid ${r.status === 'completed' ? 'rgba(100,100,100,0.25)' : 'rgba(78,222,163,0.25)'}`, borderRadius: 8 }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: 14, color: r.status === 'completed' ? '#6b7280' : '#4edea3', fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                          <span style={{ fontSize: '0.65rem', fontWeight: 700, color: r.status === 'completed' ? '#6b7280' : '#4edea3', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                            {r.status === 'completed' ? 'Completed' : r.status === 'slot_booked' ? 'Booked' : 'Accepted'}
                           </span>
                         </div>
-                        {/* Book Slot / View button */}
+                        {/* Book Slot / View button / Ended label */}
+                        {r.status === 'completed' && (
+                          <div style={{ fontSize: '0.65rem', color: '#6b7280', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4, opacity: 0.7 }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: 13 }}>videocam_off</span> Ended
+                          </div>
+                        )}
                         {r.status === 'accepted' && (
                           <button onClick={() => setBookingRequest(r)} style={{ padding: '0.35rem 0.75rem', background: 'linear-gradient(135deg,#00a572,#4edea3)', color: '#003d29', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
                             <span className="material-symbols-outlined" style={{ fontSize: 13 }}>calendar_month</span> Book Slot

@@ -10,15 +10,55 @@ const prisma = require('../lib/prisma');
  */
 router.post('/', async (req, res) => {
   try {
-    const { roomId, studentId, alumniId, studentName, alumniName, topic, meetLink, role, rating, feedback } = req.body;
+    let { roomId, studentId, alumniId, studentName, alumniName, topic, meetLink, role, rating, feedback } = req.body;
 
-    if (!roomId || !studentId || !alumniId || !role) {
-      return res.status(400).json({ error: 'roomId, studentId, alumniId, and role are required' });
+    if (!roomId || !role) {
+      return res.status(400).json({ error: 'roomId and role are required' });
     }
 
-    // Find existing session feedback for this room
+    // ── Auto-resolve studentId/alumniId from the InterviewRequest record ──
+    // The frontend may send display names instead of real UUIDs if it couldn't
+    // find the request record (due to the roomId mismatch bug). Look it up here.
+    let interviewReq = null;
+    try {
+      interviewReq = await prisma.interviewRequest.findFirst({
+        where: {
+          OR: [
+            { room_id: roomId },
+            { request_id: roomId },
+          ],
+        },
+        include: {
+          student: { select: { id: true, name: true } },
+          alumni:  { select: { id: true, name: true } },
+        },
+      });
+
+      if (interviewReq) {
+        // Use authoritative IDs from the DB record
+        studentId   = interviewReq.student_id;
+        alumniId    = interviewReq.alumni_id;
+        studentName = studentName || interviewReq.student?.name || '';
+        alumniName  = alumniName  || interviewReq.alumni?.name  || '';
+        topic       = topic       || interviewReq.topic         || 'Mock Interview';
+      }
+    } catch (lookupErr) {
+      console.warn('[Feedback] InterviewRequest lookup failed:', lookupErr.message);
+    }
+
+    if (!studentId || !alumniId) {
+      return res.status(400).json({ error: 'Could not resolve studentId and alumniId for this room' });
+    }
+
+    // ── Find or create SessionFeedback ──
+    // roomId could be a request_id UUID — search by both fields
     let session = await prisma.sessionFeedback.findFirst({
-      where: { room_id: roomId },
+      where: {
+        OR: [
+          { room_id: roomId },
+          ...(interviewReq ? [{ room_id: interviewReq.room_id }] : []),
+        ],
+      },
     });
 
     if (session) {
@@ -59,7 +99,12 @@ router.post('/', async (req, res) => {
     // Also update the associated InterviewRequest to COMPLETED status
     try {
       await prisma.interviewRequest.updateMany({
-        where: { room_id: roomId },
+        where: {
+          OR: [
+            { room_id: roomId },
+            { request_id: roomId },
+          ],
+        },
         data: { status: 'COMPLETED' }
       });
     } catch (e) {

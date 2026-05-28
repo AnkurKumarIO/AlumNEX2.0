@@ -118,10 +118,19 @@ module.exports = (io) => {
       console.log(`[${roomId}] Session ended by ${userId}`);
 
       try {
-        await prisma.interviewRequest.updateMany({
-          where: { room_id: roomId, status: { not: 'COMPLETED' } },
-          data: { status: 'COMPLETED' }
+        // roomId from the frontend URL can be a request_id UUID OR a meet link URL.
+        // Search by both to ensure we find the correct record.
+        const updated = await prisma.interviewRequest.updateMany({
+          where: {
+            OR: [
+              { room_id: roomId },
+              { request_id: roomId },
+            ],
+            status: { not: 'COMPLETED' },
+          },
+          data: { status: 'COMPLETED' },
         });
+        console.log(`[${roomId}] Updated ${updated.count} request(s) to COMPLETED`);
       } catch (err) {
         console.error(`[${roomId}] Error updating request status to COMPLETED:`, err);
       }
