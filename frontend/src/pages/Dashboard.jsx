@@ -335,7 +335,7 @@ export default function Dashboard() {
   const savedProfile = profileData;
 
   const renderContent = () => {
-    if (activeTab === 'directory') return <AlumniDiscovery searchQuery={search} />;
+    if (activeTab === 'directory') return <AlumniDiscovery searchQuery={search} myRequests={myRequests} />;
     if (activeTab === 'analytics') return <ProgressAnalytics />;
     if (activeTab === 'premium') return <PremiumPage />;
     if (activeTab === 'messages') {

@@ -91,10 +91,18 @@ export default function GoogleMeetInterviewRoom() {
     setChatInput('');
   };
 
-  const endSession = () => {
+  const endSession = async () => {
     clearInterval(timerRef.current);
     socketRef.current?.emit('session_ended', roomId, myId);
     setEnded(true);
+
+    // Also call backend API to explicitly mark the request as COMPLETED
+    // (belt-and-suspenders — don't rely solely on the socket event)
+    try {
+      await api.updateRequest(roomId, { status: 'COMPLETED' });
+    } catch (e) {
+      console.warn('[EndSession] Backend COMPLETED update failed (socket should handle it):', e.message);
+    }
   };
 
   const submitFeedback = async () => {
@@ -113,17 +121,13 @@ export default function GoogleMeetInterviewRoom() {
       let topic = 'Mock Interview';
 
       try {
-        // roomId may be a full URL (meet.google.com/...) or a UUID request_id
-        // Try fetching the request from the backend using the roomId
+        // roomId from the URL is typically a request_id UUID.
+        // The backend /requests?roomId= endpoint now searches by both room_id and request_id.
         const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001';
         const res = await fetch(`${API_BASE}/requests?roomId=${encodeURIComponent(roomId)}`);
         if (res.ok) {
           const requests = await res.json();
-          const req = Array.isArray(requests) ? requests.find(r =>
-            r.room_id === roomId ||
-            r.request_id === roomId ||
-            r.id === roomId
-          ) : null;
+          const req = Array.isArray(requests) && requests.length > 0 ? requests[0] : null;
           if (req) {
             studentId   = req.student_id   || req.studentId   || '';
             alumniId    = req.alumni_id    || req.alumniId    || '';

@@ -166,7 +166,7 @@ function BookModal({ alumni, studentName, onClose, onSent }) {
 
 // ── Book Button ───────────────────────────────────────────────────────────────
 // Reads live request status and re-renders on any realtimeSync event
-function BookButton({ alumni, studentName, userId, onBook }) {
+function BookButton({ alumni, studentName, userId, onBook, passedRequests }) {
   const [tick, setTick] = useState(0);
 
   // Re-render whenever any request status changes (accept, slot_book, complete, decline)
@@ -174,8 +174,8 @@ function BookButton({ alumni, studentName, userId, onBook }) {
     return subscribeRealtimeSync(() => setTick(t => t + 1));
   }, []);
 
-  // Read the freshest status from localStorage on every render
-  const myRequests = getRequestsByStudent(studentName);
+  // Use passedRequests if available (synced from Supabase via Dashboard), else fallback to localStorage
+  const myRequests = passedRequests || getRequestsByStudent(studentName);
   const existing = myRequests
     .filter(r => r.alumniName === alumni.name || r.alumniId === alumni.id)
     // Pick the most recent non-declined request, or the most recent declined one
@@ -249,7 +249,7 @@ function BookButton({ alumni, studentName, userId, onBook }) {
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
-export default function AlumniDiscovery({ searchQuery = '' }) {
+export default function AlumniDiscovery({ searchQuery = '', myRequests = null }) {
   const { user } = useContext(AuthContext);
   const [allAlumni, setAllAlumni] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -452,7 +452,7 @@ export default function AlumniDiscovery({ searchQuery = '' }) {
             <div style={{ height: 4, background: '#2d3449', borderRadius: 999, overflow: 'hidden', marginBottom: '1rem' }}>
               <div style={{ height: '100%', width: a.avgRating ? `${(a.avgRating / 5) * 100}%` : '40%', background: a.avgRating ? 'linear-gradient(90deg,#e07b00,#ffb95f)' : 'linear-gradient(90deg,#4f46e5,#c3c0ff)', borderRadius: 999 }} />
             </div>
-            <BookButton alumni={a} studentName={studentName} userId={user?.id} onBook={() => setBookingAlumni(a)} />
+            <BookButton alumni={a} studentName={studentName} userId={user?.id} onBook={() => setBookingAlumni(a)} passedRequests={myRequests} />
           </div>
         ))}
       </div>
