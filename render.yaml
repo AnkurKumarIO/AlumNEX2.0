@@ -3,7 +3,7 @@ services:
     name: alumnex-backend
     env: node
     rootDir: backend
-    buildCommand: npm install
+    buildCommand: npm ci --omit=dev && npx prisma generate
     startCommand: node server.js
     envVars:
       - key: FRONTEND_URL
@@ -18,3 +18,8 @@ services:
         fromSecret: groq_api_key
       - key: JWT_SECRET
         fromSecret: jwt_secret
+      - key: DATABASE_URL
+        fromSecret: database_url
+      - key: DIRECT_URL
+        fromSecret: direct_url
+

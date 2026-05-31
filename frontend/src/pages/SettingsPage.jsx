@@ -484,9 +484,43 @@ export default function SettingsPage({ role }) {
 
   const SECTIONS = [
     { id: 'profile',       icon: 'person',         label: 'Edit Profile'  },
+    ...(isAlumni ? [{ id: 'mentorship', icon: 'diversity_3', label: 'Mentorship' }] : []),
     { id: 'notifications', icon: 'notifications',  label: 'Notifications' },
     { id: 'account',       icon: 'manage_accounts', label: 'Account'      },
   ];
+
+  // Mentorship settings state
+  const [mentorship, setMentorship] = useState({
+    maxInterviews: 3,
+    slots: []
+  });
+
+  useEffect(() => {
+    if (isAlumni && user?.id) {
+      api.get(`/alumni/${user.id}/availability`)
+        .then(res => {
+          setMentorship({
+            maxInterviews: res.data.max_interviews_per_week || 3,
+            slots: res.data.availability || []
+          });
+        })
+        .catch(err => console.error('Fetch availability error:', err));
+    }
+  }, [isAlumni, user?.id]);
+
+  const saveMentorship = async () => {
+    try {
+      setSaving(true);
+      await api.post(`/alumni/${user.id}/availability`, { slots: mentorship.slots });
+      await api.post(`/alumni/${user.id}/settings`, { max_interviews_per_week: mentorship.maxInterviews });
+      flashSaved();
+    } catch (err) {
+      console.error('Save mentorship error:', err);
+      setSaveError('Failed to save mentorship settings');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   // Account items — no delete for students
   const accountItems = [
@@ -916,6 +950,84 @@ export default function SettingsPage({ role }) {
                 {saving ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
+          </div>
+        )}
+
+        {/* ── MENTORSHIP SETTINGS ── */}
+        {activeSection === 'mentorship' && isAlumni && (
+          <div style={{ background: '#131b2e', borderRadius: 16, padding: '2rem', border: '1px solid rgba(70,69,85,0.15)' }}>
+            <h3 style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: '0.5rem' }}>Mentorship Settings</h3>
+            <p style={{ fontSize: '0.875rem', color: '#c7c4d8', marginBottom: '1.75rem' }}>Set your weekly capacity and availability windows.</p>
+
+            <div style={{ marginBottom: '2rem' }}>
+              <label style={lbl}>Max Interviews Per Week</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <select
+                  value={mentorship.maxInterviews}
+                  onChange={e => setMentorship(m => ({ ...m, maxInterviews: parseInt(e.target.value) }))}
+                  style={{ ...inp, width: 120 }}
+                >
+                  {[1,2,3,4,5,6,7,8,9,10].map(n => <option key={n} value={n}>{n}</option>)}
+                </select>
+                <span style={{ fontSize: '0.8rem', color: '#c7c4d8' }}>Once you reach this limit, you'll be shown as "Fully Booked".</span>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '2rem' }}>
+              <label style={lbl}>Weekly Availability Windows</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
+                {mentorship.slots.map((slot, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#171f33', padding: '0.75rem 1rem', borderRadius: 12, border: '1px solid rgba(70,69,85,0.2)' }}>
+                    <div style={{ flex: 1, fontSize: '0.875rem', fontWeight: 600, color: '#dae2fd', textTransform: 'capitalize' }}>{slot.day_of_week}</div>
+                    <div style={{ fontSize: '0.875rem', color: '#c7c4d8' }}>{slot.start_time} – {slot.end_time}</div>
+                    <button
+                      onClick={() => setMentorship(m => ({ ...m, slots: m.slots.filter((_, j) => j !== i) }))}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ffb4ab' }}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: 18 }}>delete</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ background: 'rgba(195,192,255,0.03)', padding: '1.25rem', borderRadius: 12, border: '1px dashed rgba(195,192,255,0.2)' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 12 }}>
+                  <div>
+                    <label style={{ ...lbl, fontSize: '0.65rem' }}>Day</label>
+                    <select id="new-slot-day" style={{ ...inp, fontSize: '0.75rem' }}>
+                      {['monday','tuesday','wednesday','thursday','friday','saturday','sunday'].map(d => (
+                        <option key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ ...lbl, fontSize: '0.65rem' }}>Start Time</label>
+                    <input id="new-slot-start" type="time" style={{ ...inp, fontSize: '0.75rem' }} defaultValue="17:00" />
+                  </div>
+                  <div>
+                    <label style={{ ...lbl, fontSize: '0.65rem' }}>End Time</label>
+                    <input id="new-slot-end" type="time" style={{ ...inp, fontSize: '0.75rem' }} defaultValue="19:00" />
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    const day = document.getElementById('new-slot-day').value;
+                    const start = document.getElementById('new-slot-start').value;
+                    const end = document.getElementById('new-slot-end').value;
+                    if (day && start && end) {
+                      setMentorship(m => ({ ...m, slots: [...m.slots, { day_of_week: day, start_time: start, end_time: end, slot_duration: 60 }] }));
+                    }
+                  }}
+                  style={{ ...btnOutline, width: '100%', padding: '0.6rem' }}
+                >
+                  + Add Availability Window
+                </button>
+              </div>
+            </div>
+
+            <button onClick={saveMentorship} disabled={saving} style={{ padding: '0.75rem 2rem', background: 'linear-gradient(135deg,#4f46e5,#c3c0ff)', color: '#1d00a5', border: 'none', borderRadius: 12, fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer' }}>
+              {saving ? 'Saving...' : 'Save Mentorship Settings'}
+            </button>
           </div>
         )}
 

@@ -518,7 +518,7 @@ export function isJoinable(scheduledTime) {
 export function formatScheduledTime(isoString) {
   if (!isoString) return '';
   return new Date(isoString).toLocaleString('en-US', {
-    timeZone: 'Asia/Kolkata',
+
     weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
   });
 }

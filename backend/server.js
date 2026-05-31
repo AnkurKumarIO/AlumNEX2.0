@@ -103,6 +103,7 @@ require('./socket/interviewRoom')(io);
 require('./socket/notificationHandler')(io);
 const { startReminderService } = require('./services/reminderService');
 startReminderService(io);
+require('./services/mentorshipCron');
 
 app.set('io', io);
 

@@ -13,14 +13,12 @@ import SettingsPage from './SettingsPage';
 import LogoutConfirmModal from '../components/LogoutConfirmModal';
 import { subscribeRealtimeSync, emitRealtimeSync } from '../lib/realtimeSync';
 import { toUtcDate } from '../utils/dateUtils';
-
 // Helper to parse dates and return components in Asia/Kolkata (IST) timezone
 // Uses Intl.DateTimeFormat for correct timezone handling (avoids manual offset bugs)
 const getISTComponents = (dateOrString) => {
   const d = toUtcDate(dateOrString);
   try {
     const formatter = new Intl.DateTimeFormat('en-US', {
-      timeZone: 'Asia/Kolkata',
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -52,9 +50,7 @@ const getISTComponents = (dateOrString) => {
     };
   }
 };
-
 const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
-
 function buildISTIsoString(year, monthIndex, day, hours24, minutes) {
   // Create a date using IST components and convert to UTC ISO string
   // We create a fake UTC date with the IST values, then subtract the offset to get the actual UTC time
@@ -63,26 +59,21 @@ function buildISTIsoString(year, monthIndex, day, hours24, minutes) {
   const utcMs = fakeUTC - istOffsetMs;
   return new Date(utcMs).toISOString();
 }
-
 function getEventEndMs(scheduledTime, durationMinutes = 120) {
   const startMs = toUtcDate(scheduledTime).getTime();
   if (!Number.isFinite(startMs)) return Number.POSITIVE_INFINITY;
   return startMs + durationMinutes * 60 * 1000;
 }
-
 function getRequestCreatedAt(request) {
   return request?.createdAt || request?.created_at || null;
 }
-
 function getRequestScheduledTime(request) {
   return request?.scheduledTime || request?.scheduled_time || null;
 }
-
 function formatISTDateTime(value, options = {}) {
   const ms = toUtcDate(value).getTime();
   if (!Number.isFinite(ms)) return '';
   return new Date(ms).toLocaleString('en-US', {
-    timeZone: 'Asia/Kolkata',
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
@@ -90,11 +81,9 @@ function formatISTDateTime(value, options = {}) {
     ...options,
   });
 }
-
 function dedupeRequestsById(requests) {
   return Array.from(new Map((requests || []).map((request) => [request.id, request])).values());
 }
-
 // â”€â”€ Book Slot Calendar Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function BookSlotModal({ request, onClose, onBooked }) {
   const today = new Date();
@@ -107,18 +96,14 @@ function BookSlotModal({ request, onClose, onBooked }) {
   const [timeError, setTimeError] = useState('');
   const [step, setStep] = useState('calendar');
   const [booking, setBooking] = useState(false);
-
   const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const DAYS   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-
   const firstDay   = new Date(viewYear, viewMonth, 1).getDay();
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
   const todayStr   = today.toDateString();
-
   const prevMonth = () => { if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y-1); } else setViewMonth(m => m-1); };
   const nextMonth = () => { if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y+1); } else setViewMonth(m => m+1); };
   const isPast = (day) => new Date(viewYear, viewMonth, day) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
-
   const to24h = () => {
     let h = parseInt(timeHH, 10) || 12;
     const m = parseInt(timeMM, 10) || 0;
@@ -126,7 +111,6 @@ function BookSlotModal({ request, onClose, onBooked }) {
     else { if (h !== 12) h += 12; }
     return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
   };
-
   const handleBook = async () => {
     const h = parseInt(timeHH, 10);
     const m = parseInt(timeMM, 10);
@@ -143,20 +127,16 @@ function BookSlotModal({ request, onClose, onBooked }) {
     setStep('done');
     setTimeout(() => { onBooked(scheduledTime, roomId); onClose(); }, 1800);
   };
-
   const displayTime = () => `${String(timeHH).padStart(2,'0')}:${String(timeMM).padStart(2,'0')} ${ampm}`;
-
   const formattedSelected = selectedDate
-    ? new Date(viewYear, viewMonth, selectedDate).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+    ? new Date(viewYear, viewMonth, selectedDate).toLocaleDateString('en-US', {  weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
     : null;
-
   const inputStyle = {
     background: '#222a3d', border: '1px solid rgba(70,69,85,0.4)', borderRadius: 10,
     color: '#dae2fd', fontSize: '1.4rem', fontWeight: 700, textAlign: 'center',
     width: '100%', padding: '0.6rem 0.25rem', outline: 'none', fontFamily: 'Inter, monospace',
     boxSizing: 'border-box',
   };
-
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(6px)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
       <div style={{ background: '#171f33', borderRadius: 20, width: '100%', maxWidth: 520, border: '1px solid rgba(195,192,255,0.15)', boxShadow: '0 40px 80px rgba(0,0,0,0.6)', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -265,7 +245,6 @@ function RescheduleModal({ request, onClose, onRescheduled }) {
   const [ampm, setAmpm] = useState('AM');
   const [timeError, setTimeError] = useState('');
   const [done, setDone] = useState(false);
-
   const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const DAYS   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const firstDay = new Date(viewYear, viewMonth, 1).getDay();
@@ -274,7 +253,6 @@ function RescheduleModal({ request, onClose, onRescheduled }) {
   const isPast = (day) => new Date(viewYear, viewMonth, day) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const prevMonth = () => { if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); } else setViewMonth(m => m - 1); };
   const nextMonth = () => { if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); } else setViewMonth(m => m + 1); };
-
   const to24h = () => {
     let h = parseInt(timeHH, 10) || 12;
     const m = parseInt(timeMM, 10) || 0;
@@ -285,7 +263,6 @@ function RescheduleModal({ request, onClose, onRescheduled }) {
     }
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
   };
-
   const handleReschedule = async () => {
     const h = parseInt(timeHH, 10);
     const m = parseInt(timeMM, 10);
@@ -302,17 +279,14 @@ function RescheduleModal({ request, onClose, onRescheduled }) {
     setDone(true);
     setTimeout(() => { onRescheduled(newTime); onClose(); }, 1600);
   };
-
-  const formattedSelected = selectedDate ? new Date(viewYear, viewMonth, selectedDate).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : null;
+  const formattedSelected = selectedDate ? new Date(viewYear, viewMonth, selectedDate).toLocaleDateString('en-US', {  weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : null;
   const displayTime = () => `${String(timeHH).padStart(2, '0')}:${String(timeMM).padStart(2, '0')} ${ampm}`;
-
   const inputStyle = {
     background: '#222a3d', border: '1px solid rgba(70,69,85,0.4)', borderRadius: 10,
     color: '#dae2fd', fontSize: '1.4rem', fontWeight: 700, textAlign: 'center',
     width: '100%', padding: '0.6rem 0.25rem', outline: 'none', fontFamily: 'Inter, monospace',
     boxSizing: 'border-box',
   };
-
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(6px)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
       <div style={{ background: '#171f33', borderRadius: 20, width: '100%', maxWidth: 520, border: '1px solid rgba(255,185,95,0.2)', boxShadow: '0 40px 80px rgba(0,0,0,0.6)', overflow: 'hidden' }}>
@@ -328,7 +302,7 @@ function RescheduleModal({ request, onClose, onRescheduled }) {
               <div>
                 <div style={{ fontSize: '0.6rem', fontWeight: 700, color: '#ffb95f', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 3 }}>Reschedule Interview</div>
                 <h3 style={{ fontWeight: 700, fontSize: '1rem', color: '#dae2fd' }}>with {request.studentName}</h3>
-                {request.scheduledTime && <div style={{ fontSize: '0.72rem', color: '#c7c4d8', marginTop: 2 }}>Current: {toUtcDate(request.scheduledTime).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>}
+                {request.scheduledTime && <div style={{ fontSize: '0.72rem', color: '#c7c4d8', marginTop: 2 }}>Current: {toUtcDate(request.scheduledTime).toLocaleString('en-US', {  weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>}
               </div>
               <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c7c4d8' }}>
                 <span className="material-symbols-outlined">close</span>
@@ -394,7 +368,6 @@ function RescheduleModal({ request, onClose, onRescheduled }) {
     </div>
   );
 }
-
 // Modal to add an availability slot
 function AddSlotModal({ onClose, onAdd }) {
   const [date, setDate] = useState('');
@@ -436,7 +409,6 @@ function AddSlotModal({ onClose, onAdd }) {
     </div>
   );
 }
-
 const SCHEDULE = [
   // Schedule entries are now dynamically populated from database via interview requests
   // and extraSlots state (managed through the slot booking flow)
@@ -448,7 +420,6 @@ const NAV_ITEMS = [
   { icon: 'history',       label: 'Session History',  tab: 'history' },
   { icon: 'settings',      label: 'Settings',         tab: 'settings' },
 ];
-
 // ── Student Full Profile Modal (read-only, mirrors My Profile tab) ──────────────
 // Fetches the student's live profile_data from the DB so alumni always
 // see the latest version — resume, links, projects, bio, etc.
@@ -457,7 +428,6 @@ function StudentFullProfileModal({ request, onClose, onAccept, onDecline }) {
   const [loading, setLoading] = useState(true);
   const [accepting, setAccepting] = useState(false);
   const [done, setDone] = useState(false);
-
   useEffect(() => {
     if (!request) return;
     const load = async () => {
@@ -466,7 +436,6 @@ function StudentFullProfileModal({ request, onClose, onAccept, onDecline }) {
         // Use snapshot directly - it has everything including photo and resume
         let snap = request.studentProfile || request.student_profile_snapshot;
         console.log('[StudentFullProfileModal] Raw snapshot exists:', !!snap);
-        
         if (typeof snap === 'string') { 
           try { 
             snap = JSON.parse(snap); 
@@ -475,10 +444,8 @@ function StudentFullProfileModal({ request, onClose, onAccept, onDecline }) {
             snap = null; 
           } 
         }
-        
         // Use snapshot as-is
         const finalProfile = snap || { name: request.studentName };
-        
         // Fetch real photo/resume if stored in DB
         if (request.studentId && !request.studentId.startsWith('stu-')) {
           try {
@@ -510,7 +477,6 @@ function StudentFullProfileModal({ request, onClose, onAccept, onDecline }) {
              console.error('[StudentFullProfileModal] Failed to load profile assets', e);
           }
         }
-
         console.log('[StudentFullProfileModal] Setting final profile, has photo:', !!finalProfile.photoPreview);
         setProfile(finalProfile);
       } catch (err) {
@@ -522,20 +488,16 @@ function StudentFullProfileModal({ request, onClose, onAccept, onDecline }) {
     };
     load();
   }, [request]);
-
   if (!request) return null;
-
   const p = profile || {};
   const validProjects = (p.projects || []).filter(pr => pr && pr.title);
   const resumeHref = p.resumeUrl || p.resume_url || '';
-
   const sectionHead = (icon, text) => (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1rem' }}>
       <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#c3c0ff' }}>{icon}</span>
       <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c7c4d8' }}>{text}</span>
     </div>
   );
-
   const handleAccept = () => {
     setAccepting(true);
     setTimeout(() => {
@@ -547,16 +509,13 @@ function StudentFullProfileModal({ request, onClose, onAccept, onDecline }) {
       }, 1400);
     }, 600);
   };
-
   const handleDecline = () => {
     if (onDecline) onDecline();
     onClose();
   };
-
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
       <div style={{ background: '#0b1326', borderRadius: 20, width: '100%', maxWidth: 820, maxHeight: '92vh', display: 'flex', flexDirection: 'column', border: '1px solid rgba(195,192,255,0.15)', boxShadow: '0 40px 100px rgba(0,0,0,0.7)', overflow: 'hidden' }}>
-
         {/* Header */}
         <div style={{ padding: '1.25rem 1.5rem', background: 'linear-gradient(135deg,rgba(79,70,229,0.25),rgba(11,19,38,0.9))', borderBottom: '1px solid rgba(70,69,85,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -588,7 +547,6 @@ function StudentFullProfileModal({ request, onClose, onAccept, onDecline }) {
             <span className="material-symbols-outlined">close</span>
           </button>
         </div>
-
         {/* Body */}
         <div style={{ overflowY: 'auto', flex: 1, padding: '1.5rem' }}>
           {loading ? (
@@ -606,10 +564,8 @@ function StudentFullProfileModal({ request, onClose, onAccept, onDecline }) {
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
-
               {/* Left Column */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-
                 {/* Academics */}
                 <div style={{ background: 'rgba(23,31,51,0.7)', borderRadius: 14, padding: '1.25rem', border: '1px solid rgba(70,69,85,0.15)' }}>
                   {sectionHead('school', 'Academics & Status')}
@@ -632,7 +588,6 @@ function StudentFullProfileModal({ request, onClose, onAccept, onDecline }) {
                     </>
                   )}
                 </div>
-
                 {/* Skills */}
                 {p.skills?.length > 0 && (
                   <div style={{ background: 'rgba(23,31,51,0.7)', borderRadius: 14, padding: '1.25rem', border: '1px solid rgba(70,69,85,0.15)' }}>
@@ -642,7 +597,6 @@ function StudentFullProfileModal({ request, onClose, onAccept, onDecline }) {
                     </div>
                   </div>
                 )}
-
                 {/* Resume & Links */}
                 <div style={{ background: 'rgba(23,31,51,0.7)', borderRadius: 14, padding: '1.25rem', border: '1px solid rgba(70,69,85,0.15)' }}>
                   {sectionHead('description', 'Documents & Links')}
@@ -685,10 +639,8 @@ function StudentFullProfileModal({ request, onClose, onAccept, onDecline }) {
                   </div>
                 </div>
               </div>
-
               {/* Right Column */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-
                 {/* Bio */}
                 <div style={{ background: 'rgba(23,31,51,0.7)', borderRadius: 14, padding: '1.25rem', border: '1px solid rgba(70,69,85,0.15)' }}>
                   {sectionHead('person', 'About')}
@@ -696,7 +648,6 @@ function StudentFullProfileModal({ request, onClose, onAccept, onDecline }) {
                     {p.bio || 'No bio provided.'}
                   </p>
                 </div>
-
                 {/* Career Goals */}
                 {(p.targetRoles?.length > 0 || p.preferredCompanies?.length > 0) && (
                   <div style={{ background: 'rgba(23,31,51,0.7)', borderRadius: 14, padding: '1.25rem', border: '1px solid rgba(70,69,85,0.15)' }}>
@@ -719,7 +670,6 @@ function StudentFullProfileModal({ request, onClose, onAccept, onDecline }) {
                     )}
                   </div>
                 )}
-
                 {/* Projects */}
                 {validProjects.length > 0 && (
                   <div style={{ background: 'rgba(23,31,51,0.7)', borderRadius: 14, padding: '1.25rem', border: '1px solid rgba(70,69,85,0.15)' }}>
@@ -742,7 +692,6 @@ function StudentFullProfileModal({ request, onClose, onAccept, onDecline }) {
                     </div>
                   </div>
                 )}
-
                 {/* Interview Request Context */}
                 {request.message && (
                   <div style={{ background: 'rgba(23,31,51,0.7)', borderRadius: 14, padding: '1.25rem', border: '1px solid rgba(70,69,85,0.15)' }}>
@@ -757,7 +706,6 @@ function StudentFullProfileModal({ request, onClose, onAccept, onDecline }) {
             </div>
           )}
         </div>
-
         {/* Footer actions */}
         {!done && request.status === 'pending' && (
           <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid rgba(70,69,85,0.2)', display: 'flex', gap: 10, flexShrink: 0, background: '#0a0f1d' }}>
@@ -785,26 +733,20 @@ function StudentFullProfileModal({ request, onClose, onAccept, onDecline }) {
     </div>
   );
 }
-
-
 // ── Alumni Session History ──────────────────────────────────────────────────
 function AlumniSessionHistory({ userId, userName }) {
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(null);
-
   useEffect(() => {
     if (!userId) { setLoading(false); return; }
-    
     Promise.all([
       api.getUserFeedback(userId).catch(() => []),
       getRequestsForAlumni(userId).catch(() => [])
     ]).then(([feedbackData, requestsData]) => {
       const fbList = Array.isArray(feedbackData) ? feedbackData : [];
       const reqList = (Array.isArray(requestsData) ? requestsData : []).filter(r => r.status?.toUpperCase() === 'COMPLETED');
-      
       const mergedMap = new Map();
-      
       // Seed with completed requests
       reqList.forEach(r => {
          mergedMap.set(r.request_id, {
@@ -820,20 +762,16 @@ function AlumniSessionHistory({ userId, userName }) {
             alumni_feedback: null
          });
       });
-      
       // Merge feedback in
       fbList.forEach(fb => {
          let matchedKey = fb.id;
-         
          // Try to find the matching request: either by request_id OR meet link
          const matchingReq = reqList.find(r => r.request_id === fb.room_id || r.room_id === fb.room_id);
-         
          if (matchingReq) {
             matchedKey = matchingReq.request_id;
          } else if (mergedMap.has(fb.room_id)) {
             matchedKey = fb.room_id;
          }
-         
          const existing = mergedMap.get(matchedKey) || {};
          mergedMap.set(matchedKey, {
             ...fb,
@@ -845,16 +783,13 @@ function AlumniSessionHistory({ userId, userName }) {
             id: matchedKey, // ensure ID doesn't get overridden
          });
       });
-      
       const finalList = Array.from(mergedMap.values()).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       setSessions(finalList);
       setLoading(false);
     });
   }, [userId]);
-
   const myRatings = sessions.map(s => s.student_rating).filter(r => r != null && r > 0);
   const avgRating = myRatings.length ? (myRatings.reduce((a, b) => a + b, 0) / myRatings.length).toFixed(1) : '—';
-
   // ── Improved Rating Chart ─────────────────────────────────────────────────
   // Use last 10 rated sessions, map to date labels
   const ratedSessions = sessions.filter(s => s.student_rating != null && s.student_rating > 0).slice(0, 10).reverse();
@@ -862,10 +797,8 @@ function AlumniSessionHistory({ userId, userName }) {
   const innerW = chartW - padL - padR;
   const innerH = chartH - padT - padB;
   const n = ratedSessions.length;
-
   const getX = (i) => padL + (n <= 1 ? innerW / 2 : (i / (n - 1)) * innerW);
   const getY = (rating) => padT + innerH - ((rating / 5) * innerH);
-
   // Smooth bezier path
   const makePath = (pts) => {
     if (pts.length < 2) return '';
@@ -879,27 +812,23 @@ function AlumniSessionHistory({ userId, userName }) {
     }
     return d;
   };
-
   const pts = ratedSessions.map((s, i) => [getX(i), getY(s.student_rating)]);
   const linePath = makePath(pts);
   const areaPath = pts.length > 0
     ? `${linePath} L ${pts[pts.length - 1][0]} ${padT + innerH} L ${pts[0][0]} ${padT + innerH} Z`
     : '';
-
   const fmtLabel = (iso) => {
     try {
       const d = toUtcDate(iso);
-      return d.toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric' });
+      return d.toLocaleDateString('en-US', {  month: 'short', day: 'numeric' });
     } catch { return ''; }
   };
-
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, color: '#c7c4d8', gap: 12 }}>
       <span className="material-symbols-outlined" style={{ fontSize: 28, opacity: 0.4, animation: 'spin 1s linear infinite' }}>progress_activity</span>
       Loading session history...
     </div>
   );
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       <div>
@@ -908,7 +837,6 @@ function AlumniSessionHistory({ userId, userName }) {
         </h1>
         <p style={{ fontSize: '1rem', color: '#c7c4d8', lineHeight: 1.6 }}>Review your past mentorship sessions and student feedback.</p>
       </div>
-
       {/* Metrics */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '1.5rem' }}>
         {[
@@ -924,7 +852,6 @@ function AlumniSessionHistory({ userId, userName }) {
           </div>
         ))}
       </div>
-
       {/* Chart — Real-time Rating Trend */}
       <div style={{ background: '#131b2e', borderRadius: 16, padding: '2rem', border: '1px solid rgba(70,69,85,0.1)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
@@ -943,7 +870,6 @@ function AlumniSessionHistory({ userId, userName }) {
             <span style={{ padding: '0.25rem 0.75rem', background: '#2d3449', borderRadius: 999, fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c7c4d8' }}>{ratedSessions.length} Rated</span>
           </div>
         </div>
-
         {ratedSessions.length === 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 200, gap: 12, opacity: 0.5 }}>
             <span className="material-symbols-outlined" style={{ fontSize: 40, color: '#c7c4d8' }}>bar_chart</span>
@@ -962,7 +888,6 @@ function AlumniSessionHistory({ userId, userName }) {
                   <stop offset="100%" stopColor="#ffb95f" stopOpacity="0" />
                 </linearGradient>
               </defs>
-
               {/* Y-axis grid lines and labels */}
               {[1,2,3,4,5].map(rating => {
                 const y = getY(rating);
@@ -973,13 +898,10 @@ function AlumniSessionHistory({ userId, userName }) {
                   </g>
                 );
               })}
-
               {/* Area fill */}
               {areaPath && <path d={areaPath} fill="url(#areaGrad)" />}
-
               {/* Line */}
               {linePath && <path d={linePath} fill="none" stroke="url(#lineGrad)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />}
-
               {/* Data points + tooltips */}
               {pts.map(([x, y], i) => {
                 const s = ratedSessions[i];
@@ -1003,7 +925,6 @@ function AlumniSessionHistory({ userId, userName }) {
           </div>
         )}
       </div>
-
       {/* Past Sessions */}
       <div style={{ background: '#171f33', borderRadius: 12, padding: '1.5rem', border: '1px solid rgba(70,69,85,0.1)' }}>
         <h2 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1.5rem' }}>Past Sessions</h2>
@@ -1023,7 +944,7 @@ function AlumniSessionHistory({ userId, userName }) {
                       <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{s.student_name || 'Student'}</div>
                       <div style={{ fontSize: '0.65rem', color: '#c7c4d8', marginTop: 2 }}>{s.topic || 'Mock Interview'}</div>
                       <div style={{ fontSize: '0.6rem', color: 'rgba(199,196,216,0.4)', marginTop: 2 }}>
-                        {toUtcDate(s.createdAt).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', year: 'numeric' })}
+                        {toUtcDate(s.createdAt).toLocaleDateString('en-US', {  month: 'short', day: 'numeric', year: 'numeric' })}
                       </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1061,13 +982,11 @@ function AlumniSessionHistory({ userId, userName }) {
     </div>
   );
 }
-
 export default function AlumniDashboard() {
   const { user, login, logout } = useContext(AuthContext);
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('home');
   const [localRefresh, setLocalRefresh] = useState(0);
-
   useEffect(() => subscribeRealtimeSync(() => setLocalRefresh(v => v + 1)), []);
   const [showSlotModal, setShowSlotModal] = useState(false);
   const [extraSlots, setExtraSlots] = useState([]);
@@ -1080,7 +999,6 @@ export default function AlumniDashboard() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [globalSearch, setGlobalSearch] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(true);
-
   // ── Session data for home tab stats (real-time from DB) ───────────────────
   const [dashSessions, setDashSessions] = useState([]);
   useEffect(() => {
@@ -1094,7 +1012,6 @@ export default function AlumniDashboard() {
     ? (dashRatings.reduce((a, b) => a + b, 0) / dashRatings.length).toFixed(1)
     : null;
   const dashTotalSessions = dashSessions.length;
-
   // Motivational quotes — cycles every 8 seconds
   const QUOTES = [
     { text: "The best way to find yourself is to lose yourself in the service of others.", author: "Mahatma Gandhi" },
@@ -1108,10 +1025,8 @@ export default function AlumniDashboard() {
     { text: "The delicate balance of mentoring someone is not creating them in your own image, but giving them the opportunity to create themselves.", author: "Steven Spielberg" },
   ];
   const dailyQuote = QUOTES[Math.floor(Date.now() / 8000) % QUOTES.length];
-
   // ── Real-time notifications for alumni ────────────────────────────────────
   const { notifications, unreadCount, markAsRead } = useNotifications(user?.id);
-
   // Profile dropdown
   const [showProfile, setShowProfile] = useState(false);
   const [editProfile, setEditProfile] = useState(false);
@@ -1124,7 +1039,6 @@ export default function AlumniDashboard() {
     domain:   savedProfile.domain   || savedProfile.department || user?.department || '',
     experience: savedProfile.experience || '',
   });
-
   useEffect(() => {
     const latestProfile = (() => {
       try { return JSON.parse(localStorage.getItem('alumnex_profile') || '{}'); } catch { return {}; }
@@ -1136,16 +1050,13 @@ export default function AlumniDashboard() {
       experience: latestProfile.experience || '',
     });
   }, [editProfile, localRefresh, user]);
-
   // Notifications panel
   const [showNotifs, setShowNotifs] = useState(false);
   const [seenNotifIds, setSeenNotifIds] = useState(() => {
     try { return JSON.parse(localStorage.getItem('alumni_seen_notifs') || '[]'); } catch { return []; }
   });
-
   if (!user) return <Navigate to="/" replace />;
   const firstName = (user?.name || user?.role || 'Alumni').split(' ')[0];
-
   // Sync profile data to resolve __stored_in_database__ and populate localStorage
   useEffect(() => {
     if (!user?.id) return;
@@ -1174,7 +1085,6 @@ export default function AlumniDashboard() {
     };
     fetchSelfProfile();
   }, [user?.id]);
-
   // Load requests for this alumni from Supabase directly
   useEffect(() => {
     const load = async () => {
@@ -1211,7 +1121,6 @@ export default function AlumniDashboard() {
             })(),
           }));
           const dedupedMapped = dedupeRequestsById(mapped);
-
           // Merge DB results with current optimistic state — don't overwrite local
           // status changes (accept/decline/book) that haven't propagated to DB yet.
           setLiveRequests(prev => {
@@ -1247,11 +1156,9 @@ export default function AlumniDashboard() {
       }
     };
     load();
-
     // Supabase Realtime — fires instantly on new/updated requests for this alumni
     let channel = null;
     let isMounted = true;
-
     const setupRealtime = async () => {
       try {
         let alumniId = user.id;
@@ -1262,7 +1169,6 @@ export default function AlumniDashboard() {
           if (match) alumniId = match.id;
         }
         if (!isMounted) return;
-
         if (alumniId && !String(alumniId).startsWith('alm-') && !String(alumniId).startsWith('stu-')) {
           channel = supabase
             .channel(`alumni-reqs-${alumniId}`)
@@ -1274,7 +1180,6 @@ export default function AlumniDashboard() {
               { event: 'UPDATE', schema: 'public', table: 'interview_requests', filter: `alumni_id=eq.${alumniId}` },
               () => { if (isMounted) load(); }
             );
-
           channel.subscribe((status) => {
             if (status === 'SUBSCRIBED') {
               console.log(`[Realtime] Subscribed to alumni-reqs-${alumniId}`);
@@ -1285,9 +1190,7 @@ export default function AlumniDashboard() {
         console.warn('Alumni Realtime setup failed:', e.message);
       }
     };
-
     setupRealtime();
-
     // Socket.io listener — backend emits 'new_request' on POST /requests
     // This lets us prepend the new card instantly without waiting for Supabase Realtime
     let socket = null;
@@ -1295,7 +1198,6 @@ export default function AlumniDashboard() {
     const isMockIdForSocket = !alumniIdForSocket ||
       String(alumniIdForSocket).startsWith('alm-') ||
       String(alumniIdForSocket).startsWith('stu-');
-
     if (!isMockIdForSocket) {
       socket = io(`${SOCKET_URL}/notifications`, {
         transports: ['websocket', 'polling'],
@@ -1312,7 +1214,6 @@ export default function AlumniDashboard() {
         });
       });
     }
-
     return () => {
       isMounted = false;
       if (channel) {
@@ -1327,7 +1228,6 @@ export default function AlumniDashboard() {
   // optimistic state. Supabase Realtime + socket handle live updates instead.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user.name, user.id]);
-
   // Build notifications list: combine real-time notifications from DB + upcoming meetings
   const allScheduled = [...SCHEDULE, ...extraSlots];
   const now = Date.now();
@@ -1336,7 +1236,6 @@ export default function AlumniDashboard() {
     const t = toUtcDate(s.scheduledTime).getTime();
     return t > now && t - now <= 24 * 60 * 60 * 1000;
   });
-
   // Convert DB notifications to display format and combine with upcoming meetings
   const dbNotifications = (notifications || []).map(n => ({
     id: n.id,
@@ -1345,12 +1244,10 @@ export default function AlumniDashboard() {
     desc: n.message,
     time: n.created_at || n.createdAt
   }));
-
   const allNotifications = [
     ...dbNotifications,  // Real-time notifications from DB
     ...upcomingMeetings.map(s => ({ id: `meet-${s.title}`, type: 'meeting', title: 'Meeting in 24h', desc: `${s.title} — ${s.when}`, time: s.scheduledTime })),
   ];
-
   const openNotifs = () => {
     setShowNotifs(v => !v);
     setShowProfile(false);
@@ -1362,7 +1259,6 @@ export default function AlumniDashboard() {
     });
     localStorage.setItem('alumni_seen_notifs', JSON.stringify(allNotifications.map(n => n.id)));
   };
-
   const saveProfileForm = async () => {
     const updated = {
       ...savedProfile,
@@ -1388,7 +1284,6 @@ export default function AlumniDashboard() {
     }
     setEditProfile(false);
   };
-
   const handleAddSlot = ({ date, time, duration }) => {
     const [y, m, d] = date.split('-').map(Number);
     const [hh, mm] = time.split(':').map(Number);
@@ -1403,7 +1298,6 @@ export default function AlumniDashboard() {
       duration: parseInt(duration),
     }]);
   };
-
   const handleDeclineRequest = (id) => {
     const req = liveRequests.find(r => r.id === id);
     declineRequest(id);
@@ -1413,7 +1307,6 @@ export default function AlumniDashboard() {
       setTimeout(() => setDeclinedToast(null), 3000);
     }
   };
-
   const handleAccepted = (requestId) => {
     const req = liveRequests.find(r => r.id === requestId);
     setLiveRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: 'accepted' } : r));
@@ -1423,7 +1316,6 @@ export default function AlumniDashboard() {
       setTimeout(() => setAcceptedToast(null), 3500);
     }
   };
-
   const handleSlotBooked = (requestId, scheduledTime, bookedRoomId) => {
     // bookSlot was already called inside BookSlotModal.handleBook — do NOT call it again.
     // Just update local state with the roomId that bookSlot already returned.
@@ -1440,11 +1332,9 @@ export default function AlumniDashboard() {
       scheduledTime,
     }]);
   };
-
   // ── Instant Meet — start right now, notify student ────────────────────────
   const handleInstantMeet = async (req) => {
     const now = new Date().toISOString();
-
     // 1. Update request status to LIVE in backend
     // This triggers a real database-persisted notification for the student
     try {
@@ -1452,9 +1342,7 @@ export default function AlumniDashboard() {
         status: 'LIVE',
         scheduledTime: now,
       });
-
       const roomId = result?.room_id || result?.roomId || result?.id || req.id;
-
       // 2. Update local state
       setLiveRequests(prev => prev.map(r => r.id === req.id ? {
         ...r,
@@ -1462,7 +1350,6 @@ export default function AlumniDashboard() {
         scheduledTime: now,
         roomId
       } : r));
-
       // 3. Always navigate alumni to the internal interview room
       // Use the requestId as the base for the internal route
       navigate(`/interview/${req.id}?name=${encodeURIComponent(user?.name || 'Alumni')}`);
@@ -1472,7 +1359,6 @@ export default function AlumniDashboard() {
       navigate(`/interview/${req.id}?name=${encodeURIComponent(user?.name || 'Alumni')}`);
     }
   };
-
   const handleRescheduled = (requestId, newScheduledTime) => {
     setLiveRequests(prev => prev.map(r => r.id === requestId ? { ...r, scheduledTime: newScheduledTime } : r));
     const formatted = formatScheduledTime(newScheduledTime);
@@ -1484,7 +1370,6 @@ export default function AlumniDashboard() {
       return slot;
     }));
   };
-
   // â”€â”€ Highlight matching text (like PDF search) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const highlight = (text, query) => {
     if (!text || !query) return text;
@@ -1499,17 +1384,14 @@ export default function AlumniDashboard() {
       </>
     );
   };
-
   const renderSearchResults = (q) => {
     const ql = q.toLowerCase();
-
     // Search requests — include all statuses for this alumni
     const allRequests = (() => {
       try {
         return getRequests().filter(r => r.alumniName === user.name);
       } catch { return liveRequests; }
     })();
-
     const matchedRequests = allRequests.filter(r =>
       r.studentName?.toLowerCase().includes(ql) ||
       r.topic?.toLowerCase().includes(ql) ||
@@ -1519,7 +1401,6 @@ export default function AlumniDashboard() {
       r.studentProfile?.skills?.some(s => s.toLowerCase().includes(ql)) ||
       r.status?.toLowerCase().includes(ql)
     );
-
     // Search schedule
     const allSlots = [...SCHEDULE, ...extraSlots];
     const matchedSlots = allSlots.filter(s =>
@@ -1527,9 +1408,7 @@ export default function AlumniDashboard() {
       s.sub?.toLowerCase().includes(ql) ||
       s.when?.toLowerCase().includes(ql)
     );
-
     const total = matchedRequests.length + matchedSlots.length;
-
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         {/* Search header */}
@@ -1542,7 +1421,6 @@ export default function AlumniDashboard() {
             <p style={{ fontSize: '0.78rem', color: '#c7c4d8', marginTop: 3 }}>{total} result{total !== 1 ? 's' : ''} found across requests and schedule</p>
           </div>
         </div>
-
         {total === 0 && (
           <div style={{ textAlign: 'center', padding: '3rem', color: '#c7c4d8', background: '#131b2e', borderRadius: 16, border: '1px solid rgba(70,69,85,0.15)' }}>
             <span className="material-symbols-outlined" style={{ fontSize: 48, opacity: 0.3, display: 'block', marginBottom: 12 }}>search_off</span>
@@ -1550,7 +1428,6 @@ export default function AlumniDashboard() {
             <p style={{ fontSize: '0.875rem', opacity: 0.6, marginTop: 4 }}>Try different keywords</p>
           </div>
         )}
-
         {/* Matched Requests */}
         {matchedRequests.length > 0 && (
           <div>
@@ -1596,7 +1473,6 @@ export default function AlumniDashboard() {
             </div>
           </div>
         )}
-
         {/* Matched Schedule */}
         {matchedSlots.length > 0 && (
           <div>
@@ -1628,25 +1504,21 @@ export default function AlumniDashboard() {
       </div>
     );
   };
-
   const renderContent = () => {
     if (activeTab === 'schedule') {
       const now = Date.now();
       const nowInIST = new Date(now + 5.5 * 60 * 60 * 1000);
       const dayOfWeek = nowInIST.getUTCDay();
-
       // Build Mon–Sun week in IST (represented by shifted dates)
       const monday = new Date(nowInIST);
       monday.setUTCDate(nowInIST.getUTCDate() - ((dayOfWeek + 6) % 7));
       monday.setUTCHours(0,0,0,0);
-      
       const weekDays = Array.from({ length: 7 }, (_, i) => {
         const d = new Date(monday);
         d.setUTCDate(monday.getUTCDate() + i);
         return d;
       });
       const todayIdx = (dayOfWeek + 6) % 7;
-
       // All events with ISO scheduledTime
       const bookedRequests = liveRequests.filter(r => (r.status === 'slot_booked' || r.status === 'completed') && r.scheduledTime);
       const allEvents = [
@@ -1667,31 +1539,26 @@ export default function AlumniDashboard() {
           duration: s.duration || 60,
         })),
       ].sort((a, b) => toUtcDate(a.scheduledTime) - toUtcDate(b.scheduledTime));
-
       const weekStartVal = monday.getTime() - 5.5 * 60 * 60 * 1000;
       const weekEndVal   = weekStartVal + 7 * 24 * 60 * 60 * 1000;
       const weekEvents = allEvents.filter(e => {
         const t = toUtcDate(e.scheduledTime).getTime();
         return t >= weekStartVal && t < weekEndVal;
       });
-
       // Group by day index Mon=0 in IST
       const eventsByDay = Array.from({ length: 7 }, () => []);
       weekEvents.forEach(e => {
         const ist = getISTComponents(e.scheduledTime);
         eventsByDay[(ist.day + 6) % 7].push(e);
       });
-
       const isEnded = (e) => e.isCompleted || Date.now() > getEventEndMs(e.scheduledTime, e.duration || 120);
-      const fmtTime = (iso) => toUtcDate(iso).toLocaleTimeString('en-US', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' });
-      const fmtDate = (iso) => toUtcDate(iso).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'short', month: 'short', day: 'numeric' });
-
+      const fmtTime = (iso) => toUtcDate(iso).toLocaleTimeString('en-US', {  hour: '2-digit', minute: '2-digit' });
+      const fmtDate = (iso) => toUtcDate(iso).toLocaleDateString('en-US', {  weekday: 'short', month: 'short', day: 'numeric' });
       // Unique sorted time labels for calendar rows
       const allTimes = [...new Set(weekEvents.map(e => {
         const ist = getISTComponents(e.scheduledTime);
         return `${String(ist.hours).padStart(2,'0')}:${String(ist.minutes).padStart(2,'0')}`;
       }))].sort();
-
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           {/* Header */}
@@ -1701,7 +1568,6 @@ export default function AlumniDashboard() {
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span> Add Slot
             </button>
           </div>
-
           {/* Legend */}
           <div style={{ display: 'flex', gap: 16, fontSize: '0.72rem', color: '#c7c4d8', flexWrap: 'wrap' }}>
             {[
@@ -1716,7 +1582,6 @@ export default function AlumniDashboard() {
               </div>
             ))}
           </div>
-
           {/* Calendar grid — only rows with events */}
           <div style={{ background: '#131b2e', borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(70,69,85,0.15)' }}>
             {/* Day headers */}
@@ -1737,7 +1602,6 @@ export default function AlumniDashboard() {
                 );
               })}
             </div>
-
             {/* Event-only time rows */}
             {allTimes.length === 0 ? (
               <div style={{ padding: '3rem', textAlign: 'center', color: '#c7c4d8', opacity: 0.5 }}>
@@ -1784,7 +1648,6 @@ export default function AlumniDashboard() {
               </div>
             ))}
           </div>
-
           {/* Sorted session list */}
           <div style={{ background: '#171f33', borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(70,69,85,0.1)' }}>
             <div style={{ background: '#222a3d', padding: '0.875rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1836,8 +1699,34 @@ export default function AlumniDashboard() {
         </div>
       );
     }
-
     if (activeTab === 'requests') return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      {/* Waiting List Section */}
+      {liveRequests.filter(r => r.status === 'waiting').length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#ffb95f' }}>Waiting List</h2>
+            <span style={{ background: 'rgba(255,185,95,0.1)', color: '#ffb95f', padding: '0.2rem 0.6rem', borderRadius: 6, fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+              {liveRequests.filter(r => r.status === 'waiting').length} Students
+            </span>
+          </div>
+          <p style={{ fontSize: '0.8rem', color: '#c7c4d8', marginTop: -10 }}>These students are waiting for a slot to open up. You'll be notified if you gain capacity.</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1rem' }}>
+            {liveRequests.filter(r => r.status === 'waiting').map(r => (
+              <div key={r.id} style={{ background: '#131b2e', borderRadius: 16, padding: '1.25rem', border: '1px solid rgba(255,185,95,0.2)', display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ width: 44, height: 44, borderRadius: '50%', background: r.studentProfile?.photoPreview ? 'transparent' : 'linear-gradient(135deg,#222a3d,#2d3449)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', fontWeight: 700, color: '#c3c0ff', flexShrink: 0 }}>
+                  {r.studentProfile?.photoPreview ? <img src={r.studentProfile.photoPreview} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : r.studentName[0]}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#dae2fd' }}>{r.studentName}</div>
+                  <div style={{ fontSize: '0.7rem', color: '#c7c4d8' }}>{r.topic}</div>
+                </div>
+                <button onClick={() => setViewingStudentProfile(r)} style={{ padding: '0.4rem 0.8rem', background: 'rgba(195,192,255,0.1)', border: '1px solid rgba(195,192,255,0.2)', borderRadius: 8, color: '#c3c0ff', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>View</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Interview Requests</h2>
@@ -1855,7 +1744,6 @@ export default function AlumniDashboard() {
             </span>
           )}
         </div>
-
         {liveRequests.length === 0 && (
           <div style={{ textAlign: 'center', padding: '3rem', color: '#c7c4d8' }}>
             <span className="material-symbols-outlined" style={{ fontSize: 48, opacity: 0.3, display: 'block', marginBottom: 12 }}>task_alt</span>
@@ -1863,8 +1751,7 @@ export default function AlumniDashboard() {
             <p style={{ fontSize: '0.875rem', opacity: 0.6, marginTop: 6 }}>New requests from students will appear here</p>
           </div>
         )}
-
-        {liveRequests.map(r => (
+        {liveRequests.filter(r => r.status !== 'waiting').map(r => (
           <div key={r.id} style={{ background: '#171f33', borderRadius: 16, padding: '1.25rem 1.5rem', border: `1px solid ${r.status === 'accepted' ? 'rgba(255,185,95,0.2)' : 'rgba(70,69,85,0.2)'}`, cursor: 'pointer', transition: 'all 0.2s' }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = r.status === 'accepted' ? 'rgba(255,185,95,0.4)' : 'rgba(195,192,255,0.2)'; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = r.status === 'accepted' ? 'rgba(255,185,95,0.2)' : 'rgba(70,69,85,0.2)'; }}>
@@ -1879,7 +1766,6 @@ export default function AlumniDashboard() {
                   r.studentName[0]
                 )}
               </div>
-
               {/* Info */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
@@ -1908,7 +1794,6 @@ export default function AlumniDashboard() {
                 )}
                 {r.studentProfile?.college && <div style={{ fontSize: '0.68rem', color: 'rgba(199,196,216,0.5)', marginTop: 2 }}>{r.studentProfile.college} {r.studentProfile.department ? `• ${r.studentProfile.department}` : ''}</div>}
               </div>
-
               {/* Actions */}
               <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
                 <button onClick={() => setViewingStudentProfile(r)} style={{ padding: '0.45rem 0.875rem', background: 'rgba(79,70,229,0.2)', color: '#c3c0ff', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -1992,14 +1877,12 @@ export default function AlumniDashboard() {
                 })()}
               </div>
             </div>
-
             {/* Message preview */}
             {r.message && (
               <div style={{ marginTop: '0.875rem', padding: '0.6rem 0.875rem', background: 'rgba(45,52,73,0.4)', borderLeft: '2px solid rgba(195,192,255,0.3)', borderRadius: 8, fontSize: '0.75rem', color: 'rgba(218,226,253,0.7)', fontStyle: 'italic', lineHeight: 1.5 }}>
                 "{r.message.length > 100 ? r.message.slice(0, 100) + '...' : r.message}"
               </div>
             )}
-
             {getRequestCreatedAt(r) && formatISTDateTime(getRequestCreatedAt(r)) && (
               <div style={{ marginTop: 8, fontSize: '0.62rem', color: 'rgba(199,196,216,0.4)' }}>
                 Sent {formatISTDateTime(getRequestCreatedAt(r))}
@@ -2008,14 +1891,12 @@ export default function AlumniDashboard() {
           </div>
         ))}
       </div>
+    </div>
     );
-
     if (activeTab === 'history') {
       return <AlumniSessionHistory userId={user?.id} userName={user?.name} />;
     }
-
     if (activeTab === 'settings') return <SettingsPage role="ALUMNI" />;
-
     // home
     return (
       <>
@@ -2054,7 +1935,6 @@ export default function AlumniDashboard() {
             </div>
           </div>
         </div>
-
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '2rem', alignItems: 'start' }}>
           {/* Requests preview */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -2081,13 +1961,11 @@ export default function AlumniDashboard() {
                       r.studentName[0]
                     )}
                   </div>
-
                   {/* Info */}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: 2 }}>{r.studentName}</div>
                     <div style={{ fontSize: '0.7rem', color: '#c7c4d8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{r.topic}</div>
                   </div>
-
                   {/* Status-aware actions */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                     {r.status === 'pending' && (
@@ -2154,7 +2032,6 @@ export default function AlumniDashboard() {
               </div>
             ))}
           </div>
-
           {/* Schedule sidebar */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -2195,7 +2072,6 @@ export default function AlumniDashboard() {
       </>
     );
   };
-
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#0b1326', color: '#dae2fd', fontFamily: 'Inter, sans-serif' }}>
       {showSlotModal && <AddSlotModal onClose={() => setShowSlotModal(false)} onAdd={handleAddSlot} />}
@@ -2221,7 +2097,6 @@ export default function AlumniDashboard() {
           onRescheduled={(newTime) => handleRescheduled(reschedulingRequest.id, newTime)}
         />
       )}
-
       {/* Declined toast */}
       {declinedToast && (
         <div style={{ position: 'fixed', bottom: 32, left: '50%', transform: 'translateX(-50%)', background: '#222a3d', border: '1px solid rgba(255,180,171,0.3)', borderRadius: 12, padding: '0.875rem 1.5rem', display: 'flex', alignItems: 'center', gap: 10, zIndex: 400, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', animation: 'slideUp 0.3s ease' }}>
@@ -2229,7 +2104,6 @@ export default function AlumniDashboard() {
           <span style={{ fontSize: '0.875rem', color: '#dae2fd' }}>Request from <strong>{declinedToast.name}</strong> declined</span>
         </div>
       )}
-
       {/* Accepted toast */}
       {acceptedToast && (
         <div style={{ position: 'fixed', bottom: 32, left: '50%', transform: 'translateX(-50%)', background: '#131b2e', border: '1px solid rgba(78,222,163,0.35)', borderRadius: 12, padding: '0.875rem 1.5rem', display: 'flex', alignItems: 'center', gap: 10, zIndex: 400, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', animation: 'slideUp 0.3s ease' }}>
@@ -2240,7 +2114,6 @@ export default function AlumniDashboard() {
           </div>
         </div>
       )}
-
       {/* Logout confirmation */}
       {showLogoutConfirm && (
         <LogoutConfirmModal
@@ -2248,11 +2121,9 @@ export default function AlumniDashboard() {
           onCancel={() => setShowLogoutConfirm(false)}
         />
       )}
-
       {/* â”€â”€ SIDEBAR â”€â”€ */}
       {/* Sidebar overlay */}
       {sidebarOpen && <div className="sidebar-backdrop" onClick={() => setSidebarOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 45 }} />}
-
       <aside style={{ width: 256, minHeight: '100vh', position: 'fixed', left: sidebarOpen ? 0 : -256, top: 0, background: '#131b2e', display: 'flex', flexDirection: 'column', padding: '1.5rem', zIndex: 50, transition: 'left 0.3s ease' }}>
         <div style={{ marginBottom: '2rem' }}>
           {/* Logo row: logo left, collapse button right */}
@@ -2309,7 +2180,6 @@ export default function AlumniDashboard() {
           </button>
         </div>
       </aside>
-
       {/* â”€â”€ MAIN â”€â”€ */}
       <main style={{ marginLeft: sidebarOpen ? 256 : 0, flex: 1, transition: 'margin-left 0.3s ease' }}>
         <header style={{ position: 'fixed', top: 0, left: sidebarOpen ? 256 : 0, right: 0, height: 64, zIndex: 40, background: 'rgba(11,19,38,0.85)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(195,192,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2.5rem', transition: 'left 0.3s ease' }}>
@@ -2334,9 +2204,7 @@ export default function AlumniDashboard() {
               </button>
             )}
           </div>
-
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-
             {/* â”€â”€ NOTIFICATIONS â”€â”€ */}
             <div style={{ position: 'relative' }}>
               <button onClick={openNotifs} style={{ background: 'none', border: 'none', cursor: 'pointer', position: 'relative', padding: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -2346,7 +2214,6 @@ export default function AlumniDashboard() {
                   <div style={{ position: 'absolute', top: 2, right: 2, width: 8, height: 8, borderRadius: '50%', background: '#ff4444', border: '1.5px solid #0b1326' }} />
                 )}
               </button>
-
               {showNotifs && (
                 <>
                   <div onClick={() => setShowNotifs(false)} style={{ position: 'fixed', inset: 0, zIndex: 199 }} />
@@ -2372,7 +2239,7 @@ export default function AlumniDashboard() {
                             <div style={{ fontWeight: 600, fontSize: '0.8rem', marginBottom: 3 }}>{n.title}</div>
                             <div style={{ fontSize: '0.72rem', color: '#c7c4d8', lineHeight: 1.4 }}>{n.desc}</div>
                             <div style={{ fontSize: '0.62rem', color: 'rgba(199,196,216,0.4)', marginTop: 4 }}>
-                              {toUtcDate(n.time).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              {toUtcDate(n.time).toLocaleString('en-US', {  month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                             </div>
                           </div>
                           {(n.type === 'request' || n.type === 'new_request') && (
@@ -2385,9 +2252,7 @@ export default function AlumniDashboard() {
                 </>
               )}
             </div>
-
             <div style={{ width: 1, height: 32, background: 'rgba(70,69,85,0.3)' }} />
-
             {/* â”€â”€ PROFILE BUTTON â”€â”€ */}
             <div style={{ position: 'relative' }}>
               <button onClick={() => { setShowProfile(p => !p); setShowNotifs(false); }} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
@@ -2405,13 +2270,11 @@ export default function AlumniDashboard() {
                   );
                 })()}
               </button>
-
               {/* Profile dropdown */}
               {showProfile && (
                 <>
                   <div onClick={() => setShowProfile(false)} style={{ position: 'fixed', inset: 0, zIndex: 199 }} />
                   <div style={{ position: 'absolute', top: 48, right: 0, width: 320, background: '#171f33', borderRadius: 16, border: '1px solid rgba(195,192,255,0.15)', boxShadow: '0 20px 60px rgba(0,0,0,0.5)', zIndex: 200, overflow: 'hidden' }}>
-
                     {!editProfile ? (() => {
                       // Read fresh profile data on every render
                       const liveProfile = JSON.parse(localStorage.getItem('alumnex_profile') || '{}');
@@ -2527,7 +2390,6 @@ export default function AlumniDashboard() {
             </div>
           </div>
         </header>
-
         <section style={{ margin: '64px auto 0', padding: '2.5rem', display: 'flex', flexDirection: 'column', gap: '2.5rem', maxWidth: '1280px', width: '100%', boxSizing: 'border-box' }}>
           {globalSearch.trim() ? renderSearchResults(globalSearch.trim()) : renderContent()}
         </section>
@@ -2536,6 +2398,5 @@ export default function AlumniDashboard() {
     </div>
   );
 }
-
 const glass = { background: 'rgba(23,31,51,0.7)', backdropFilter: 'blur(20px)', boxShadow: '0 20px 40px rgba(0,0,0,0.4)', borderRadius: 16 };
 const btnOutline = { padding: '0.5rem 1.25rem', background: 'transparent', border: '1px solid rgba(195,192,255,0.2)', color: '#c3c0ff', borderRadius: 999, fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer' };
