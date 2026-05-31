@@ -32,4 +32,61 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET /alumni/:id/availability
+router.get('/:id/availability', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const availability = await prisma.alumniAvailability.findMany({
+      where: { alumni_id: id, is_active: true }
+    });
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: { max_interviews_per_week: true }
+    });
+    res.json({ availability, max_interviews_per_week: user?.max_interviews_per_week || 3 });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /alumni/:id/availability — batch update
+router.post('/:id/availability', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { slots } = req.body; // Array of { day_of_week, start_time, end_time, slot_duration }
+
+    // Clear existing and replace (simple approach for MVP)
+    await prisma.alumniAvailability.deleteMany({ where: { alumni_id: id } });
+
+    const created = await prisma.alumniAvailability.createMany({
+      data: slots.map(s => ({
+        alumni_id: id,
+        day_of_week: s.day_of_week.toLowerCase(),
+        start_time: s.start_time,
+        end_time: s.end_time,
+        slot_duration: s.slot_duration || 60
+      }))
+    });
+
+    res.json({ success: true, count: created.count });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /alumni/:id/settings
+router.post('/:id/settings', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { max_interviews_per_week } = req.body;
+    await prisma.user.update({
+      where: { id },
+      data: { max_interviews_per_week }
+    });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

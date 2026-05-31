@@ -5,7 +5,6 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -25,8 +24,15 @@ model User {
   batch_year          Int?
   college_id          String?
 
-  given_slots         ScheduleSlot[]    @relation("AlumniSlots")
-  booked_slots        ScheduleSlot[]    @relation("StudentBookings")
+  weekly_request_tokens    Int     @default(5)
+  tokens_reset_at          DateTime?
+  max_interviews_per_week  Int     @default(3)
+
+  availability_slots   AlumniAvailability[]
+  weekly_trackers      WeeklyRequestTracker[]
+  booked_slots         BookedSlot[]         @relation("StudentBookings")
+  alumni_booked_slots  BookedSlot[]         @relation("AlumniBookings")
+
   student_interviews  InterviewRecord[] @relation("StudentInterviews")
   alumni_interviews   InterviewRecord[] @relation("AlumniInterviews")
   
@@ -58,6 +64,7 @@ model InterviewRequest {
 
   student                  User     @relation("StudentRequests", fields: [student_id], references: [id], onDelete: Cascade)
   alumni                   User     @relation("AlumniRequests", fields: [alumni_id], references: [id], onDelete: Cascade)
+  booked_slot              BookedSlot?
 
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt
@@ -87,21 +94,53 @@ model Notification {
   @@map("notifications")
 }
 
-model ScheduleSlot {
-  slot_id    String   @id @default(uuid())
-  alumni_id  String
-  student_id String?
-  start_time DateTime
-  end_time   DateTime
-  status     String   @default("OPEN")
+model WeeklyRequestTracker {
+  id              String   @id @default(uuid())
+  student_id      String
+  week_start      DateTime
+  tokens_used     Int      @default(0)
+  bonus_granted   Boolean  @default(false)
+  interviews_done Int      @default(0)
+  created_at      DateTime @default(now())
 
-  alumni     User     @relation("AlumniSlots", fields: [alumni_id], references: [id], onDelete: Cascade)
-  student    User?    @relation("StudentBookings", fields: [student_id], references: [id], onDelete: Cascade)
+  student         User     @relation(fields: [student_id], references: [id], onDelete: Cascade)
 
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  @@unique([student_id, week_start])
+  @@map("weekly_request_trackers")
+}
 
-  @@map("schedule_slots")
+model AlumniAvailability {
+  id              String   @id @default(uuid())
+  alumni_id       String
+  day_of_week     String   // 'monday','tuesday',...,'sunday'
+  start_time      String   // e.g. "17:00"
+  end_time        String   // e.g. "19:00"
+  slot_duration   Int      @default(60)  // minutes per interview
+  is_active       Boolean  @default(true)
+  created_at      DateTime @default(now())
+
+  alumni          User     @relation(fields: [alumni_id], references: [id], onDelete: Cascade)
+
+  @@unique([alumni_id, day_of_week, start_time])
+  @@map("alumni_availabilities")
+}
+
+model BookedSlot {
+  id              String   @id @default(uuid())
+  request_id      String   @unique
+  alumni_id       String
+  student_id      String
+  slot_start      DateTime
+  slot_end        DateTime
+  status          String   @default("BOOKED") // 'BOOKED','COMPLETED','NO_SHOW','CANCELLED'
+
+  request         InterviewRequest @relation(fields: [request_id], references: [request_id], onDelete: Cascade)
+  alumni          User             @relation("AlumniBookings", fields: [alumni_id], references: [id])
+  student         User             @relation("StudentBookings", fields: [student_id], references: [id])
+
+  created_at      DateTime @default(now())
+
+  @@map("booked_slots")
 }
 
 model InterviewRecord {

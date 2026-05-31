@@ -1838,6 +1838,35 @@ export default function AlumniDashboard() {
     }
 
     if (activeTab === 'requests') return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      {/* Waiting List Section */}
+      {liveRequests.filter(r => r.status === 'waiting').length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#ffb95f' }}>Waiting List</h2>
+            <span style={{ background: 'rgba(255,185,95,0.1)', color: '#ffb95f', padding: '0.2rem 0.6rem', borderRadius: 6, fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+              {liveRequests.filter(r => r.status === 'waiting').length} Students
+            </span>
+          </div>
+          <p style={{ fontSize: '0.8rem', color: '#c7c4d8', marginTop: -10 }}>These students are waiting for a slot to open up. You'll be notified if you gain capacity.</p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1rem' }}>
+            {liveRequests.filter(r => r.status === 'waiting').map(r => (
+              <div key={r.id} style={{ background: '#131b2e', borderRadius: 16, padding: '1.25rem', border: '1px solid rgba(255,185,95,0.2)', display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ width: 44, height: 44, borderRadius: '50%', background: r.studentProfile?.photoPreview ? 'transparent' : 'linear-gradient(135deg,#222a3d,#2d3449)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', fontWeight: 700, color: '#c3c0ff', flexShrink: 0 }}>
+                  {r.studentProfile?.photoPreview ? <img src={r.studentProfile.photoPreview} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : r.studentName[0]}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#dae2fd' }}>{r.studentName}</div>
+                  <div style={{ fontSize: '0.7rem', color: '#c7c4d8' }}>{r.topic}</div>
+                </div>
+                <button onClick={() => setViewingStudentProfile(r)} style={{ padding: '0.4rem 0.8rem', background: 'rgba(195,192,255,0.1)', border: '1px solid rgba(195,192,255,0.2)', borderRadius: 8, color: '#c3c0ff', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>View</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Interview Requests</h2>
@@ -1864,7 +1893,7 @@ export default function AlumniDashboard() {
           </div>
         )}
 
-        {liveRequests.map(r => (
+        {liveRequests.filter(r => r.status !== 'waiting').map(r => (
           <div key={r.id} style={{ background: '#171f33', borderRadius: 16, padding: '1.25rem 1.5rem', border: `1px solid ${r.status === 'accepted' ? 'rgba(255,185,95,0.2)' : 'rgba(70,69,85,0.2)'}`, cursor: 'pointer', transition: 'all 0.2s' }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = r.status === 'accepted' ? 'rgba(255,185,95,0.4)' : 'rgba(195,192,255,0.2)'; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = r.status === 'accepted' ? 'rgba(255,185,95,0.2)' : 'rgba(70,69,85,0.2)'; }}>
@@ -2008,6 +2037,7 @@ export default function AlumniDashboard() {
           </div>
         ))}
       </div>
+    </div>
     );
 
     if (activeTab === 'history') {
