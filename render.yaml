@@ -3,7 +3,7 @@ services:
     name: alumnex-backend
     env: node
     rootDir: backend
-    buildCommand: npm install
+    buildCommand: npm ci --omit=dev && npx prisma generate
     startCommand: node server.js
     envVars:
       - key: FRONTEND_URL
