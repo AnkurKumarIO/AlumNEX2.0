@@ -63,7 +63,7 @@ export default function ProgressAnalytics() {
   const fmtLabel = (iso) => {
     try {
       const d = new Date(iso);
-      return d.toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric' });
+      return d.toLocaleDateString('en-US', {  month: 'short', day: 'numeric' });
     } catch { return ''; }
   };
 
@@ -200,7 +200,7 @@ export default function ProgressAnalytics() {
                         <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{peerName || 'Unknown'}</div>
                         <div style={{ fontSize: '0.65rem', color: '#c7c4d8', marginTop: 2 }}>{s.topic || 'Mock Interview'}</div>
                         <div style={{ fontSize: '0.6rem', color: 'rgba(199,196,216,0.4)', marginTop: 2 }}>
-                          {new Date(s.createdAt).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', year: 'numeric' })}
+                          {new Date(s.createdAt).toLocaleDateString('en-US', {  month: 'short', day: 'numeric', year: 'numeric' })}
                         </div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
