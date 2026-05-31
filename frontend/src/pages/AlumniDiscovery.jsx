@@ -5,6 +5,7 @@ import { getAllAlumni } from '../lib/db';
 import { api } from '../api';
 import { subscribeRealtimeSync } from '../lib/realtimeSync';
 import { supabase } from '../lib/supabaseClient';
+import SlotPickerModal from '../components/SlotPickerModal';
 
 const TOPICS = [
   'Mock Interview – General','Mock Interview – System Design','Mock Interview – Frontend',
@@ -36,7 +37,12 @@ function toDisplay(u, ratingsMap = {}) {
   const totalSessions = ratingData?.totalSessions || 0;
   
   const title = p.title || p.jobTitle || (company ? `Alumni at ${company}` : 'Alumni');
-  
+  const availability = u.availability_slots || [];
+  const maxInterviews = u.max_interviews_per_week || 3;
+  const acceptedThisWeek = (u.received_requests || []).filter(r =>
+    ['ACCEPTED', 'SLOT_BOOKED'].includes(r.status?.toUpperCase())
+  ).length;
+
   return {
     id: u.id,
     name: u.name,
@@ -57,6 +63,9 @@ function toDisplay(u, ratingsMap = {}) {
     totalSessions,
     avgRating: ratingData?.avgRating || null,
     photoPreview: p.photoPreview || '',
+    availability,
+    maxInterviews,
+    acceptedThisWeek,
   };
 }
 
@@ -77,6 +86,9 @@ function BookModal({ alumni, studentName, onClose, onSent }) {
   const [message, setMessage] = useState('');
   const [sent, setSent] = useState(false);
   const [sending, setSending] = useState(false);
+  const [showSlotPicker, setShowSlotPicker] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState(null);
+  const [error, setError] = useState('');
 
   const handleSend = async () => {
     setSending(true);
@@ -89,23 +101,45 @@ function BookModal({ alumni, studentName, onClose, onSent }) {
       } catch { return null; }
     })();
     try {
-      await sendRequest({
-        studentName,
+      const res = await api.post('/requests', {
         studentId: authUser.id || studentName,
-        alumniName: alumni.name,
         alumniId: alumni.id,
-        alumniRole: alumni.role,
         topic,
         message,
-        studentProfile,
+        studentProfileSnapshot: studentProfile,
       });
+
+      const requestId = res.data.id;
+
+      if (selectedSlot) {
+        await api.post(`/requests/${requestId}/book-slot`, {
+          slotStart: selectedSlot.start,
+          slotEnd: selectedSlot.end,
+        });
+      }
     } catch (e) {
       console.error('sendRequest failed:', e);
+      setError(e.response?.data?.message || 'Failed to send request');
+      setSending(false);
+      return;
     }
     setSending(false);
     setSent(true);
     setTimeout(() => { onSent(); onClose(); }, 1800);
   };
+
+  if (showSlotPicker) {
+    return (
+      <SlotPickerModal
+        alumni={alumni}
+        onClose={() => setShowSlotPicker(false)}
+        onBooked={(slot) => {
+          setSelectedSlot(slot);
+          setShowSlotPicker(false);
+        }}
+      />
+    );
+  }
 
   const inp = { width: '100%', background: '#222a3d', border: '1px solid rgba(70,69,85,0.4)', borderRadius: 10, padding: '0.65rem 0.875rem', color: '#dae2fd', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' };
 
@@ -137,6 +171,16 @@ function BookModal({ alumni, studentName, onClose, onSent }) {
             )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div>
+                <label style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c7c4d8', display: 'block', marginBottom: 6 }}>Time Slot</label>
+                <button
+                  onClick={() => setShowSlotPicker(true)}
+                  style={{ ...inp, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#c3c0ff' }}>calendar_today</span>
+                  {selectedSlot ? `${selectedSlot.displayDate} • ${selectedSlot.displayTime}` : 'Pick a time slot'}
+                </button>
+              </div>
+              <div>
                 <label style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c7c4d8', display: 'block', marginBottom: 6 }}>Session Type</label>
                 <select value={topic} onChange={e => setTopic(e.target.value)} style={inp}>
                   {TOPICS.map(t => <option key={t} value={t}>{t}</option>)}
@@ -146,6 +190,7 @@ function BookModal({ alumni, studentName, onClose, onSent }) {
                 <label style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c7c4d8', display: 'block', marginBottom: 6 }}>Message <span style={{ opacity: 0.5, fontWeight: 400, textTransform: 'none' }}>(optional)</span></label>
                 <textarea value={message} onChange={e => setMessage(e.target.value)} placeholder={`Hi ${alumni.name.split(' ')[0]}, I'd love to practice ${topic.toLowerCase()} with you...`} rows={3} style={{ ...inp, resize: 'none' }} />
               </div>
+              {error && <p style={{ fontSize: '0.75rem', color: '#ff6b6b', margin: 0 }}>{error}</p>}
             </div>
             <div style={{ display: 'flex', gap: 10, marginTop: '1.5rem' }}>
               <button onClick={onClose} style={{ flex: 1, padding: '0.75rem', background: '#222a3d', color: '#c7c4d8', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer' }}>Cancel</button>
@@ -160,6 +205,31 @@ function BookModal({ alumni, studentName, onClose, onSent }) {
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+// ── Availability Badge ───────────────────────────────────────────────────────
+function AvailabilityBadge({ availability, maxInterviews, acceptedThisWeek }) {
+  const isFullyBooked = acceptedThisWeek >= maxInterviews;
+
+  if (isFullyBooked) {
+    return (
+      <div style={{ background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.3)', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.7rem', color: '#ffb4ab', display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>event_busy</span>
+        Fully Booked This Week
+      </div>
+    );
+  }
+
+  const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const today = days[new Date().getDay()];
+  const todayAvail = availability.find(a => a.day_of_week === today);
+
+  return (
+    <div style={{ background: 'rgba(78,222,163,0.08)', border: '1px solid rgba(78,222,163,0.2)', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.7rem', color: '#4edea3', display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+      <span className="material-symbols-outlined" style={{ fontSize: 14 }}>event_available</span>
+      {todayAvail ? `Available Today • ${maxInterviews - acceptedThisWeek} slots left` : `Available this week • ${maxInterviews - acceptedThisWeek} slots left`}
     </div>
   );
 }
@@ -452,6 +522,7 @@ export default function AlumniDiscovery({ searchQuery = '', myRequests = null })
             <div style={{ height: 4, background: '#2d3449', borderRadius: 999, overflow: 'hidden', marginBottom: '1rem' }}>
               <div style={{ height: '100%', width: a.avgRating ? `${(a.avgRating / 5) * 100}%` : '40%', background: a.avgRating ? 'linear-gradient(90deg,#e07b00,#ffb95f)' : 'linear-gradient(90deg,#4f46e5,#c3c0ff)', borderRadius: 999 }} />
             </div>
+            <AvailabilityBadge availability={a.availability} maxInterviews={a.maxInterviews} acceptedThisWeek={a.acceptedThisWeek} />
             <BookButton alumni={a} studentName={studentName} userId={user?.id} onBook={() => setBookingAlumni(a)} passedRequests={myRequests} />
           </div>
         ))}

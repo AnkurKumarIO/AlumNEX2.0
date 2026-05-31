@@ -13,6 +13,7 @@ import { getAllAlumni, getUserById } from '../lib/db';
 import { useNotifications } from '../hooks/useNotifications';
 import { useInterviewRequests } from '../hooks/useInterviewRequests';
 import { subscribeRealtimeSync } from '../lib/realtimeSync';
+import TokenCounter from '../components/TokenCounter';
 import { loadProfileFromStorage } from '../lib/profilePersistence';
 import { getProfileAsset } from '../lib/profileAssetsAPI';
 import io from 'socket.io-client';
@@ -831,6 +832,7 @@ export default function Dashboard() {
           {/* Pipeline */}
           <div style={glass}>
             <div style={{ ...label, marginBottom: '1.5rem' }}>Pipeline</div>
+            <TokenCounter studentId={user?.id} refreshTick={localRefresh} />
             {[
               { icon: 'send',       label: 'Requests Sent', count: myRequests.length,  color: '#c3c0ff' },
               { icon: 'forum',      label: 'Interviews',    count: interviewCount,      color: '#4edea3' },

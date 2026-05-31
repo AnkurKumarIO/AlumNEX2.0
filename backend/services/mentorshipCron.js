@@ -1,0 +1,197 @@
+const cron = require('node-cron');
+const prisma = require('../lib/prisma');
+const { getWeekStart } = require('../lib/timeUtils');
+
+async function promoteWaitingStudent(alumniId) {
+  const weekStart = getWeekStart();
+
+  // 1. Check if alumni still has capacity
+  const alumni = await prisma.user.findUnique({
+    where: { id: alumniId },
+    include: {
+      received_requests: {
+        where: {
+          status: { in: ['ACCEPTED', 'SLOT_BOOKED'] },
+          createdAt: { gte: weekStart }
+        }
+      }
+    }
+  });
+
+  if (!alumni) return;
+  const maxInterviews = alumni.max_interviews_per_week || 3;
+  const currentAccepted = alumni.received_requests.length;
+
+  if (currentAccepted < maxInterviews) {
+    // 2. Find first WAITING request
+    const firstWaiting = await prisma.interviewRequest.findFirst({
+      where: {
+        alumni_id: alumniId,
+        status: 'WAITING',
+        createdAt: { gte: weekStart }
+      },
+      orderBy: { createdAt: 'asc' },
+      include: { student: true }
+    });
+
+    if (firstWaiting) {
+      // Promote to PENDING
+      await prisma.interviewRequest.update({
+        where: { request_id: firstWaiting.request_id },
+        data: { status: 'PENDING' }
+      });
+
+      // Notify alumni
+      const notification = await prisma.notification.create({
+        data: {
+          user_id: alumniId,
+          type: 'NEW_REQUEST',
+          title: 'Slot Opened Up! 🟢',
+          message: `${firstWaiting.student?.name || 'A student'} was promoted from the waiting list.`,
+          request_id: firstWaiting.request_id
+        }
+      });
+
+      // Notify student
+      await prisma.notification.create({
+        data: {
+          user_id: firstWaiting.student_id,
+          type: 'PROMOTED',
+          title: 'Good news! You are off the waitlist! 🚀',
+          message: `A slot opened up with ${alumni.name}. Your request is now pending.`,
+          request_id: firstWaiting.request_id
+        }
+      });
+    }
+  }
+}
+
+async function detectNoShows() {
+  const thirtyMinsAgo = new Date(Date.now() - 30 * 60 * 1000);
+
+  const overdueSlots = await prisma.bookedSlot.findMany({
+    where: {
+      slot_end: { lt: thirtyMinsAgo },
+      status: 'BOOKED',
+    }
+  });
+
+  for (const slot of overdueSlots) {
+    // Check if session feedback exists (marking it as completed)
+    const feedback = await prisma.sessionFeedback.findUnique({
+      where: { room_id: slot.request_id }
+    });
+
+    if (!feedback) {
+      // Mark as NO_SHOW
+      await prisma.bookedSlot.update({ where: { id: slot.id }, data: { status: 'NO_SHOW' } });
+      await prisma.interviewRequest.update({
+        where: { request_id: slot.request_id },
+        data: { status: 'NO_SHOW' }
+      });
+
+      // Penalize student: -2 tokens next week logic (handled in reset job)
+      // Actually, we can store penalty in User for next week
+      // For now, let's just mark it.
+
+      // Promote next WAITING student
+      await promoteWaitingStudent(slot.alumni_id);
+    } else {
+      // Mark as COMPLETED
+      await prisma.bookedSlot.update({ where: { id: slot.id }, data: { status: 'COMPLETED' } });
+      await prisma.interviewRequest.update({
+        where: { request_id: slot.request_id },
+        data: { status: 'COMPLETED' }
+      });
+    }
+  }
+}
+
+async function grantBonusTokens() {
+  const weekStart = getWeekStart();
+
+  // Find students who used all 5, had 0 interviews done, and all were declined
+  const trackers = await prisma.weeklyRequestTracker.findMany({
+    where: {
+      week_start: weekStart,
+      tokens_used: { gte: 5 },
+      bonus_granted: false,
+      interviews_done: 0
+    },
+    include: { student: { include: { sent_requests: { where: { createdAt: { gte: weekStart } } } } } }
+  });
+
+  for (const tracker of trackers) {
+    const declinedCount = tracker.student.sent_requests.filter(r => r.status === 'DECLINED').length;
+    if (declinedCount >= 5) {
+      await prisma.weeklyRequestTracker.update({
+        where: { id: tracker.id },
+        data: { bonus_granted: true }
+      });
+
+      await prisma.notification.create({
+        data: {
+          user_id: tracker.student_id,
+          type: 'SYSTEM',
+          title: '3 Bonus Tokens Granted 🎁',
+          message: 'All your requests were declined this week. We\'ve added 3 bonus tokens so you can keep trying!'
+        }
+      });
+    }
+  }
+}
+
+async function weeklyReset() {
+  const weekStart = getWeekStart();
+
+  // 1. Reset tokens for everyone
+  // Handle no-show penalty: -2 tokens (min 2)
+  const students = await prisma.user.findMany({ where: { role: 'STUDENT' } });
+
+  for (const student of students) {
+    // Check if they had NO_SHOW last week
+    const lastWeekStart = new Date(weekStart);
+    lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+
+    const noShows = await prisma.bookedSlot.count({
+      where: {
+        student_id: student.id,
+        status: 'NO_SHOW',
+        slot_start: { gte: lastWeekStart, lt: weekStart }
+      }
+    });
+
+    const baseTokens = 5;
+    const penalty = noShows > 0 ? 2 : 0;
+    const startingTokens = Math.max(2, baseTokens - penalty);
+
+    await prisma.user.update({
+      where: { id: student.id },
+      data: {
+        weekly_request_tokens: startingTokens,
+        tokens_reset_at: new Date()
+      }
+    });
+
+    // Create fresh tracker
+    await prisma.weeklyRequestTracker.upsert({
+      where: { student_id_week_start: { student_id: student.id, week_start: weekStart } },
+      update: {},
+      create: { student_id: student.id, week_start: weekStart, tokens_used: 0 }
+    });
+  }
+}
+
+// Every 15 mins: No-show detection
+cron.schedule('*/15 * * * *', detectNoShows);
+
+// Every hour: Bonus token grant check
+cron.schedule('0 * * * *', grantBonusTokens);
+
+// Every Monday at 00:00 IST (roughly)
+// 0 0 * * 1 is Monday midnight.
+cron.schedule('0 0 * * 1', weeklyReset);
+
+console.log('📅 Mentorship System Cron Jobs Initialized');
+
+module.exports = { detectNoShows, grantBonusTokens, weeklyReset, promoteWaitingStudent };
