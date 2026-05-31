@@ -43,7 +43,7 @@ function ActivityFeedTab({ token }) {
             title: l.title,
             desc: l.desc,
             category: l.category || 'System',
-            time: l.time ? new Date(l.time).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric' }) : '',
+            time: l.time ? new Date(l.time).toLocaleDateString('en-US', {  month: 'short', day: 'numeric' }) : '',
           })));
         }
         if (colors && typeof colors === 'object') setCategoryColors({ ...DEFAULT_CATEGORY_COLORS, ...colors });

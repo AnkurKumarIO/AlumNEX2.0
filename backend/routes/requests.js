@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../lib/prisma');
 const { createGoogleMeetLink, generateJitsiFallback } = require('../services/googleMeetService');
+const { authenticate } = require('../lib/authMiddleware');
 const { getWeekStart, getNextMonday } = require('../lib/timeUtils');
 
 function parseJsonField(value) {
@@ -41,7 +42,12 @@ router.get('/tokens/:studentId', async (req, res) => {
       });
     }
 
-    const baseTokens = 5;
+    const student = await prisma.user.findUnique({
+      where: { id: studentId },
+      select: { weekly_request_tokens: true }
+    });
+
+    const baseTokens = student?.weekly_request_tokens ?? 5;
     const bonus = tracker.bonus_granted ? 3 : 0;
     const totalMax = baseTokens + bonus;
     const remaining = Math.max(0, totalMax - tracker.tokens_used);
@@ -105,7 +111,7 @@ router.get('/', async (req, res) => {
 });
 
 // POST /requests — student sends a request
-router.post('/', async (req, res) => {
+router.post('/', authenticate, async (req, res) => {
   try {
     const { studentId, alumniId, topic, message, studentProfileSnapshot } = req.body;
     if (!studentId || !alumniId) return res.status(400).json({ error: 'studentId and alumniId are required.' });
@@ -123,7 +129,12 @@ router.post('/', async (req, res) => {
       });
     }
 
-    const MAX_TOKENS = 5 + (tracker.bonus_granted ? 3 : 0);
+    const student = await prisma.user.findUnique({
+      where: { id: studentId },
+      select: { weekly_request_tokens: true }
+    });
+
+    const MAX_TOKENS = (student?.weekly_request_tokens ?? 5) + (tracker.bonus_granted ? 3 : 0);
     if (tracker.tokens_used >= MAX_TOKENS) {
       return res.status(429).json({
         error: 'weekly_limit_reached',
@@ -395,7 +406,7 @@ router.patch('/:id', async (req, res) => {
 });
 
 // POST /requests/:id/book-slot
-router.post('/:id/book-slot', async (req, res) => {
+router.post('/:id/book-slot', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
     const { slotStart, slotEnd } = req.body;
