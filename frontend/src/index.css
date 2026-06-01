@@ -692,3 +692,26 @@ a:hover { color: var(--accent-primary); }
   }
 }
 
+/* Defensive guard: ensure sidebar backdrop is translucent and not full-black */
+.sidebar-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(0,0,0,0.3) !important;
+  z-index: 45 !important;
+  transition: opacity 200ms ease, background-color 200ms ease !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+/* When hidden via JS add .hidden to fade out and ignore pointer events */
+.sidebar-backdrop.hidden {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* If an app-level render error occurs, keep backdrop hidden to avoid stuck overlay */
+body[data-app-render-error="true"] .sidebar-backdrop {
+  display: none !important;
+  pointer-events: none !important;
+}
+
