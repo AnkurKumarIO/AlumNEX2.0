@@ -4,11 +4,8 @@ import './index.css';
 import AlumNexLogo from './AlumNexLogo';
 import { AuthContext, AuthProvider } from './context/AuthContext';
 import LandingPage from './pages/LandingPage';
-import StudentLogin from './pages/StudentLogin';
 import UnifiedLogin from './pages/UnifiedLogin';
 import ProfileSetup from './pages/ProfileSetup';
-import TNPLogin from './pages/TNPLogin';
-import AlumniLogin from './pages/AlumniLogin';
 import Dashboard from './pages/Dashboard';
 import AlumniDashboard from './pages/AlumniDashboard';
 import TNPDashboard from './pages/TNPDashboard';
@@ -85,9 +82,9 @@ function App() {
         <Routes>
           <Route path="/"                       element={<LandingGuard />} />
           <Route path="/login"                  element={<UnifiedLogin />} />
-          <Route path="/student/login"          element={<StudentLogin />} />
-          <Route path="/alumni/login"           element={<AlumniLogin />} />
-          <Route path="/tnp/login"              element={<TNPLogin />} />
+          <Route path="/student/login"          element={<UnifiedLogin initialRole="STUDENT" />} />
+          <Route path="/alumni/login"           element={<UnifiedLogin initialRole="ALUMNI" />} />
+          <Route path="/tnp/login"              element={<UnifiedLogin initialRole="TNP" />} />
           <Route path="/profile-setup"          element={<ProfileSetupGuard />} />
           <Route path="/dashboard"              element={<DashboardRouter />} />
           <Route path="/interview/:roomId"      element={<InterviewRoom />} />
