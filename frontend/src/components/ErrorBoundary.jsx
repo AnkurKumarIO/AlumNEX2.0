@@ -12,6 +12,19 @@ class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, errorInfo) {
     console.error('ErrorBoundary caught an error:', error, errorInfo);
+    try {
+      if (typeof document !== 'undefined' && document?.body) {
+        document.body.setAttribute('data-app-render-error', 'true');
+      }
+    } catch (e) {}
+  }
+
+  componentDidMount() {
+    try { if (typeof document !== 'undefined' && document?.body) document.body.removeAttribute('data-app-render-error'); } catch (e) {}
+  }
+
+  componentWillUnmount() {
+    try { if (typeof document !== 'undefined' && document?.body) document.body.removeAttribute('data-app-render-error'); } catch (e) {}
   }
 
   render() {

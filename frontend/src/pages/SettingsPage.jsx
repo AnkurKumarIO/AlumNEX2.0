@@ -5,6 +5,7 @@ import { api } from '../api';
 import { emitRealtimeSync } from '../lib/realtimeSync';
 import { saveProfileToStorage, loadProfileFromStorage, verifyProfileIntegrity } from '../lib/profilePersistence';
 import { uploadProfileAsset, getProfileAsset, compressImageFile } from '../lib/profileAssetsAPI';
+import ErrorBoundary from '../components/ErrorBoundary';
 
 const NOTIF_ITEMS = [
   { key: 'interview_requests', label: 'Interview Requests', desc: 'When a student sends you a booking request' },
@@ -165,6 +166,23 @@ export default function SettingsPage({ role }) {
       setGoogleLoading(false);
     }
   }, [isAlumni, user?.id]);
+
+  // Instrumentation: log active section and whether backdrop exists
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      console.log('[SettingsPage] activeSection ->', activeSection);
+      const bd = document.querySelector('.sidebar-backdrop');
+      if (bd) {
+        const bg = window.getComputedStyle(bd).backgroundColor;
+        console.log('[SettingsPage] sidebar-backdrop present, bg=', bg, 'zIndex=', window.getComputedStyle(bd).zIndex);
+      } else {
+        console.log('[SettingsPage] sidebar-backdrop not present');
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, [activeSection]);
 
   const handleGoogleDisconnect = async () => {
     if (!user?.id) return;
@@ -481,6 +499,7 @@ export default function SettingsPage({ role }) {
     fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box', fontFamily: 'Inter, sans-serif',
   };
   const lbl = { fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c7c4d8', display: 'block', marginBottom: 6 };
+  const btnOutline = { padding: '0.6rem 1rem', background: 'transparent', border: '1px solid rgba(195,192,255,0.12)', borderRadius: 10, color: '#c3c0ff', fontWeight: 700, cursor: 'pointer' };
 
   const SECTIONS = [
     { id: 'profile',       icon: 'person',         label: 'Edit Profile'  },
@@ -529,22 +548,44 @@ export default function SettingsPage({ role }) {
   ];
 
   return (
-    <div style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
+      <div style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
 
       {/* Sidebar nav */}
       <div style={{ width: 220, flexShrink: 0 }}>
         <div style={{ background: '#131b2e', borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(70,69,85,0.15)' }}>
-          {SECTIONS.map(s => (
-            <button key={s.id} onClick={() => setActiveSection(s.id)}
-              style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '0.875rem 1.25rem', background: activeSection === s.id ? '#222a3d' : 'transparent', color: activeSection === s.id ? '#c3c0ff' : '#c7c4d8', border: 'none', borderLeft: activeSection === s.id ? '3px solid #c3c0ff' : '3px solid transparent', cursor: 'pointer', fontSize: '0.875rem', fontWeight: activeSection === s.id ? 600 : 400, textAlign: 'left', transition: 'all 0.2s' }}>
-              <span className="material-symbols-outlined" style={{ fontSize: 18, fontVariationSettings: activeSection === s.id ? "'FILL' 1" : "'FILL' 0" }}>{s.icon}</span>
-              {s.label}
-            </button>
-          ))}
+          {SECTIONS.map(s => {
+            const isActive = activeSection === s.id;
+            return (
+              <button key={s.id} onClick={() => { try { console.log('[SettingsPage] section click:', s.id); } catch(e){}; setActiveSection(s.id); }}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '0.875rem 1.25rem',
+                  background: isActive ? 'linear-gradient(90deg, rgba(79,70,229,0.25), rgba(124,58,237,0.18))' : 'transparent',
+                  color: isActive ? '#e0e7ff' : '#c7c4d8',
+                  border: 'none',
+                  borderLeft: isActive ? '4px solid #8b5cf6' : '4px solid transparent',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                  fontWeight: isActive ? 700 : 400,
+                  textAlign: 'left',
+                  transition: 'all 0.2s',
+                  boxShadow: isActive ? '0 0 0 1px rgba(124,58,237,0.16)' : 'none',
+                  outline: 'none',
+                  WebkitTapHighlightColor: 'transparent',
+                }}>
+                <span className="material-symbols-outlined" style={{ fontSize: 18, fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}>{s.icon}</span>
+                {s.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* Content */}
+      <ErrorBoundary>
       <div style={{ flex: 1 }}>
 
         {/* Save toast */}
@@ -1301,8 +1342,9 @@ export default function SettingsPage({ role }) {
           </div>
         )}
 
-      </div>
       <style>{`@keyframes slideIn { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} } @keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    </ErrorBoundary>
     </div>
   );
 }
