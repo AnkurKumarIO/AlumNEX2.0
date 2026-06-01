@@ -359,6 +359,20 @@ export const api = {
     () => MOCK_API.getNotifications(userId)
   ),
 
+  get: (path, params = {}) => {
+    const query = params && typeof params === 'object' && Object.keys(params).length
+      ? `?${new URLSearchParams(params).toString()}`
+      : '';
+    return fetch(`${API_BASE}${path}${query}`).then(parseJsonOrThrow);
+  },
+
+  post: (path, body = {}, options = {}) => fetch(`${API_BASE}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+    body: body === undefined ? undefined : JSON.stringify(body),
+    ...options,
+  }).then(parseJsonOrThrow),
+
   markNotifsRead: (userId) => callOrMock(
     () => fetch(`${API_BASE}/notifications/read`, {
       method: 'PATCH',
