@@ -40,10 +40,11 @@ function isProfileComplete() {
   } catch { return false; }
 }
 
-export default function UnifiedLogin() {
+export default function UnifiedLogin({ initialRole }) {
   const { user, login } = useContext(AuthContext);
   const navigate = useNavigate();
   const [role, setRole] = useState(() => {
+    if (initialRole) return initialRole;
     const params = new URLSearchParams(window.location.search);
     const r = params.get('role');
     if (r === 'ALUMNI') return 'ALUMNI';
