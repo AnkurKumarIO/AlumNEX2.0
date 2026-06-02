@@ -22,6 +22,7 @@ const ALUMNI = [
       skills: ['System Design', 'Go', 'Python', 'Kubernetes', 'Distributed Systems', 'SQL'],
       targetRoles: ['Software Engineer', 'Backend Engineer'],
       openTo: ['Mock Interviews', 'Resume Review', 'Career Guidance'],
+      sector: 'Technology',
     },
   },
   {
@@ -36,6 +37,7 @@ const ALUMNI = [
       github: 'https://github.com/rahulverma',
       skills: ['Azure', 'DevOps', 'C#', '.NET', 'Terraform', 'CI/CD', 'Microservices'],
       openTo: ['Mock Interviews', 'Career Guidance'],
+      sector: 'Technology',
     },
   },
   {
@@ -50,6 +52,7 @@ const ALUMNI = [
       github: 'https://github.com/ananyaiyer',
       skills: ['React', 'TypeScript', 'Node.js', 'Ruby on Rails', 'PostgreSQL', 'GraphQL'],
       openTo: ['Mock Interviews', 'Resume Review', 'Portfolio Review'],
+      sector: 'Finance',
     },
   },
   {
@@ -63,6 +66,7 @@ const ALUMNI = [
       linkedin: 'https://linkedin.com/in/karan-mehta',
       skills: ['Leadership', 'System Design', 'Java', 'AWS', 'Agile', 'Team Management'],
       openTo: ['Mock Interviews', 'Career Guidance', 'Leadership Coaching'],
+      sector: 'Technology',
     },
   },
   {
@@ -77,6 +81,7 @@ const ALUMNI = [
       github: 'https://github.com/snehapatel',
       skills: ['React', 'JavaScript', 'Product Thinking', 'Figma', 'REST APIs', 'Jest'],
       openTo: ['Mock Interviews', 'Resume Review', 'Internship Guidance'],
+      sector: 'Technology',
     },
   },
   {
@@ -90,6 +95,7 @@ const ALUMNI = [
       linkedin: 'https://linkedin.com/in/arjun-nair',
       skills: ['C++', 'Python', 'Kafka', 'Spark', 'Geospatial', 'DSA', 'Competitive Programming'],
       openTo: ['Mock Interviews', 'DSA Coaching'],
+      sector: 'Transportation',
     },
   },
 ];

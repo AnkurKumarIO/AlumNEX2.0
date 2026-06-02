@@ -597,6 +597,7 @@ router.post('/bulk-alumni', async (req, res) => {
             company:   a.company   || '',
             jobTitle:  a.jobTitle  || '',
             batchYear: a.batchYear || '',
+            sector:    a.sector    || '',
           },
           skipDuplicateCheck: true,
         });
@@ -670,9 +671,9 @@ router.get('/template/students', (req, res) => {
 // ── GET /register/template/alumni ────────────────────────────────────────────
 router.get('/template/alumni', (req, res) => {
   const csv = [
-    'name,email,department,company,jobTitle,batchYear',
-    'Priya Sharma,priya@gmail.com,Computer Science,Google,Senior Engineer,2020',
-    'Amit Joshi,amit@gmail.com,Electronics,Microsoft,Staff Engineer,2019',
+    'name,email,department,company,jobTitle,batchYear,sector',
+    'Priya Sharma,priya@gmail.com,Computer Science,Google,Senior Engineer,2020,Technology',
+    'Amit Joshi,amit@gmail.com,Electronics,Microsoft,Staff Engineer,2019,Technology',
   ].join('\n') + '\n';
   res.setHeader('Content-Type', 'text/csv');
   res.setHeader('Content-Disposition', 'attachment; filename="alumni_template.csv"');

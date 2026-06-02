@@ -18,12 +18,12 @@ function parseCSV(text) {
 
 // ── Field maps ────────────────────────────────────────────────────────────────
 const STUDENT_FIELDS = ['name', 'email', 'department', 'college', 'year', 'studentId'];
-const ALUMNI_FIELDS  = ['name', 'email', 'department', 'company', 'jobTitle', 'batchYear'];
+const ALUMNI_FIELDS  = ['name', 'email', 'department', 'company', 'jobTitle', 'batchYear', 'sector'];
 
 const FIELD_LABELS = {
   name: 'Full Name', email: 'Email', department: 'Department',
   college: 'College', year: 'Year', studentId: 'Student ID',
-  company: 'Company', jobTitle: 'Job Title', batchYear: 'Batch Year',
+  company: 'Company', jobTitle: 'Job Title', batchYear: 'Batch Year', sector: 'Sector',
 };
 
 function validateRow(row, type) {

@@ -22,6 +22,7 @@ function toDisplay(u, ratingsMap = {}) {
   const expRange = !yrs ? '0-2 Years' : yrs <= 2 ? '0-2 Years' : yrs <= 5 ? '3-5 Years' : yrs <= 10 ? '6-10 Years' : '10+ Years';
   const skills = p.skills || [];
   const domain = skills.length > 0 ? skills[0] : (u.department || 'Engineering');
+  const sector = p.sector || '';
   
   // Impact score: use average student rating if available, otherwise fallback to skill-based
   const ratingData = ratingsMap[u.id];
@@ -67,17 +68,18 @@ function toDisplay(u, ratingsMap = {}) {
     availability,
     maxInterviews,
     acceptedThisWeek,
+    sector,
   };
 }
 
 // ── Fallback mock data (matches Supabase alumni) ──────────────────────────────
 const MOCK = [
-  { id:'alm-priya-sharma',  name:'Priya Sharma',  company:'Google',    batch_year:2019, department:'Computer Science',       profile_data:{ title:'Senior SWE',        skills:['System Design','Go','Python','Kubernetes'],  bio:'Senior Software Engineer at Google. Love mentoring on system design and FAANG interviews.' } },
-  { id:'alm-rahul-verma',   name:'Rahul Verma',   company:'Microsoft', batch_year:2018, department:'Electrical Engineering', profile_data:{ title:'Principal Engineer', skills:['Azure','DevOps','C#','.NET','Terraform'],    bio:'Principal Engineer at Microsoft Azure. Specialise in cloud infrastructure and DevOps.' } },
-  { id:'alm-ananya-iyer',   name:'Ananya Iyer',   company:'Stripe',    batch_year:2020, department:'Computer Science',       profile_data:{ title:'Full Stack Engineer',skills:['React','TypeScript','Node.js','GraphQL'],     bio:'Full Stack Engineer at Stripe working on payment infrastructure.' } },
-  { id:'alm-karan-mehta',   name:'Karan Mehta',   company:'Amazon',    batch_year:2017, department:'Information Technology', profile_data:{ title:'Engineering Manager',skills:['Leadership','System Design','Java','AWS'],     bio:'Engineering Manager at Amazon. 7 years scaling teams and systems.' } },
-  { id:'alm-sneha-patel',   name:'Sneha Patel',   company:'Atlassian', batch_year:2021, department:'Computer Science',       profile_data:{ title:'Product Engineer',  skills:['React','JavaScript','Figma','REST APIs'],    bio:'Product Engineer at Atlassian working on Jira. Great at internship prep.' } },
-  { id:'alm-arjun-nair',    name:'Arjun Nair',    company:'Uber',      batch_year:2016, department:'Electronics & Communication', profile_data:{ title:'Staff Engineer', skills:['C++','Python','Kafka','Spark','DSA'],       bio:'Staff Engineer at Uber Maps. Expert in geospatial systems and DSA coaching.' } },
+  { id:'alm-priya-sharma',  name:'Priya Sharma',  company:'Google',    batch_year:2019, department:'Computer Science',       profile_data:{ title:'Senior SWE',        skills:['System Design','Go','Python','Kubernetes'],  bio:'Senior Software Engineer at Google. Love mentoring on system design and FAANG interviews.', sector: 'Technology' } },
+  { id:'alm-rahul-verma',   name:'Rahul Verma',   company:'Microsoft', batch_year:2018, department:'Electrical Engineering', profile_data:{ title:'Principal Engineer', skills:['Azure','DevOps','C#','.NET','Terraform'],    bio:'Principal Engineer at Microsoft Azure. Specialise in cloud infrastructure and DevOps.', sector: 'Technology' } },
+  { id:'alm-ananya-iyer',   name:'Ananya Iyer',   company:'Stripe',    batch_year:2020, department:'Computer Science',       profile_data:{ title:'Full Stack Engineer',skills:['React','TypeScript','Node.js','GraphQL'],     bio:'Full Stack Engineer at Stripe working on payment infrastructure.', sector: 'Finance' } },
+  { id:'alm-karan-mehta',   name:'Karan Mehta',   company:'Amazon',    batch_year:2017, department:'Information Technology', profile_data:{ title:'Engineering Manager',skills:['Leadership','System Design','Java','AWS'],     bio:'Engineering Manager at Amazon. 7 years scaling teams and systems.', sector: 'Technology' } },
+  { id:'alm-sneha-patel',   name:'Sneha Patel',   company:'Atlassian', batch_year:2021, department:'Computer Science',       profile_data:{ title:'Product Engineer',  skills:['React','JavaScript','Figma','REST APIs'],    bio:'Product Engineer at Atlassian working on Jira. Great at internship prep.', sector: 'Technology' } },
+  { id:'alm-arjun-nair',    name:'Arjun Nair',    company:'Uber',      batch_year:2016, department:'Electronics & Communication', profile_data:{ title:'Staff Engineer', skills:['C++','Python','Kafka','Spark','DSA'],       bio:'Staff Engineer at Uber Maps. Expert in geospatial systems and DSA coaching.', sector: 'Transportation' } },
 ];
 
 
@@ -330,9 +332,9 @@ export default function AlumniDiscovery({ searchQuery = '', myRequests = null })
   const { user } = useContext(AuthContext);
   const [allAlumni, setAllAlumni] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [companyFilter, setCompanyFilter] = useState('');
+  const [deptFilter, setDeptFilter] = useState('');
   const [expFilter, setExpFilter] = useState('');
-  const [domainFilter, setDomainFilter] = useState('');
+  const [sectorFilter, setSectorFilter] = useState('');
   const [visibleCount, setVisibleCount] = useState(6);
   const [bookingAlumni, setBookingAlumni] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -407,25 +409,25 @@ export default function AlumniDiscovery({ searchQuery = '', myRequests = null })
     }).catch(() => { setAllAlumni(MOCK.map(u => toDisplay(u, {}))); setLoading(false); });
   }, []);
 
-  // Build filter options from actual data
-  const companies = [...new Set(allAlumni.map(a => a.company).filter(Boolean))].sort();
+  // Build filter options dynamically from actual data
+  const departments = [...new Set(allAlumni.map(a => a.department).filter(Boolean))].sort();
   const expRanges = ['0-2 Years', '3-5 Years', '6-10 Years', '10+ Years'];
-  const domains = [...new Set(allAlumni.flatMap(a => a.tags).filter(Boolean))].sort().slice(0, 12);
+  const sectors = [...new Set(allAlumni.map(a => a.sector).filter(Boolean))].sort();
 
   const q = searchQuery.toLowerCase().trim();
-  React.useEffect(() => { setVisibleCount(6); }, [searchQuery, companyFilter, expFilter, domainFilter]);
+  React.useEffect(() => { setVisibleCount(6); }, [searchQuery, deptFilter, expFilter, sectorFilter]);
 
   const filtered = allAlumni.filter(a => {
     const matchSearch = !q || a.name.toLowerCase().includes(q) || a.company.toLowerCase().includes(q) || a.bio.toLowerCase().includes(q) || a.tags.some(t => t.toLowerCase().includes(q));
-    const matchCompany = !companyFilter || a.company === companyFilter;
+    const matchDept = !deptFilter || a.department === deptFilter;
     const matchExp = !expFilter || a.expRange === expFilter;
-    const matchDomain = !domainFilter || a.tags.some(t => t.toLowerCase().includes(domainFilter.toLowerCase())) || a.domain.toLowerCase().includes(domainFilter.toLowerCase());
-    return matchSearch && matchCompany && matchExp && matchDomain;
+    const matchSector = !sectorFilter || a.sector === sectorFilter;
+    return matchSearch && matchDept && matchExp && matchSector;
   });
 
   const visible = filtered.slice(0, visibleCount);
   const studentName = user?.name || 'Student';
-  const hasFilters = companyFilter || expFilter || domainFilter;
+  const hasFilters = deptFilter || expFilter || sectorFilter;
 
   const selStyle = (active) => ({
     padding: '0.35rem 0.875rem', borderRadius: 999, fontSize: '0.78rem', fontWeight: 600,
@@ -457,13 +459,15 @@ export default function AlumniDiscovery({ searchQuery = '', myRequests = null })
       {/* ── Filter bar ── */}
       <div style={{ background: '#131b2e', borderRadius: 14, padding: '1.25rem 1.5rem', marginBottom: '1.5rem', border: '1px solid rgba(70,69,85,0.15)' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', alignItems: 'flex-start' }}>
-          {/* Company */}
-          <div>
-            <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#c7c4d8', marginBottom: 8 }}>Company</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {companies.map(c => <button key={c} onClick={() => setCompanyFilter(companyFilter === c ? '' : c)} style={selStyle(companyFilter === c)}>{c}</button>)}
+          {/* Department */}
+          {departments.length > 0 && (
+            <div>
+              <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#c7c4d8', marginBottom: 8 }}>Department</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {departments.map(d => <button key={d} onClick={() => setDeptFilter(deptFilter === d ? '' : d)} style={selStyle(deptFilter === d)}>{d}</button>)}
+              </div>
             </div>
-          </div>
+          )}
           {/* Experience */}
           <div>
             <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#c7c4d8', marginBottom: 8 }}>Experience</div>
@@ -471,23 +475,25 @@ export default function AlumniDiscovery({ searchQuery = '', myRequests = null })
               {expRanges.map(e => <button key={e} onClick={() => setExpFilter(expFilter === e ? '' : e)} style={selStyle(expFilter === e)}>{e}</button>)}
             </div>
           </div>
-          {/* Domain / Skills */}
-          <div>
-            <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#c7c4d8', marginBottom: 8 }}>Domain / Skills</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {domains.map(d => <button key={d} onClick={() => setDomainFilter(domainFilter === d ? '' : d)} style={selStyle(domainFilter === d)}>{d}</button>)}
+          {/* Sector */}
+          {sectors.length > 0 && (
+            <div>
+              <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#c7c4d8', marginBottom: 8 }}>Sector</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {sectors.map(s => <button key={s} onClick={() => setSectorFilter(sectorFilter === s ? '' : s)} style={selStyle(sectorFilter === s)}>{s}</button>)}
+              </div>
             </div>
-          </div>
+          )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '1rem', paddingTop: '0.875rem', borderTop: '1px solid rgba(70,69,85,0.15)' }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {[companyFilter, expFilter, domainFilter].filter(Boolean).map(f => (
+            {[deptFilter, expFilter, sectorFilter].filter(Boolean).map(f => (
               <span key={f} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '0.2rem 0.6rem', background: 'rgba(78,222,163,0.1)', border: '1px solid rgba(78,222,163,0.25)', borderRadius: 999, fontSize: '0.72rem', color: '#4edea3' }}>
                 {f}
-                <button onClick={() => { if (f === companyFilter) setCompanyFilter(''); else if (f === expFilter) setExpFilter(''); else setDomainFilter(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4edea3', padding: 0, lineHeight: 1, fontSize: 14 }}>×</button>
+                <button onClick={() => { if (f === deptFilter) setDeptFilter(''); else if (f === expFilter) setExpFilter(''); else setSectorFilter(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4edea3', padding: 0, lineHeight: 1, fontSize: 14 }}>×</button>
               </span>
             ))}
-            {hasFilters && <button onClick={() => { setCompanyFilter(''); setExpFilter(''); setDomainFilter(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c3c0ff', fontSize: '0.72rem', fontWeight: 600 }}>Clear all</button>}
+            {hasFilters && <button onClick={() => { setDeptFilter(''); setExpFilter(''); setSectorFilter(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c3c0ff', fontSize: '0.72rem', fontWeight: 600 }}>Clear all</button>}
           </div>
           <span style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c7c4d8' }}>{filtered.length} Alumni Found</span>
         </div>
@@ -511,7 +517,11 @@ export default function AlumniDiscovery({ searchQuery = '', myRequests = null })
                 <div>
                   <div style={{ fontWeight: 700, fontSize: '1rem', color: '#dae2fd' }}>{a.name}</div>
                   <div style={{ fontSize: '0.78rem', color: '#c7c4d8' }}>{a.title}</div>
-                  <div style={{ fontSize: '0.72rem', color: a.scoreColor, fontWeight: 600, marginTop: 1 }}>{a.company}{a.experience ? ` • ${a.experience}` : ''}</div>
+                  <div style={{ fontSize: '0.72rem', color: a.scoreColor, fontWeight: 600, marginTop: 1 }}>
+                    {a.company}
+                    {a.sector ? ` (${a.sector})` : ''}
+                    {a.experience ? ` • ${a.experience}` : ''}
+                  </div>
                 </div>
               </div>
               <div style={{ textAlign: 'right', flexShrink: 0 }}>

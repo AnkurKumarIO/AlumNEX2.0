@@ -143,7 +143,7 @@ router.patch('/:id/profile', async (req, res) => {
 
     // Update verified fields only if user is NOT verified
     const verifiedStudentFields = ['college', 'year', 'rollNo'];
-    const verifiedAlumniFields = ['company', 'jobTitle', 'currentTitle', 'batchYear', 'passOutYear'];
+    const verifiedAlumniFields = ['company', 'jobTitle', 'currentTitle', 'batchYear', 'passOutYear', 'sector'];
 
     if (!isVerified) {
       verifiedStudentFields.forEach(f => {
@@ -164,6 +164,7 @@ router.patch('/:id/profile', async (req, res) => {
         profileDataObj.currentTitle = existingProfileData.currentTitle || existingProfileData.jobTitle || '';
         profileDataObj.batchYear = existingProfileData.batchYear || existingProfileData.passOutYear || '';
         profileDataObj.passOutYear = existingProfileData.passOutYear || existingProfileData.batchYear || '';
+        profileDataObj.sector = existingProfileData.sector || '';
       } else {
         profileDataObj.college = existingProfileData.college || '';
         profileDataObj.year = existingProfileData.year || '';
