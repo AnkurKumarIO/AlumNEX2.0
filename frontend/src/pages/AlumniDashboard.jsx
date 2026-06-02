@@ -155,7 +155,7 @@ function BookSlotModal({ request, onClose, onBooked }) {
               </div>
               <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c7c4d8' }}><span className="material-symbols-outlined">close</span></button>
             </div>
-            <div style={{ padding: '1.25rem 1.5rem', overflowY: 'auto' }}>
+            <div style={{ padding: '1.25rem 1.5rem', overflowY: 'auto', flex: 1 }}>
               {/* Month nav */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
                 <button onClick={prevMonth} style={{ background: '#222a3d', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', color: '#c7c4d8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span className="material-symbols-outlined" style={{ fontSize: 18 }}>chevron_left</span></button>
@@ -289,7 +289,7 @@ function RescheduleModal({ request, onClose, onRescheduled }) {
   };
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(6px)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-      <div style={{ background: '#171f33', borderRadius: 20, width: '100%', maxWidth: 520, border: '1px solid rgba(255,185,95,0.2)', boxShadow: '0 40px 80px rgba(0,0,0,0.6)', overflow: 'hidden' }}>
+      <div style={{ background: '#171f33', borderRadius: 20, width: '100%', maxWidth: 520, border: '1px solid rgba(255,185,95,0.2)', boxShadow: '0 40px 80px rgba(0,0,0,0.6)', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {done ? (
           <div style={{ padding: '3rem', textAlign: 'center' }}>
             <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>🔄</div>
@@ -308,7 +308,7 @@ function RescheduleModal({ request, onClose, onRescheduled }) {
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
-            <div style={{ padding: '1.25rem 1.5rem' }}>
+            <div style={{ padding: '1.25rem 1.5rem', overflowY: 'auto', flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
                 <button onClick={prevMonth} style={{ background: '#222a3d', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', color: '#c7c4d8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span className="material-symbols-outlined" style={{ fontSize: 18 }}>chevron_left</span></button>
                 <span style={{ fontWeight: 700, fontSize: '1rem', color: '#dae2fd' }}>{MONTHS[viewMonth]} {viewYear}</span>
@@ -1547,7 +1547,7 @@ export default function AlumniDashboard() {
           isFreeSlot: true,
           duration: s.duration || 60,
         })),
-      ].sort((a, b) => toUtcDate(a.scheduledTime) - toUtcDate(b.scheduledTime));
+      ].sort((a, b) => toUtcDate(b.scheduledTime) - toUtcDate(a.scheduledTime)); // Descending: latest first
       const weekStartVal = monday.getTime() - 5.5 * 60 * 60 * 1000;
       const weekEndVal   = weekStartVal + 7 * 24 * 60 * 60 * 1000;
       const weekEvents = allEvents.filter(e => {
