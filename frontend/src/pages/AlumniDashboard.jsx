@@ -2,7 +2,7 @@ import React, { useContext, useState, useEffect, useRef } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import AlumNexLogo from '../AlumNexLogo';
-import { getRequests, acceptRequestOnly, bookSlot, rescheduleSlot, declineRequest, formatScheduledTime } from '../interviewRequests';
+import { getRequests, acceptRequestOnly, promoteRequest, bookSlot, rescheduleSlot, declineRequest, formatScheduledTime } from '../interviewRequests';
 import { api, SOCKET_URL } from '../api';
 import { getAllAlumni, getRequestsForAlumni, getUserById } from '../lib/db';
 import { supabase } from '../lib/supabaseClient';
@@ -1316,6 +1316,15 @@ export default function AlumniDashboard() {
       setTimeout(() => setAcceptedToast(null), 3500);
     }
   };
+  const handlePromoteRequest = async (id) => {
+    const req = liveRequests.find(r => r.id === id);
+    await promoteRequest(id);
+    setLiveRequests(prev => prev.map(r => r.id === id ? { ...r, status: 'pending' } : r));
+    if (req) {
+      setAcceptedToast({ name: `${req.studentName} promoted to Pending` });
+      setTimeout(() => setAcceptedToast(null), 3000);
+    }
+  };
   const handleSlotBooked = (requestId, scheduledTime, bookedRoomId) => {
     // bookSlot was already called inside BookSlotModal.handleBook — do NOT call it again.
     // Just update local state with the roomId that bookSlot already returned.
@@ -1721,7 +1730,10 @@ export default function AlumniDashboard() {
                   <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#dae2fd' }}>{r.studentName}</div>
                   <div style={{ fontSize: '0.7rem', color: '#c7c4d8' }}>{r.topic}</div>
                 </div>
-                <button onClick={() => setViewingStudentProfile(r)} style={{ padding: '0.4rem 0.8rem', background: 'rgba(195,192,255,0.1)', border: '1px solid rgba(195,192,255,0.2)', borderRadius: 8, color: '#c3c0ff', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>View</button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => setViewingStudentProfile(r)} style={{ padding: '0.4rem 0.8rem', background: 'rgba(195,192,255,0.1)', border: '1px solid rgba(195,192,255,0.2)', borderRadius: 8, color: '#c3c0ff', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>View</button>
+                  <button onClick={() => handlePromoteRequest(r.id)} style={{ padding: '0.4rem 0.8rem', background: 'rgba(78,222,163,0.15)', border: '1px solid rgba(78,222,163,0.35)', borderRadius: 8, color: '#4edea3', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>Promote</button>
+                </div>
               </div>
             ))}
           </div>

@@ -1,6 +1,19 @@
 export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 const ROOT_BASE = API_BASE;
 
+const originalFetch = window.fetch;
+const fetch = (url, options = {}) => {
+  const token = localStorage.getItem('alumnex_token');
+  if (token && typeof url === 'string' && url.startsWith(API_BASE)) {
+    const headers = { ...options.headers };
+    if (!headers['Authorization']) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    return originalFetch(url, { ...options, headers });
+  }
+  return originalFetch(url, options);
+};
+
 // ─── Mock data (used when backend is unreachable) ───────────────────────────
 
 const MOCK_TOKEN = 'mock-jwt-token-for-local-dev';

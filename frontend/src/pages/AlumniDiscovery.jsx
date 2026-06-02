@@ -6,6 +6,7 @@ import { api } from '../api';
 import { subscribeRealtimeSync } from '../lib/realtimeSync';
 import { supabase } from '../lib/supabaseClient';
 import SlotPickerModal from '../components/SlotPickerModal';
+import TokenCounter from '../components/TokenCounter';
 
 const TOPICS = [
   'Mock Interview – General','Mock Interview – System Design','Mock Interview – Frontend',
@@ -107,19 +108,25 @@ function BookModal({ alumni, studentName, onClose, onSent }) {
         topic,
         message,
         studentProfileSnapshot: studentProfile,
+        slotStart: selectedSlot?.start,
+        slotEnd: selectedSlot?.end,
       });
 
-      const requestId = res.data.id;
-
-      if (selectedSlot) {
-        await api.post(`/requests/${requestId}/book-slot`, {
-          slotStart: selectedSlot.start,
-          slotEnd: selectedSlot.end,
-        });
+      const requestId = res?.id || res?.request_id;
+      if (!requestId) {
+        throw new Error('No request ID returned from server');
       }
     } catch (e) {
       console.error('sendRequest failed:', e);
-      setError(e.response?.data?.message || 'Failed to send request');
+      let errMsg = e.message;
+      if (errMsg === 'weekly_limit_reached') {
+        errMsg = 'You have used all your request tokens for this week. Tokens reset every Monday.';
+      } else if (errMsg === 'alumni_full') {
+        errMsg = 'This alumni is fully booked and has a full waiting list for this week.';
+      } else if (errMsg === 'slot_taken') {
+        errMsg = 'This slot has already been booked by another student. Please pick another slot.';
+      }
+      setError(errMsg || 'Failed to send request');
       setSending(false);
       return;
     }
@@ -439,6 +446,13 @@ export default function AlumniDiscovery({ searchQuery = '', myRequests = null })
   return (
     <div key={refreshKey}>
       {bookingAlumni && <BookModal alumni={bookingAlumni} studentName={studentName} onClose={() => setBookingAlumni(null)} onSent={() => setRefreshKey(k => k + 1)} />}
+
+      {/* Token Counter */}
+      {user?.role === 'STUDENT' && (
+        <div style={{ maxWidth: 300, marginBottom: '1.25rem' }}>
+          <TokenCounter studentId={user?.id} refreshTick={refreshKey} />
+        </div>
+      )}
 
       {/* ── Filter bar ── */}
       <div style={{ background: '#131b2e', borderRadius: 14, padding: '1.25rem 1.5rem', marginBottom: '1.5rem', border: '1px solid rgba(70,69,85,0.15)' }}>

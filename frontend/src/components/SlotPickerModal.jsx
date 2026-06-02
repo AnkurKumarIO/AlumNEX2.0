@@ -11,7 +11,7 @@ export default function SlotPickerModal({ alumni, onClose, onBooked }) {
   useEffect(() => {
     api.get(`/alumni/${alumni.id}/availability`)
       .then(res => {
-        setAvailability(res.data.availability || []);
+        setAvailability(res.availability || []);
         setLoading(false);
       })
       .catch(err => {

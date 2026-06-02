@@ -394,6 +394,27 @@ export async function acceptRequestOnly(requestId) {
   return requests[idx];
 }
 
+export async function promoteRequest(requestId) {
+  try {
+    await api.updateRequest(requestId, { status: 'PENDING' });
+  } catch (e) {
+    console.warn('promoteRequest Backend error, trying Supabase:', e.message);
+    try {
+      await dbUpdateRequest(requestId, { status: 'PENDING' });
+    } catch (dbErr) {
+      console.warn('promoteRequest Supabase error:', dbErr.message);
+    }
+  }
+
+  const requests = loadLocal();
+  const idx = requests.findIndex(r => r.id === requestId);
+  if (idx === -1) return null;
+  requests[idx] = { ...requests[idx], status: 'pending' };
+  saveLocal(requests);
+
+  return requests[idx];
+}
+
 // ── Book slot (alumni) ────────────────────────────────────────────────────────
 
 export async function bookSlot(requestId, scheduledTime) {
@@ -532,6 +553,7 @@ export default {
   getRequestsForAlumni,
   getRequestsByStudent,
   acceptRequestOnly,
+  promoteRequest,
   bookSlot,
   rescheduleSlot,
   declineRequest,

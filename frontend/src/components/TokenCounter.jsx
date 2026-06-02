@@ -9,7 +9,7 @@ export default function TokenCounter({ studentId, refreshTick }) {
     if (!studentId) return;
     api.get(`/requests/tokens/${studentId}`)
       .then(res => {
-        setTokens(res.data);
+        setTokens(res);
         setLoading(false);
       })
       .catch(err => {

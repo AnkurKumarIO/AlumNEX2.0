@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../lib/prisma');
 const { authenticate, verifyRole } = require('../lib/authMiddleware');
+const { getWeekStart } = require('../lib/timeUtils');
 
 // GET /alumni — return all verified alumni with their profile data
 router.get('/', async (req, res) => {
@@ -17,7 +18,20 @@ router.get('/', async (req, res) => {
         email: true,
         department: true,
         profile_data: true,
+        max_interviews_per_week: true,
         createdAt: true,
+        availability_slots: {
+          where: { is_active: true }
+        },
+        received_requests: {
+          where: {
+            createdAt: { gte: getWeekStart() }
+          },
+          select: {
+            status: true,
+            createdAt: true
+          }
+        }
       },
       orderBy: { createdAt: 'asc' },
     });
