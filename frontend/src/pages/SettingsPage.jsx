@@ -222,6 +222,7 @@ export default function SettingsPage({ role }) {
     passOutYear:  savedProfile.passOutYear  || savedProfile.batchYear || '',
     experience:   savedProfile.experience   || '',
     domain:       savedProfile.domain       || '',
+    sector:       savedProfile.sector       || '',
     // Student setup fields
     projects:           savedProfile.projects           || [{ title: '', desc: '', stack: '', link: '' }],
     targetRoles:        savedProfile.targetRoles        || [],
@@ -248,6 +249,7 @@ export default function SettingsPage({ role }) {
           company: profileData.company || p.company,
           currentTitle: profileData.currentTitle || profileData.jobTitle || profileData.title || p.currentTitle,
           passOutYear: profileData.passOutYear || profileData.batchYear || p.passOutYear,
+          sector: profileData.sector || p.sector,
         };
       });
     }
@@ -354,6 +356,7 @@ export default function SettingsPage({ role }) {
         company:            user?.profile_data?.company      || currentSaved.company      || profile.company      || '',
         currentTitle:       user?.profile_data?.currentTitle || user?.profile_data?.jobTitle || currentSaved.currentTitle || profile.currentTitle || '',
         passOutYear:        user?.profile_data?.passOutYear  || user?.profile_data?.batchYear || currentSaved.passOutYear  || profile.passOutYear  || '',
+        sector:             user?.profile_data?.sector       || currentSaved.sector       || profile.sector       || '',
         experience:         profile.experience   || currentSaved.experience   || '',
         domain:             profile.domain       || currentSaved.domain       || '',
         projects:           profile.projects     || currentSaved.projects     || [],
@@ -413,7 +416,7 @@ export default function SettingsPage({ role }) {
             github: merged.github, portfolio: merged.portfolio, skills: merged.skills,
             cgpa: merged.cgpa, college: merged.college, year: merged.year,
             rollNo: merged.rollNo, company: merged.company, currentTitle: merged.currentTitle,
-            passOutYear: merged.passOutYear, experience: merged.experience, domain: merged.domain,
+            passOutYear: merged.passOutYear, sector: merged.sector, experience: merged.experience, domain: merged.domain,
             projects: merged.projects, targetRoles: merged.targetRoles,
             preferredCompanies: merged.preferredCompanies, openTo: merged.openTo,
             gradMonth: merged.gradMonth, gradYear: merged.gradYear, resumeName: merged.resumeName,
@@ -607,7 +610,7 @@ export default function SettingsPage({ role }) {
               <div style={{ fontSize: '0.78rem', color: '#c7c4d8', lineHeight: 1.5 }}>
                 {isAlumni ? (
                   <>
-                    Verified profile details (such as <strong style={{ color: '#dae2fd' }}>Name, Email, Department, Company, Job Title, and Batch Year</strong>) are managed by your institution's placement office and cannot be changed here. Contact your coordinator if you need to update them.
+                    Verified profile details (such as <strong style={{ color: '#dae2fd' }}>Name, Email, Department, Company, Job Title, Sector, and Batch Year</strong>) are managed by your institution's placement office and cannot be changed here. Contact your coordinator if you need to update them.
                   </>
                 ) : (
                   <>
@@ -737,6 +740,15 @@ export default function SettingsPage({ role }) {
                     value={profile.passOutYear}
                     disabled
                     placeholder="e.g. 2018"
+                    style={{ ...inp, opacity: 0.65, cursor: 'not-allowed' }}
+                  />
+                </div>
+                <div>
+                  <label style={lbl}>Sector</label>
+                  <input
+                    value={profile.sector}
+                    placeholder="e.g. Technology, Finance"
+                    disabled
                     style={{ ...inp, opacity: 0.65, cursor: 'not-allowed' }}
                   />
                 </div>
