@@ -519,8 +519,8 @@ export default function SettingsPage({ role }) {
       api.get(`/alumni/${user.id}/availability`)
         .then(res => {
           setMentorship({
-            maxInterviews: res.data.max_interviews_per_week || 3,
-            slots: res.data.availability || []
+            maxInterviews: res.max_interviews_per_week || 3,
+            slots: res.availability || []
           });
         })
         .catch(err => console.error('Fetch availability error:', err));
