@@ -514,16 +514,22 @@ export default function SettingsPage({ role }) {
   // Mentorship settings state
   const [mentorship, setMentorship] = useState({
     maxInterviews: 3,
-    slots: []
+    slots: [],
+    defaultDuration: 60,
+    defaultBuffer: 15
   });
 
   useEffect(() => {
     if (isAlumni && user?.id) {
       api.get(`/alumni/${user.id}/availability`)
         .then(res => {
+          const slots = res.availability || [];
+          const firstSlot = slots[0];
           setMentorship({
             maxInterviews: res.max_interviews_per_week || 3,
-            slots: res.availability || []
+            slots: slots,
+            defaultDuration: firstSlot?.slot_duration || 60,
+            defaultBuffer: firstSlot?.buffer_time !== undefined ? firstSlot.buffer_time : 15
           });
         })
         .catch(err => console.error('Fetch availability error:', err));
@@ -1026,13 +1032,36 @@ export default function SettingsPage({ role }) {
               </div>
             </div>
 
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
+              <div>
+                <label style={lbl}>Default Meeting Duration</label>
+                <select
+                  value={mentorship.defaultDuration}
+                  onChange={e => setMentorship(m => ({ ...m, defaultDuration: parseInt(e.target.value) }))}
+                  style={inp}
+                >
+                  {[30, 45, 60, 90, 120].map(d => <option key={d} value={d}>{d} minutes</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={lbl}>Default Buffer Time</label>
+                <select
+                  value={mentorship.defaultBuffer}
+                  onChange={e => setMentorship(m => ({ ...m, defaultBuffer: parseInt(e.target.value) }))}
+                  style={inp}
+                >
+                  {[0, 5, 10, 15, 20, 30].map(b => <option key={b} value={b}>{b} minutes</option>)}
+                </select>
+              </div>
+            </div>
+
             <div style={{ marginBottom: '2rem' }}>
               <label style={lbl}>Weekly Availability Windows</label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
                 {mentorship.slots.map((slot, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#171f33', padding: '0.75rem 1rem', borderRadius: 12, border: '1px solid rgba(70,69,85,0.2)' }}>
                     <div style={{ flex: 1, fontSize: '0.875rem', fontWeight: 600, color: '#dae2fd', textTransform: 'capitalize' }}>{slot.day_of_week}</div>
-                    <div style={{ fontSize: '0.875rem', color: '#c7c4d8' }}>{slot.start_time} – {slot.end_time}</div>
+                    <div style={{ fontSize: '0.875rem', color: '#c7c4d8' }}>{slot.start_time} – {slot.end_time} ({slot.slot_duration || 60}m duration, {slot.buffer_time !== undefined ? slot.buffer_time : 15}m buffer)</div>
                     <button
                       onClick={() => setMentorship(m => ({ ...m, slots: m.slots.filter((_, j) => j !== i) }))}
                       style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ffb4ab' }}
@@ -1068,7 +1097,7 @@ export default function SettingsPage({ role }) {
                     const start = document.getElementById('new-slot-start').value;
                     const end = document.getElementById('new-slot-end').value;
                     if (day && start && end) {
-                      setMentorship(m => ({ ...m, slots: [...m.slots, { day_of_week: day, start_time: start, end_time: end, slot_duration: 60 }] }));
+                      setMentorship(m => ({ ...m, slots: [...m.slots, { day_of_week: day, start_time: start, end_time: end, slot_duration: m.defaultDuration, buffer_time: m.defaultBuffer }] }));
                     }
                   }}
                   style={{ ...btnOutline, width: '100%', padding: '0.6rem' }}

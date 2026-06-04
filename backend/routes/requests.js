@@ -168,7 +168,7 @@ router.post('/', authenticate, async (req, res) => {
       include: {
         received_requests: {
           where: {
-            status: { in: ['PENDING', 'ACCEPTED', 'SLOT_BOOKED'] },
+            status: { in: ['PENDING', 'ACCEPTED', 'SLOT_BOOKED', 'SLOT_REQUESTED'] },
             createdAt: { gte: weekStart }
           }
         }
@@ -178,7 +178,7 @@ router.post('/', authenticate, async (req, res) => {
     if (!alumni) return res.status(404).json({ error: 'Alumni not found.' });
 
     const maxInterviews = alumni.max_interviews_per_week || 3;
-    const acceptedCount = alumni.received_requests.filter(r => ['ACCEPTED', 'SLOT_BOOKED'].includes(r.status)).length;
+    const acceptedCount = alumni.received_requests.filter(r => ['ACCEPTED', 'SLOT_BOOKED', 'SLOT_REQUESTED'].includes(r.status)).length;
     const pendingCount = alumni.received_requests.filter(r => r.status === 'PENDING').length;
 
     // Phase 8: Overflow Buffer = 2x capacity
@@ -190,7 +190,7 @@ router.post('/', authenticate, async (req, res) => {
       });
     }
 
-    const status = acceptedCount >= maxInterviews ? 'WAITING' : (slotStart ? 'SLOT_BOOKED' : 'PENDING');
+    const status = acceptedCount >= maxInterviews ? 'WAITING' : (slotStart ? 'SLOT_REQUESTED' : 'PENDING');
 
     const request = await prisma.interviewRequest.create({
       data: {
@@ -211,8 +211,8 @@ router.post('/', authenticate, async (req, res) => {
       data: { tokens_used: { increment: 1 } }
     });
 
-    // 5. If slot was booked, create BookedSlot and generate Meet link
-    if (slotStart && slotEnd && status === 'SLOT_BOOKED') {
+    // 5. If slot was requested, create provisional BookedSlot hold — NO meet link yet
+    if (slotStart && slotEnd && status === 'SLOT_REQUESTED') {
       await prisma.bookedSlot.create({
         data: {
           request_id: request.request_id,
@@ -223,71 +223,47 @@ router.post('/', authenticate, async (req, res) => {
         }
       });
 
-      // Generate meet link
-      let meetLink = null;
-      if (request.alumni?.google_refresh_token) {
-        try {
-          const endTime = new Date(new Date(slotStart).getTime() + 60 * 60 * 1000).toISOString();
-          meetLink = await createGoogleMeetLink(
-            request.alumni.google_refresh_token,
-            request.request_id,
-            `AlumNEX Interview — ${request.alumni.name || 'Alumni'}`,
-            slotStart,
-            endTime
-          );
-        } catch (err) {
-          console.error(`[Requests] Google Meet creation failed:`, err.message);
-        }
-      }
-      if (!meetLink && process.env.GOOGLE_REFRESH_TOKEN) {
-        try {
-          const endTime = new Date(new Date(slotStart).getTime() + 60 * 60 * 1000).toISOString();
-          meetLink = await createGoogleMeetLink(
-            process.env.GOOGLE_REFRESH_TOKEN,
-            request.request_id,
-            `AlumNEX Interview`,
-            slotStart,
-            endTime
-          );
-        } catch (err) {
-          console.error(`[Requests] Platform Google Meet creation failed:`, err.message);
-        }
-      }
-      if (!meetLink) {
-        meetLink = generateJitsiFallback(request.request_id);
-      }
-
-      await prisma.interviewRequest.update({
-        where: { request_id: request.request_id },
-        data: { room_id: meetLink }
-      });
-      request.room_id = meetLink;
-
-      // Notify slot booked
+      // Notify alumni: student requested this specific slot — please accept/decline
       const formatted = formatScheduledTimeIST(new Date(slotStart));
-      const notifications = [
-        {
-          user_id: studentId,
-          type: 'SLOT_BOOKED',
-          title: 'Interview Slot Confirmed! 📅',
-          message: `Your interview with ${request.alumni?.name || 'the alumni'} is scheduled for ${formatted}. Join: ${meetLink}`,
-          request_id: request.request_id,
-          room_id: meetLink
-        },
-        {
+      const alumniNotif = await prisma.notification.create({
+        data: {
           user_id: alumniId,
-          type: 'SLOT_BOOKED_ALUMNI',
-          title: 'Interview Slot Confirmed! 📅',
-          message: `Your interview with ${request.student?.name || 'the student'} is scheduled for ${formatted}. Join: ${meetLink}`,
+          type: 'SLOT_REQUESTED',
+          title: 'Slot Request — Please Confirm 🕐',
+          message: `${request.student?.name || 'A student'} has requested the ${formatted} slot for "${topic || 'Mock Interview'}". Please accept or decline.`,
           request_id: request.request_id,
-          room_id: meetLink
         }
-      ];
+      });
+
+      // Notify student: pending alumni confirmation
+      const studentNotif = await prisma.notification.create({
+        data: {
+          user_id: studentId,
+          type: 'SLOT_REQUESTED',
+          title: 'Slot Reserved — Awaiting Confirmation 🕐',
+          message: `Your request for the ${formatted} slot with ${request.alumni?.name || 'the alumni'} has been sent. Please wait for alumni confirmation.`,
+          request_id: request.request_id,
+        }
+      });
 
       const io = req.app.get('io');
-      for (const n of notifications) {
-        const created = await prisma.notification.create({ data: n });
-        if (io) io.of('/notifications').to(n.user_id).emit('notification', created);
+      if (io) {
+        io.of('/notifications').to(alumniId).emit('notification', alumniNotif);
+        io.of('/notifications').to(alumniId).emit('new_request', {
+          id:            request.request_id,
+          studentName:   request.student?.name || '',
+          studentId:     request.student_id,
+          alumniName:    request.alumni?.name || '',
+          alumniId:      request.alumni_id,
+          topic:         request.topic,
+          message:       request.message || '',
+          status:        'slot_requested',
+          scheduledTime: slotStart,
+          roomId:        null,
+          createdAt:     request.createdAt,
+          studentProfile: parseJsonField(request.student_profile_snapshot) || parseJsonField(request.student?.profile_data),
+        });
+        io.of('/notifications').to(studentId).emit('notification', studentNotif);
       }
     } else if (status === 'PENDING') {
       // Notify alumni of new request
@@ -335,7 +311,43 @@ router.patch('/:id', async (req, res) => {
     const { status, scheduledTime, roomId } = req.body;
 
     const updates = { status };
-    if (scheduledTime) {
+
+    // Handle SLOT_CONFIRMED: alumni confirming a SLOT_REQUESTED → becomes SLOT_BOOKED
+    if (status === 'SLOT_CONFIRMED') {
+      updates.status = 'SLOT_BOOKED';
+      const existingReq = await prisma.interviewRequest.findUnique({
+        where: { request_id: id },
+        include: { alumni: { select: { google_refresh_token: true, name: true } }, student: { select: { name: true } } }
+      });
+      if (existingReq) {
+        const confirmTime = scheduledTime || existingReq.scheduled_time;
+        if (confirmTime) {
+          updates.scheduled_time = new Date(confirmTime);
+          let meetLink = null;
+          if (existingReq.alumni?.google_refresh_token) {
+            try {
+              const endTime = new Date(new Date(confirmTime).getTime() + 60 * 60 * 1000).toISOString();
+              meetLink = await createGoogleMeetLink(
+                existingReq.alumni.google_refresh_token, id,
+                `AlumNEX Interview — ${existingReq.alumni.name || 'Alumni'}`,
+                new Date(confirmTime).toISOString(), endTime
+              );
+            } catch (err) { console.error('[SLOT_CONFIRMED] Google Meet failed:', err.message); }
+          }
+          if (!meetLink && process.env.GOOGLE_REFRESH_TOKEN) {
+            try {
+              const endTime = new Date(new Date(confirmTime).getTime() + 60 * 60 * 1000).toISOString();
+              meetLink = await createGoogleMeetLink(
+                process.env.GOOGLE_REFRESH_TOKEN, id, 'AlumNEX Interview',
+                new Date(confirmTime).toISOString(), endTime
+              );
+            } catch (err) { console.error('[SLOT_CONFIRMED] Platform Meet failed:', err.message); }
+          }
+          if (!meetLink) meetLink = generateJitsiFallback(id);
+          updates.room_id = meetLink;
+        }
+      }
+    } else if (scheduledTime) {
       updates.scheduled_time = new Date(scheduledTime);
 
       // If a real meet URL was already provided by the client, use it.
@@ -413,8 +425,8 @@ router.patch('/:id', async (req, res) => {
         request_id: id,
         room_id: request.room_id || null,
       });
-    } else if (status === 'SLOT_BOOKED' || status === 'LIVE') {
-      const formatted = formatScheduledTimeIST(scheduledTime || new Date());
+    } else if (status === 'SLOT_BOOKED' || status === 'LIVE' || status === 'SLOT_CONFIRMED') {
+      const formatted = formatScheduledTimeIST(scheduledTime || request.scheduled_time || new Date());
       const meetLinkStored = request.room_id || '';
       const meetInfo = meetLinkStored.startsWith('http') ? ` Join: ${meetLinkStored}` : '';
       const isLive = status === 'LIVE';
@@ -463,6 +475,9 @@ router.patch('/:id', async (req, res) => {
         console.warn('[Notify TNP] Could not find TNP user:', tnpErr.message);
       }
     } else if (status === 'DECLINED') {
+      // Delete provisional BookedSlot if exists (re-opens slot for other students)
+      try { await prisma.bookedSlot.deleteMany({ where: { request_id: id } }); } catch (e) {}
+
       // Notify student of decline
       notificationsToCreate.push({
         user_id: request.student_id,

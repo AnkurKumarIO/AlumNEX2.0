@@ -117,6 +117,7 @@ model AlumniAvailability {
   start_time      String   // e.g. "17:00"
   end_time        String   // e.g. "19:00"
   slot_duration   Int      @default(60)  // minutes per interview
+  buffer_time     Int      @default(15)  // buffer minutes between meetings
   is_active       Boolean  @default(true)
   created_at      DateTime @default(now())
 

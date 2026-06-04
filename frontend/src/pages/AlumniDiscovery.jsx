@@ -159,7 +159,12 @@ function BookModal({ alumni, studentName, onClose, onSent }) {
           <div style={{ textAlign: 'center', padding: '2rem 0' }}>
             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>✅</div>
             <h3 style={{ fontWeight: 700, color: '#4edea3', marginBottom: 8 }}>Request Sent!</h3>
-            <p style={{ fontSize: '0.875rem', color: '#c7c4d8' }}>Your request has been sent to <strong style={{ color: '#dae2fd' }}>{alumni.name}</strong>.<br />You'll see the scheduled time once they accept.</p>
+            <p style={{ fontSize: '0.875rem', color: '#c7c4d8' }}>
+              {selectedSlot 
+                ? <>Your slot request has been sent! Wait for alumni confirmation.</>
+                : <>Your request has been sent to <strong style={{ color: '#dae2fd' }}>{alumni.name}</strong>.<br />You'll see the scheduled time once they accept.</>
+              }
+            </p>
           </div>
         ) : (
           <>
@@ -296,6 +301,13 @@ function BookButton({ alumni, studentName, userId, onBook, passedRequests }) {
     <div style={{ width: '100%', padding: '0.6rem', background: 'rgba(255,185,95,0.1)', border: '1px solid rgba(255,185,95,0.25)', borderRadius: 10, textAlign: 'center' }}>
       <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#ffb95f', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 }}>⏳ Request Pending</div>
       <div style={{ fontSize: '0.7rem', color: '#c7c4d8' }}>Waiting for {alumni.name.split(' ')[0]} to accept</div>
+    </div>
+  );
+
+  if (status === 'slot_requested') return (
+    <div style={{ width: '100%', padding: '0.6rem', background: 'rgba(255,185,95,0.1)', border: '1px solid rgba(255,185,95,0.25)', borderRadius: 10, textAlign: 'center' }}>
+      <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#ffb95f', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 }}>⏳ Pending Confirmation</div>
+      <div style={{ fontSize: '0.7rem', color: '#c7c4d8' }}>Waiting for {alumni.name.split(' ')[0]} to confirm slot</div>
     </div>
   );
 
