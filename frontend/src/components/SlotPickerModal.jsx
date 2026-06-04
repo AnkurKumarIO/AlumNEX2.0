@@ -43,8 +43,8 @@ export default function SlotPickerModal({ alumni, onClose, onBooked }) {
         const end = new Date(date);
         end.setHours(endH, endM, 0, 0);
 
-        // Add 15 min buffer to slot duration
-        const durationWithBuffer = avail.slot_duration + 15;
+        // Add buffer time to slot duration
+        const durationWithBuffer = avail.slot_duration + (avail.buffer_time !== undefined && avail.buffer_time !== null ? avail.buffer_time : 15);
 
         while (current.getTime() + avail.slot_duration * 60000 <= end.getTime() + 30 * 60000) { // allow slight extension
           const slotEnd = new Date(current.getTime() + avail.slot_duration * 60000);
@@ -156,7 +156,7 @@ export default function SlotPickerModal({ alumni, onClose, onBooked }) {
               cursor: (!selectedSlot || booking) ? 'not-allowed' : 'pointer'
             }}
           >
-            {booking ? 'Confirming...' : 'Confirm Slot'}
+            {booking ? 'Confirming...' : 'Confirm Slot Request'}
           </button>
         </div>
       </div>

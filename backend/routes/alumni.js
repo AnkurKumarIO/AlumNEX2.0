@@ -69,7 +69,7 @@ router.post('/:id/availability', authenticate, verifyRole('ALUMNI'), async (req,
   try {
     const { id } = req.params;
     if (req.user.userId !== id) return res.status(403).json({ error: 'Unauthorized' });
-    const { slots } = req.body; // Array of { day_of_week, start_time, end_time, slot_duration }
+    const { slots } = req.body; // Array of { day_of_week, start_time, end_time, slot_duration, buffer_time }
 
     // Clear existing and replace (simple approach for MVP)
     await prisma.alumniAvailability.deleteMany({ where: { alumni_id: id } });
@@ -80,7 +80,8 @@ router.post('/:id/availability', authenticate, verifyRole('ALUMNI'), async (req,
         day_of_week: s.day_of_week.toLowerCase(),
         start_time: s.start_time,
         end_time: s.end_time,
-        slot_duration: s.slot_duration || 60
+        slot_duration: s.slot_duration || 60,
+        buffer_time: s.buffer_time !== undefined ? s.buffer_time : 15,
       }))
     });
 
