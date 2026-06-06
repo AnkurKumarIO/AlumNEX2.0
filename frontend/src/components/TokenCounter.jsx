@@ -57,7 +57,7 @@ export default function TokenCounter({ studentId, refreshTick }) {
               height: 5,
               borderRadius: 2.5,
               background: active ? 'linear-gradient(90deg, #4f46e5, #c3c0ff)' : 'rgba(70, 69, 85, 0.3)',
-              boxShadow: active ? '0 0 8px rgba(195, 192, 255, 0.4)' : 'none',
+              boxShadow: 'none',
               transition: 'all 0.3s ease'
             }} />
           );
