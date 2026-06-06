@@ -230,9 +230,9 @@ function AvailabilityBadge({ availability, maxInterviews, acceptedThisWeek }) {
 
   if (!hasSlots) {
     return (
-      <div style={{ background: 'rgba(70,69,85,0.15)', border: '1px solid rgba(70,69,85,0.3)', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.7rem', color: '#c7c4d8', display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>event_unavailable</span>
-        Not available this week
+      <div style={{ background: 'rgba(70,69,85,0.15)', border: '1px solid rgba(70,69,85,0.3)', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.7rem', color: '#c7c4d8', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, width: 'fit-content' }}>
+        <span className="material-symbols-outlined" style={{ fontSize: 14, flexShrink: 0 }}>calendar_month</span>
+        <span>Not available this week</span>
       </div>
     );
   }
@@ -244,9 +244,9 @@ function AvailabilityBadge({ availability, maxInterviews, acceptedThisWeek }) {
 
   if (isFullyBooked) {
     return (
-      <div style={{ background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.3)', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.7rem', color: '#ffb4ab', display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>event_busy</span>
-        Fully Booked This Week
+      <div style={{ background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.3)', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.7rem', color: '#ffb4ab', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, width: 'fit-content' }}>
+        <span className="material-symbols-outlined" style={{ fontSize: 14, flexShrink: 0 }}>block</span>
+        <span>Fully Booked This Week</span>
       </div>
     );
   }
@@ -257,9 +257,9 @@ function AvailabilityBadge({ availability, maxInterviews, acceptedThisWeek }) {
   const slotsText = cap === 999 ? '' : ` • ${slotsLeft} slot${slotsLeft !== 1 ? 's' : ''} left`;
 
   return (
-    <div style={{ background: 'rgba(78,222,163,0.08)', border: '1px solid rgba(78,222,163,0.2)', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.7rem', color: '#4edea3', display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-      <span className="material-symbols-outlined" style={{ fontSize: 14 }}>event_available</span>
-      {todayAvail ? `Available Today${slotsText}` : `Available this week${slotsText}`}
+    <div style={{ background: 'rgba(78,222,163,0.08)', border: '1px solid rgba(78,222,163,0.2)', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.7rem', color: '#4edea3', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, width: 'fit-content' }}>
+      <span className="material-symbols-outlined" style={{ fontSize: 14, flexShrink: 0 }}>check_circle</span>
+      <span>{todayAvail ? `Available Today${slotsText}` : `Available this week${slotsText}`}</span>
     </div>
   );
 }
