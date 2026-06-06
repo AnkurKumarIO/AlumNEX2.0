@@ -274,6 +274,28 @@ function BookButton({ alumni, studentName, userId, onBook, passedRequests }) {
     return subscribeRealtimeSync(() => setTick(t => t + 1));
   }, []);
 
+  // Block booking if alumni has no availability slots configured
+  const hasSlots = Array.isArray(alumni.availability) && alumni.availability.length > 0;
+  const cap = alumni.maxInterviews ?? 999;
+  const isFullyBooked = cap !== 999 && Math.max(0, cap - (alumni.acceptedThisWeek || 0)) === 0;
+
+  if (!hasSlots || isFullyBooked) {
+    return (
+      <div style={{
+        width: '100%', padding: '0.6rem',
+        background: 'rgba(70,69,85,0.1)',
+        border: '1px solid rgba(70,69,85,0.25)',
+        borderRadius: 10, fontSize: '0.75rem', fontWeight: 700,
+        textTransform: 'uppercase', letterSpacing: '0.08em',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+        color: '#6b6880', cursor: 'not-allowed',
+      }}>
+        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>do_not_disturb</span>
+        {isFullyBooked ? 'Fully Booked This Week' : 'Not Available This Week'}
+      </div>
+    );
+  }
+
   // Use passedRequests if available (synced from Supabase via Dashboard), else fallback to localStorage
   const myRequests = passedRequests || getRequestsByStudent(studentName);
   const existing = myRequests
