@@ -4,9 +4,9 @@ import { sendRequest, getRequestsByStudent } from '../interviewRequests';
 import { getAllAlumni } from '../lib/db';
 import { api } from '../api';
 import { subscribeRealtimeSync } from '../lib/realtimeSync';
-import { supabase } from '../lib/supabaseClient';
 import SlotPickerModal from '../components/SlotPickerModal';
-import TokenCounter from '../components/TokenCounter';
+import { supabase } from '../lib/supabaseClient';
+
 
 const TOPICS = [
   'Mock Interview – General','Mock Interview – System Design','Mock Interview – Frontend',
@@ -463,12 +463,7 @@ export default function AlumniDiscovery({ searchQuery = '', myRequests = null })
     <div key={refreshKey}>
       {bookingAlumni && <BookModal alumni={bookingAlumni} studentName={studentName} onClose={() => setBookingAlumni(null)} onSent={() => setRefreshKey(k => k + 1)} />}
 
-      {/* Token Counter */}
-      {user?.role === 'STUDENT' && (
-        <div style={{ maxWidth: 300, marginBottom: '1.25rem' }}>
-          <TokenCounter studentId={user?.id} refreshTick={refreshKey} />
-        </div>
-      )}
+
 
       {/* ── Filter bar ── */}
       <div style={{ background: '#131b2e', borderRadius: 14, padding: '1.25rem 1.5rem', marginBottom: '1.5rem', border: '1px solid rgba(70,69,85,0.15)' }}>
