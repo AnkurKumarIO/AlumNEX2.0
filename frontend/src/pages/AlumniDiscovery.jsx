@@ -19,7 +19,7 @@ function toDisplay(u, ratingsMap = {}) {
   const company = u.company || p.company || 'Alumni';
   const batch_year = u.batch_year || p.batchYear || p.batch_year || null;
   const yrs = batch_year ? new Date().getFullYear() - batch_year : null;
-  const expRange = !yrs ? '0-2 Years' : yrs <= 2 ? '0-2 Years' : yrs <= 5 ? '3-5 Years' : yrs <= 10 ? '6-10 Years' : '10+ Years';
+  const expRange = yrs === null ? '' : yrs <= 2 ? '0-2 Years' : yrs <= 5 ? '3-5 Years' : yrs <= 10 ? '6-10 Years' : '10+ Years';
   const skills = p.skills || [];
   const domain = skills.length > 0 ? skills[0] : (u.department || 'Engineering');
   const sector = p.sector || '';
@@ -423,7 +423,9 @@ export default function AlumniDiscovery({ searchQuery = '', myRequests = null })
 
   // Build filter options dynamically from actual data
   const departments = [...new Set(allAlumni.map(a => a.department).filter(Boolean))].sort();
-  const expRanges = ['0-2 Years', '3-5 Years', '6-10 Years', '10+ Years'];
+  const expRanges = ['0-2 Years', '3-5 Years', '6-10 Years', '10+ Years'].filter(r =>
+    allAlumni.some(a => a.expRange === r)
+  );
   const sectors = [...new Set(allAlumni.map(a => a.sector).filter(Boolean))].sort();
 
   const q = searchQuery.toLowerCase().trim();
@@ -481,12 +483,14 @@ export default function AlumniDiscovery({ searchQuery = '', myRequests = null })
             </div>
           )}
           {/* Experience */}
-          <div>
-            <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#c7c4d8', marginBottom: 8 }}>Experience</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {expRanges.map(e => <button key={e} onClick={() => setExpFilter(expFilter === e ? '' : e)} style={selStyle(expFilter === e)}>{e}</button>)}
+          {expRanges.length > 0 && (
+            <div>
+              <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#c7c4d8', marginBottom: 8 }}>Experience</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {expRanges.map(e => <button key={e} onClick={() => setExpFilter(expFilter === e ? '' : e)} style={selStyle(expFilter === e)}>{e}</button>)}
+              </div>
             </div>
-          </div>
+          )}
           {/* Sector */}
           {sectors.length > 0 && (
             <div>
@@ -531,7 +535,8 @@ export default function AlumniDiscovery({ searchQuery = '', myRequests = null })
                   <div style={{ fontSize: '0.78rem', color: '#c7c4d8' }}>{a.title}</div>
                   <div style={{ fontSize: '0.72rem', color: a.scoreColor, fontWeight: 600, marginTop: 1 }}>
                     {a.company}
-                    {a.sector ? ` (${a.sector})` : ''}
+                    {a.department ? ` • ${a.department}` : ''}
+                    {a.sector ? ` • ${a.sector}` : ''}
                     {a.experience ? ` • ${a.experience}` : ''}
                   </div>
                 </div>
