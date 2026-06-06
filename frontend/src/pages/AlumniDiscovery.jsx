@@ -39,8 +39,8 @@ function toDisplay(u, ratingsMap = {}) {
   const totalSessions = ratingData?.totalSessions || 0;
   
   const title = p.title || p.jobTitle || (company ? `Alumni at ${company}` : 'Alumni');
-  const availability = u.availability_slots || [];
-  const maxInterviews = u.max_interviews_per_week || 3;
+  const availability = Array.isArray(u.availability_slots) ? u.availability_slots : [];
+  const maxInterviews = u.max_interviews_per_week ?? null; // null means alumni hasn't configured yet
   const acceptedThisWeek = (u.received_requests || []).filter(r =>
     ['ACCEPTED', 'SLOT_BOOKED'].includes(r.status?.toUpperCase())
   ).length;
@@ -225,7 +225,22 @@ function BookModal({ alumni, studentName, onClose, onSent }) {
 
 // ── Availability Badge ───────────────────────────────────────────────────────
 function AvailabilityBadge({ availability, maxInterviews, acceptedThisWeek }) {
-  const isFullyBooked = acceptedThisWeek >= maxInterviews;
+  // No slots configured → alumni hasn't set their availability yet
+  const hasSlots = Array.isArray(availability) && availability.length > 0;
+
+  if (!hasSlots) {
+    return (
+      <div style={{ background: 'rgba(70,69,85,0.15)', border: '1px solid rgba(70,69,85,0.3)', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.7rem', color: '#c7c4d8', display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>event_unavailable</span>
+        Not available this week
+      </div>
+    );
+  }
+
+  // maxInterviews null → alumni set slots but didn't set a cap; treat as unlimited
+  const cap = maxInterviews ?? 999;
+  const slotsLeft = Math.max(0, cap - acceptedThisWeek);
+  const isFullyBooked = cap !== 999 && slotsLeft === 0;
 
   if (isFullyBooked) {
     return (
@@ -239,11 +254,12 @@ function AvailabilityBadge({ availability, maxInterviews, acceptedThisWeek }) {
   const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
   const today = days[new Date().getDay()];
   const todayAvail = availability.find(a => a.day_of_week === today);
+  const slotsText = cap === 999 ? '' : ` • ${slotsLeft} slot${slotsLeft !== 1 ? 's' : ''} left`;
 
   return (
     <div style={{ background: 'rgba(78,222,163,0.08)', border: '1px solid rgba(78,222,163,0.2)', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.7rem', color: '#4edea3', display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
       <span className="material-symbols-outlined" style={{ fontSize: 14 }}>event_available</span>
-      {todayAvail ? `Available Today • ${maxInterviews - acceptedThisWeek} slots left` : `Available this week • ${maxInterviews - acceptedThisWeek} slots left`}
+      {todayAvail ? `Available Today${slotsText}` : `Available this week${slotsText}`}
     </div>
   );
 }
@@ -407,18 +423,38 @@ export default function AlumniDiscovery({ searchQuery = '', myRequests = null })
 
   useEffect(() => {
     // Fetch alumni list and ratings in parallel
-    Promise.all([
-      getAllAlumni(),
-      api.getAlumniRatings().catch(() => ({})),
-    ]).then(([data, ratings]) => {
-      const ratingsMap = ratings || {};
-      if (Array.isArray(data) && data.length > 0) {
-        setAllAlumni(data.map(u => toDisplay(u, ratingsMap)));
-      } else {
-        setAllAlumni(MOCK.map(u => toDisplay(u, ratingsMap)));
-      }
-      setLoading(false);
-    }).catch(() => { setAllAlumni(MOCK.map(u => toDisplay(u, {}))); setLoading(false); });
+    const fetchAlumni = () => {
+      Promise.all([
+        getAllAlumni(),
+        api.getAlumniRatings().catch(() => ({})),
+      ]).then(([data, ratings]) => {
+        const ratingsMap = ratings || {};
+        if (Array.isArray(data) && data.length > 0) {
+          setAllAlumni(data.map(u => toDisplay(u, ratingsMap)));
+        } else {
+          setAllAlumni(MOCK.map(u => toDisplay(u, ratingsMap)));
+        }
+        setLoading(false);
+      }).catch(() => { setAllAlumni(MOCK.map(u => toDisplay(u, {}))); setLoading(false); });
+    };
+
+    fetchAlumni();
+
+    // Re-fetch whenever any alumni updates their availability slots
+    const channel = supabase
+      .channel('alumni-availability-changes')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'alumni_availability' },
+        () => fetchAlumni()
+      )
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'users',
+          filter: 'role=eq.ALUMNI' },
+        () => fetchAlumni()
+      )
+      .subscribe();
+
+    return () => { try { supabase.removeChannel(channel); } catch {} };
   }, []);
 
   // Build filter options dynamically from actual data
