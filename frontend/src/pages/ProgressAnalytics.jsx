@@ -178,65 +178,124 @@ export default function ProgressAnalytics() {
           )}
         </div>
 
-        <div style={{ background: '#222a3d', borderRadius: 12, padding: '1.5rem', border: '1px solid rgba(70,69,85,0.1)' }}>
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1.5rem' }}>Past Sessions</h2>
+        <div style={{ background: '#131b2e', borderRadius: 12, padding: '1.5rem', border: '1px solid rgba(195,192,255,0.08)' }}>
+          <h2 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#c3c0ff' }}>history</span>
+            Recent Sessions
+          </h2>
           {sessions.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '2rem 0', color: '#c7c4d8', opacity: 0.5 }}>
-              <span className="material-symbols-outlined" style={{ fontSize: 40, display: 'block', marginBottom: 8 }}>videocam_off</span>
-              <p style={{ fontSize: '0.8rem' }}>No sessions yet</p>
+              <span className="material-symbols-outlined" style={{ fontSize: 36, display: 'block', marginBottom: 8 }}>videocam_off</span>
+              <p style={{ fontSize: '0.75rem' }}>No sessions yet</p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {sessions.map(s => {
+              {sessions.slice(0, 3).map(s => {
                 const peerName = myRole === 'STUDENT' ? s.alumni_name : s.student_name;
                 const ratingReceived = myRole === 'STUDENT' ? s.alumni_rating : s.student_rating;
-                const feedbackReceived = myRole === 'STUDENT' ? s.alumni_feedback : s.student_feedback;
-                const ratingGiven = myRole === 'STUDENT' ? s.student_rating : s.alumni_rating;
-                const isExpanded = expanded === s.id;
                 return (
-                  <div key={s.id} style={{ background: isExpanded ? '#171f33' : '#131b2e', borderRadius: 12, overflow: 'hidden', border: isExpanded ? '1px solid rgba(195,192,255,0.2)' : '1px solid transparent' }}>
-                    <button onClick={() => setExpanded(isExpanded ? null : s.id)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', background: 'none', border: 'none', cursor: 'pointer', color: '#dae2fd' }}>
-                      <div style={{ textAlign: 'left' }}>
-                        <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{peerName || 'Unknown'}</div>
-                        <div style={{ fontSize: '0.65rem', color: '#c7c4d8', marginTop: 2 }}>{s.topic || 'Mock Interview'}</div>
-                        <div style={{ fontSize: '0.6rem', color: 'rgba(199,196,216,0.4)', marginTop: 2 }}>
-                          {new Date(s.createdAt).toLocaleDateString('en-US', {  month: 'short', day: 'numeric', year: 'numeric' })}
-                        </div>
+                  <div key={s.id} style={{ background: '#171f33', padding: '0.875rem 1rem', borderRadius: 10, border: '1px solid rgba(195,192,255,0.05)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: '0.8rem', color: '#dae2fd', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{peerName || 'Unknown'}</div>
+                        <div style={{ fontSize: '0.68rem', color: '#c7c4d8', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.topic || 'Mock Interview'}</div>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        {ratingReceived && <span style={{ color: '#ffb95f', fontWeight: 700, fontSize: '0.85rem' }}>{'★'.repeat(ratingReceived)}</span>}
-                        <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#c7c4d8' }}>{isExpanded ? 'expand_less' : 'expand_more'}</span>
-                      </div>
-                    </button>
-                    {isExpanded && (
-                      <div style={{ padding: '0 1rem 1rem' }}>
-                        {ratingReceived && (
-                          <div style={{ background: 'rgba(255,185,95,0.06)', border: '1px solid rgba(255,185,95,0.15)', borderRadius: 10, padding: '0.75rem', marginBottom: 8 }}>
-                            <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#ffb95f', marginBottom: 4 }}>Rating Received</div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <span style={{ fontSize: '1.25rem', fontWeight: 900, color: '#ffb95f' }}>{ratingReceived}/5</span>
-                              <span style={{ color: '#ffb95f' }}>{'★'.repeat(ratingReceived)}{'☆'.repeat(5 - ratingReceived)}</span>
-                            </div>
-                            {feedbackReceived && <p style={{ fontSize: '0.75rem', color: '#c7c4d8', fontStyle: 'italic', marginTop: 6, lineHeight: 1.5 }}>"{feedbackReceived}"</p>}
-                          </div>
-                        )}
-                        {ratingGiven && (
-                          <div style={{ background: 'rgba(195,192,255,0.06)', border: '1px solid rgba(195,192,255,0.15)', borderRadius: 10, padding: '0.75rem' }}>
-                            <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c3c0ff', marginBottom: 4 }}>Your Rating</div>
-                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#c3c0ff' }}>{ratingGiven}/5 ★</span>
-                          </div>
-                        )}
-                        {!ratingReceived && !ratingGiven && (
-                          <p style={{ fontSize: '0.75rem', color: '#c7c4d8', opacity: 0.5 }}>No feedback exchanged yet for this session.</p>
-                        )}
-                      </div>
-                    )}
+                      {ratingReceived ? (
+                        <span style={{ color: '#ffb95f', fontWeight: 700, fontSize: '0.72rem', background: 'rgba(255,185,95,0.08)', padding: '2px 6px', borderRadius: 6, flexShrink: 0, marginLeft: 8 }}>
+                          {ratingReceived} ★
+                        </span>
+                      ) : (
+                        <span style={{ color: 'rgba(199,196,216,0.4)', fontSize: '0.65rem', flexShrink: 0, marginLeft: 8 }}>Pending</span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: '0.6rem', color: 'rgba(199,196,216,0.4)', marginTop: 8 }}>
+                      {new Date(s.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </div>
                   </div>
                 );
               })}
             </div>
           )}
         </div>
+      </div>
+
+      {/* Bottom: Complete Past Sessions (Horizontal Grid Layout) */}
+      <div style={{ background: '#131b2e', borderRadius: 12, padding: '2rem', border: '1px solid rgba(70,69,85,0.1)' }}>
+        <h2 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 22, color: '#4edea3' }}>verified_user</span>
+          Complete Past Sessions
+        </h2>
+        
+        {sessions.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '3rem 0', color: '#c7c4d8', opacity: 0.5 }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 48, display: 'block', marginBottom: 12 }}>videocam_off</span>
+            <p style={{ fontSize: '0.875rem' }}>No past sessions recorded yet</p>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.25rem' }}>
+            {sessions.map(s => {
+              const peerName = myRole === 'STUDENT' ? s.alumni_name : s.student_name;
+              const ratingReceived = myRole === 'STUDENT' ? s.alumni_rating : s.student_rating;
+              const feedbackReceived = myRole === 'STUDENT' ? s.alumni_feedback : s.student_feedback;
+              const ratingGiven = myRole === 'STUDENT' ? s.student_rating : s.alumni_rating;
+              
+              return (
+                <div key={s.id} style={{ 
+                  background: '#171f33', 
+                  borderRadius: 14, 
+                  border: '1px solid rgba(195,192,255,0.05)',
+                  transition: 'all 0.2s ease',
+                  padding: '1.25rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 12
+                }}
+                onMouseEnter={e => { e.currentTarget.style.border = '1px solid rgba(195,192,255,0.15)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.3)'; }}
+                onMouseLeave={e => { e.currentTarget.style.border = '1px solid rgba(195,192,255,0.05)'; e.currentTarget.style.boxShadow = 'none'; }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                      <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg, #222a3d, #2d3449)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: '#c3c0ff', fontSize: '0.85rem', flexShrink: 0 }}>
+                        {peerName?.[0]?.toUpperCase() || '?'}
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#dae2fd', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{peerName || 'Unknown'}</div>
+                        <div style={{ fontSize: '0.68rem', color: '#c7c4d8', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.topic || 'Mock Interview'}</div>
+                      </div>
+                    </div>
+                    
+                    {ratingReceived ? (
+                      <span style={{ color: '#ffb95f', fontWeight: 800, fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: 2, background: 'rgba(255,185,95,0.08)', padding: '3px 8px', borderRadius: 6, flexShrink: 0 }}>
+                        {ratingReceived} <span className="material-symbols-outlined" style={{ fontSize: 12, fontVariationSettings: "'FILL' 1" }}>star</span>
+                      </span>
+                    ) : (
+                      <span style={{ color: 'rgba(199,196,216,0.4)', fontSize: '0.65rem', flexShrink: 0 }}>Pending</span>
+                    )}
+                  </div>
+                  
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.68rem', color: 'rgba(199,196,216,0.5)', borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: 8 }}>
+                    <span>{new Date(s.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                    <span>{s.duration_minutes ? `${s.duration_minutes} mins` : 'Completed'}</span>
+                  </div>
+
+                  {feedbackReceived && (
+                    <div style={{ background: 'rgba(255,185,95,0.03)', border: '1px solid rgba(255,185,95,0.08)', borderRadius: 10, padding: '0.75rem', marginTop: 4 }}>
+                      <div style={{ fontSize: '0.58rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#ffb95f', marginBottom: 4 }}>Feedback Received</div>
+                      <p style={{ fontSize: '0.72rem', color: '#c7c4d8', fontStyle: 'italic', margin: 0, lineHeight: 1.4 }}>"{feedbackReceived}"</p>
+                    </div>
+                  )}
+
+                  {ratingGiven && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.68rem', color: '#c3c0ff', background: 'rgba(195,192,255,0.04)', padding: '6px 10px', borderRadius: 8, marginTop: 'auto' }}>
+                      <span>Your Rating:</span>
+                      <strong style={{ display: 'flex', alignItems: 'center', gap: 2 }}>{ratingGiven} ★</strong>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
