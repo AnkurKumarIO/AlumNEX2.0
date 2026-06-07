@@ -182,6 +182,38 @@ async function weeklyReset() {
   }
 }
 
+/**
+ * Deletes AlumniAvailability records for days that have already passed
+ * in the current week. Runs once daily at midnight.
+ *
+ * e.g. if today is Wednesday, any slots set for monday or tuesday this
+ * week are stale — delete them so they don't roll over to next week.
+ */
+async function clearExpiredAvailability() {
+  try {
+    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const todayIndex = new Date().getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+
+    // All days strictly before today in the week are expired
+    const expiredDays = days.filter((_, i) => i < todayIndex);
+
+    if (expiredDays.length === 0) {
+      // It's Sunday (start of week) — nothing to expire yet
+      return;
+    }
+
+    const result = await prisma.alumniAvailability.deleteMany({
+      where: { day_of_week: { in: expiredDays } }
+    });
+
+    if (result.count > 0) {
+      console.log(`[ClearExpiredAvailability] Deleted ${result.count} stale slot(s) for days: ${expiredDays.join(', ')}`);
+    }
+  } catch (err) {
+    console.error('[ClearExpiredAvailability] Error:', err.message);
+  }
+}
+
 // Every 15 mins: No-show detection
 cron.schedule('*/15 * * * *', detectNoShows);
 
@@ -192,6 +224,11 @@ cron.schedule('0 * * * *', grantBonusTokens);
 // 0 0 * * 1 is Monday midnight.
 cron.schedule('0 0 * * 1', weeklyReset);
 
+// Daily at midnight: remove availability slots for days already passed this week
+cron.schedule('0 0 * * *', clearExpiredAvailability);
+// Also run once on startup to clean up any slots that expired while server was down
+clearExpiredAvailability();
+
 console.log('📅 Mentorship System Cron Jobs Initialized');
 
-module.exports = { detectNoShows, grantBonusTokens, weeklyReset, promoteWaitingStudent };
+module.exports = { detectNoShows, grantBonusTokens, weeklyReset, promoteWaitingStudent, clearExpiredAvailability };

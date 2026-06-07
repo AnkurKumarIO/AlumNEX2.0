@@ -58,7 +58,28 @@ router.get('/:id/availability', async (req, res) => {
       where: { id },
       select: { max_interviews_per_week: true }
     });
-    res.json({ availability, max_interviews_per_week: user?.max_interviews_per_week || 3 });
+
+    // Return booked slot start times for the next 14 days so the frontend
+    // can hide already-taken slots from the picker
+    const now = new Date();
+    const twoWeeksOut = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+    const bookedSlots = await prisma.bookedSlot.findMany({
+      where: {
+        alumni_id: id,
+        status: { in: ['BOOKED'] },
+        slot_start: { gte: now, lte: twoWeeksOut },
+      },
+      select: { slot_start: true, slot_end: true },
+    });
+
+    res.json({
+      availability,
+      max_interviews_per_week: user?.max_interviews_per_week || 3,
+      booked_slots: bookedSlots.map(s => ({
+        slot_start: s.slot_start.toISOString(),
+        slot_end: s.slot_end.toISOString(),
+      })),
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
