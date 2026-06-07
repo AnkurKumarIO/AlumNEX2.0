@@ -842,7 +842,7 @@ function AlumniSessionHistory({ userId, userName }) {
         {[
           { label: 'Average Rating (from students)', val: avgRating !== '—' ? `${avgRating} ★` : '—', color: '#ffb95f' },
           { label: 'Total Sessions', val: String(sessions.length), sub: 'Completed', color: '#c3c0ff' },
-          { label: 'Latest Feedback', val: sessions[0]?.student_feedback || 'No feedback yet', highlight: true },
+          { label: 'Latest Feedback', val: sessions.find(s => s.student_feedback)?.student_feedback || 'No feedback yet', highlight: true },
         ].map((m, i) => (
           <div key={i} style={{ background: '#171f33', borderRadius: 12, padding: '2rem', border: '1px solid rgba(70,69,85,0.15)', position: 'relative', overflow: 'hidden' }}>
             {m.highlight && <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: '#c3c0ff' }} />}
