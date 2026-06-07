@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../lib/prisma');
+const { notify } = require('../lib/notify');
 const { createGoogleMeetLink, generateJitsiFallback } = require('../services/googleMeetService');
 const { authenticate } = require('../lib/authMiddleware');
 const { getWeekStart, getNextMonday } = require('../lib/timeUtils');
@@ -225,25 +226,21 @@ router.post('/', authenticate, async (req, res) => {
 
       // Notify alumni: student requested this specific slot — please accept/decline
       const formatted = formatScheduledTimeIST(new Date(slotStart));
-      const alumniNotif = await prisma.notification.create({
-        data: {
-          user_id: alumniId,
-          type: 'SLOT_REQUESTED',
-          title: 'Slot Request — Please Confirm 🕐',
-          message: `${request.student?.name || 'A student'} has requested the ${formatted} slot for "${topic || 'Mock Interview'}". Please accept or decline.`,
-          request_id: request.request_id,
-        }
+      const alumniNotif = await notify({
+        user_id: alumniId,
+        type: 'SLOT_REQUESTED',
+        title: 'Slot Request — Please Confirm 🕐',
+        message: `${request.student?.name || 'A student'} has requested the ${formatted} slot for "${topic || 'Mock Interview'}". Please accept or decline.`,
+        request_id: request.request_id,
       });
 
       // Notify student: pending alumni confirmation
-      const studentNotif = await prisma.notification.create({
-        data: {
-          user_id: studentId,
-          type: 'SLOT_REQUESTED',
-          title: 'Slot Reserved — Awaiting Confirmation 🕐',
-          message: `Your request for the ${formatted} slot with ${request.alumni?.name || 'the alumni'} has been sent. Please wait for alumni confirmation.`,
-          request_id: request.request_id,
-        }
+      const studentNotif = await notify({
+        user_id: studentId,
+        type: 'SLOT_REQUESTED',
+        title: 'Slot Reserved — Awaiting Confirmation 🕐',
+        message: `Your request for the ${formatted} slot with ${request.alumni?.name || 'the alumni'} has been sent. Please wait for alumni confirmation.`,
+        request_id: request.request_id,
       });
 
       const io = req.app.get('io');
@@ -267,14 +264,12 @@ router.post('/', authenticate, async (req, res) => {
       }
     } else if (status === 'PENDING') {
       // Notify alumni of new request
-      const notification = await prisma.notification.create({
-        data: {
-          user_id: alumniId,
-          type: 'NEW_REQUEST',
-          title: 'New Interview Request! 📬',
-          message: `${request.student?.name || 'A student'} requested an interview for ${topic || 'Mock Interview'}.`,
-          request_id: request.request_id,
-        }
+      const notification = await notify({
+        user_id: alumniId,
+        type: 'NEW_REQUEST',
+        title: 'New Interview Request! 📬',
+        message: `${request.student?.name || 'A student'} requested an interview for ${topic || 'Mock Interview'}.`,
+        request_id: request.request_id,
       });
 
       const io = req.app.get('io');
@@ -491,13 +486,7 @@ router.patch('/:id', async (req, res) => {
     // Create all notifications
     const io = req.app.get('io');
     for (const notifPayload of notificationsToCreate) {
-      const createdNotif = await prisma.notification.create({
-        data: notifPayload
-      });
-      // Emit real-time notification — include room_id in the socket payload
-      // so the student's dashboard can show the correct Join Now link immediately.
-      // (The DB Notification record doesn't have a room_id column, but the socket
-      //  payload can carry extra fields that the frontend reads from state.)
+      const createdNotif = await notify(notifPayload);
       if (io) {
         io.of('/notifications').to(notifPayload.user_id).emit('notification', {
           ...createdNotif,
@@ -623,7 +612,7 @@ router.post('/:id/book-slot', authenticate, async (req, res) => {
 
     const io = req.app.get('io');
     for (const n of notifications) {
-      const created = await prisma.notification.create({ data: n });
+      const created = await notify(n);
       if (io) io.of('/notifications').to(n.user_id).emit('notification', created);
     }
 

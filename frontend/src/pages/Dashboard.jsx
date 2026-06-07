@@ -11,6 +11,7 @@ import LogoutConfirmModal from '../components/LogoutConfirmModal';
 import { api, SOCKET_URL } from '../api';
 import { getAllAlumni, getUserById } from '../lib/db';
 import { useNotifications } from '../hooks/useNotifications';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 import { useInterviewRequests } from '../hooks/useInterviewRequests';
 import { subscribeRealtimeSync } from '../lib/realtimeSync';
 import TokenCounter from '../components/TokenCounter';
@@ -156,6 +157,7 @@ export default function Dashboard() {
 
   // ── Real-time notifications using Supabase subscriptions ──────────────────
   const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications(user?.id);
+  usePushNotifications(user?.id);
   const { requests: syncedRequests, loading: requestsLoading } = useInterviewRequests(hasRealUserId ? user?.id : null, hasRealUserId ? user?.role : null);
   const [localRefresh, setLocalRefresh] = useState(0);
 

@@ -1,5 +1,6 @@
 const cron = require('node-cron');
 const prisma = require('../lib/prisma');
+const { notify } = require('../lib/notify');
 const { getWeekStart } = require('../lib/timeUtils');
 
 async function promoteWaitingStudent(alumniId) {
@@ -42,25 +43,21 @@ async function promoteWaitingStudent(alumniId) {
       });
 
       // Notify alumni
-      const notification = await prisma.notification.create({
-        data: {
-          user_id: alumniId,
-          type: 'NEW_REQUEST',
-          title: 'Slot Opened Up! 🟢',
-          message: `${firstWaiting.student?.name || 'A student'} was promoted from the waiting list.`,
-          request_id: firstWaiting.request_id
-        }
+      const notification = await notify({
+        user_id: alumniId,
+        type: 'NEW_REQUEST',
+        title: 'Slot Opened Up! 🟢',
+        message: `${firstWaiting.student?.name || 'A student'} was promoted from the waiting list.`,
+        request_id: firstWaiting.request_id
       });
 
       // Notify student
-      await prisma.notification.create({
-        data: {
-          user_id: firstWaiting.student_id,
-          type: 'PROMOTED',
-          title: 'Good news! You are off the waitlist! 🚀',
-          message: `A slot opened up with ${alumni.name}. Your request is now pending.`,
-          request_id: firstWaiting.request_id
-        }
+      await notify({
+        user_id: firstWaiting.student_id,
+        type: 'PROMOTED',
+        title: 'Good news! You are off the waitlist! 🚀',
+        message: `A slot opened up with ${alumni.name}. Your request is now pending.`,
+        request_id: firstWaiting.request_id
       });
     }
   }
@@ -129,13 +126,11 @@ async function grantBonusTokens() {
         data: { bonus_granted: true }
       });
 
-      await prisma.notification.create({
-        data: {
-          user_id: tracker.student_id,
-          type: 'SYSTEM',
-          title: '3 Bonus Tokens Granted 🎁',
-          message: 'All your requests were declined this week. We\'ve added 3 bonus tokens so you can keep trying!'
-        }
+      await notify({
+        user_id: tracker.student_id,
+        type: 'SYSTEM',
+        title: '3 Bonus Tokens Granted 🎁',
+        message: 'All your requests were declined this week. We\'ve added 3 bonus tokens so you can keep trying!'
       });
     }
   }

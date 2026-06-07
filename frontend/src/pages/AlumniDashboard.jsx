@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabaseClient';
 import { io } from 'socket.io-client';
 import { useInterviewRequests } from '../hooks/useInterviewRequests';
 import { useNotifications } from '../hooks/useNotifications';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 import SettingsPage from './SettingsPage';
 import LogoutConfirmModal from '../components/LogoutConfirmModal';
 import { subscribeRealtimeSync, emitRealtimeSync } from '../lib/realtimeSync';
@@ -1027,6 +1028,7 @@ export default function AlumniDashboard() {
   const dailyQuote = QUOTES[Math.floor(Date.now() / 8000) % QUOTES.length];
   // ── Real-time notifications for alumni ────────────────────────────────────
   const { notifications, unreadCount, markAsRead } = useNotifications(user?.id);
+  usePushNotifications(user?.id);
   // Profile dropdown
   const [showProfile, setShowProfile] = useState(false);
   const [editProfile, setEditProfile] = useState(false);

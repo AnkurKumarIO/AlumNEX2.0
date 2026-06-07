@@ -45,6 +45,7 @@ model User {
   alumni_sessions     SessionFeedback[]  @relation("AlumniSessions")
   
   profile_assets      ProfileAsset[]
+  push_subscriptions  PushSubscription[]
 
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
@@ -223,6 +224,21 @@ model CollegeRegistry {
   department String
 
   @@map("college_registry")
+}
+
+model PushSubscription {
+  id          String   @id @default(uuid())
+  user_id     String
+  endpoint    String   @unique
+  p256dh      String   // Browser public key
+  auth        String   // Auth secret
+  user_agent  String?
+  created_at  DateTime @default(now())
+
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("push_subscriptions")
 }
 
 model ProfileAsset {

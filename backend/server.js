@@ -82,6 +82,7 @@ app.use('/feedback',          require('./routes/feedback'));          // Session
 app.use('/activity-logs',     require('./routes/activityLogs'));      // Activity feed data
 app.use('/platform-config',   require('./routes/platformConfig'));    // Platform configuration
 app.use('/profile-assets',    require('./routes/profileAssets'));     // Profile photos & resumes
+app.use('/push',              require('./routes/push'));              // Web push subscriptions
 
 // ── Socket.io ─────────────────────────────────────────────────────────────────
 const server = http.createServer(app);
