@@ -4,6 +4,7 @@ import { api } from '../api';
 export default function SlotPickerModal({ alumni, onClose, onBooked }) {
   const [loading, setLoading] = useState(true);
   const [availability, setAvailability] = useState([]);
+  const [bookedSlots, setBookedSlots] = useState([]); // already-taken slot ranges
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [booking, setBooking] = useState(false);
   const [error, setError] = useState('');
@@ -12,6 +13,7 @@ export default function SlotPickerModal({ alumni, onClose, onBooked }) {
     api.get(`/alumni/${alumni.id}/availability`)
       .then(res => {
         setAvailability(res.availability || []);
+        setBookedSlots(res.booked_slots || []);
         setLoading(false);
       })
       .catch(err => {
@@ -20,15 +22,24 @@ export default function SlotPickerModal({ alumni, onClose, onBooked }) {
       });
   }, [alumni.id]);
 
+  const isSlotTaken = (slotStart, slotEnd) => {
+    return bookedSlots.some(b => {
+      const bStart = new Date(b.slot_start).getTime();
+      const bEnd = new Date(b.slot_end).getTime();
+      // Overlap check: slot starts before booked ends AND slot ends after booked starts
+      return slotStart.getTime() < bEnd && slotEnd.getTime() > bStart;
+    });
+  };
+
   const generateDateSlots = () => {
     const slots = [];
     const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    const today = new Date();
+    const now = new Date();
 
-    // Generate slots for the next 7 days
+    // Generate slots for the next 7 days (starting from tomorrow)
     for (let i = 1; i <= 7; i++) {
       const date = new Date();
-      date.setDate(today.getDate() + i);
+      date.setDate(now.getDate() + i);
       const dayName = days[date.getDay()];
 
       const dayAvailability = availability.filter(a => a.day_of_week === dayName);
@@ -43,17 +54,27 @@ export default function SlotPickerModal({ alumni, onClose, onBooked }) {
         const end = new Date(date);
         end.setHours(endH, endM, 0, 0);
 
-        // Add 15 min buffer to slot duration
-        const durationWithBuffer = avail.slot_duration + 15;
+        const duration = avail.slot_duration || 60;
+        const buffer = avail.buffer_time !== undefined && avail.buffer_time !== null ? avail.buffer_time : 15;
+        const durationWithBuffer = duration + buffer;
 
-        while (current.getTime() + avail.slot_duration * 60000 <= end.getTime() + 30 * 60000) { // allow slight extension
-          const slotEnd = new Date(current.getTime() + avail.slot_duration * 60000);
-          slots.push({
-            start: new Date(current),
-            end: slotEnd,
-            displayDate: date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
-            displayTime: `${current.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${slotEnd.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-          });
+        // Strict boundary: slot must fully fit within the availability window
+        while (current.getTime() + duration * 60000 <= end.getTime()) {
+          const slotEnd = new Date(current.getTime() + duration * 60000);
+
+          // Skip slots that are in the past
+          if (current.getTime() > now.getTime()) {
+            // Skip slots already booked by another student
+            if (!isSlotTaken(current, slotEnd)) {
+              slots.push({
+                start: new Date(current),
+                end: slotEnd,
+                displayDate: date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+                displayTime: `${current.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${slotEnd.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+              });
+            }
+          }
+
           current = new Date(current.getTime() + durationWithBuffer * 60000);
         }
       });
@@ -156,7 +177,7 @@ export default function SlotPickerModal({ alumni, onClose, onBooked }) {
               cursor: (!selectedSlot || booking) ? 'not-allowed' : 'pointer'
             }}
           >
-            {booking ? 'Confirming...' : 'Confirm Slot'}
+            {booking ? 'Confirming...' : 'Confirm Slot Request'}
           </button>
         </div>
       </div>

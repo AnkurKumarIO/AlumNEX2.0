@@ -118,16 +118,29 @@ export default function SettingsPage({ role, initialSection, onMentorshipSaved }
   }, [user?.id]); // Reload when user changes
 
   const [activeSection, setActiveSection] = useState(() => {
-    // Try to restore from sessionStorage first, then initialSection, then default to 'profile'
-    const saved = sessionStorage.getItem('alumnex_settings_section');
-    return saved || initialSection || 'profile';
+    // Clean up old key if it exists
+    const oldKey = sessionStorage.getItem('alumnex_settings_section');
+    if (oldKey) {
+      sessionStorage.setItem('alumni_settingsSection', oldKey);
+      sessionStorage.removeItem('alumnex_settings_section');
+    }
+    
+    // Prioritize initialSection prop over sessionStorage
+    // This allows parent to override the cached section
+    return initialSection || sessionStorage.getItem('alumni_settingsSection') || 'profile';
   });
   
   // Persist activeSection to sessionStorage whenever it changes
   useEffect(() => {
-    sessionStorage.setItem('alumnex_settings_section', activeSection);
+    sessionStorage.setItem('alumni_settingsSection', activeSection);
   }, [activeSection]);
-  // Update activeSection when initialSection prop changes
+  
+  // Update activeSection when initialSection prop changes (e.g., navigating from elsewhere)
+  useEffect(() => {
+    if (initialSection) {
+      setActiveSection(initialSection);
+    }
+  }, [initialSection]);
   useEffect(() => {
     if (initialSection) {
       setActiveSection(initialSection);
@@ -539,21 +552,35 @@ export default function SettingsPage({ role, initialSection, onMentorshipSaved }
       if (cached) {
         const parsed = JSON.parse(cached);
         console.log('[Mentorship] Loaded from cache:', parsed.slots.length, 'slots');
-        return parsed;
+        return {
+          maxInterviews: parsed.maxInterviews || 3,
+          slots: parsed.slots || [],
+          defaultDuration: parsed.defaultDuration || 60,
+          defaultBuffer: parsed.defaultBuffer || 15
+        };
       }
     } catch (err) {
       console.error('[Mentorship] Cache load failed:', err);
     }
-    return { maxInterviews: 3, slots: [] };
+    return { 
+      maxInterviews: 3, 
+      slots: [],
+      defaultDuration: 60,
+      defaultBuffer: 15
+    };
   });
 
   useEffect(() => {
     if (isAlumni && user?.id) {
       api.get(`/alumni/${user.id}/availability`)
         .then(res => {
+          const slots = res.availability || [];
+          const firstSlot = slots[0];
           const data = {
             maxInterviews: res.max_interviews_per_week || 3,
-            slots: res.availability || []
+            slots: slots,
+            defaultDuration: firstSlot?.slot_duration || 60,
+            defaultBuffer: firstSlot?.buffer_time !== undefined ? firstSlot.buffer_time : 15
           };
           console.log('[Mentorship] Fetched from server:', data.slots.length, 'slots');
           setMentorship(data);
@@ -577,10 +604,12 @@ export default function SettingsPage({ role, initialSection, onMentorshipSaved }
       await api.post(`/alumni/${user.id}/settings`, { max_interviews_per_week: mentorship.maxInterviews });
       console.log('[Mentorship] ✓ Settings saved');
       
-      // Update cache immediately
+      // Update cache immediately with complete data
       const savedData = {
         maxInterviews: mentorship.maxInterviews,
-        slots: mentorship.slots
+        slots: mentorship.slots,
+        defaultDuration: mentorship.defaultDuration,
+        defaultBuffer: mentorship.defaultBuffer
       };
       sessionStorage.setItem('alumnex_mentorship_settings', JSON.stringify(savedData));
       
@@ -595,25 +624,13 @@ export default function SettingsPage({ role, initialSection, onMentorshipSaved }
       flashSaved('Changes saved!');
       console.log('[Mentorship] === SAVE COMPLETED ===');
       
-      // Notify parent to refresh requirements checklist
+      // Notify parent to refresh requirements checklist immediately
       if (onMentorshipSaved) {
         onMentorshipSaved();
       }
       
-      // Reload to confirm save
-      setTimeout(() => {
-        api.get(`/alumni/${user.id}/availability`)
-          .then(res => {
-            console.log('[Mentorship] ✓ Verified:', res.availability?.length, 'slots persisted');
-            setMentorship({
-              maxInterviews: res.max_interviews_per_week || 3,
-              slots: res.availability || []
-            });
-          })
-          .catch(err => {
-            console.error('[Mentorship] Verification failed:', err);
-          });
-      }, 500);
+      // No need for verification fetch - we already know the save succeeded
+      // and the UI already shows the correct data from cache
       
     } catch (err) {
       console.error('[Mentorship] SAVE FAILED:', err.message);
@@ -1106,13 +1123,36 @@ export default function SettingsPage({ role, initialSection, onMentorshipSaved }
               </div>
             </div>
 
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
+              <div>
+                <label style={lbl}>Default Meeting Duration</label>
+                <select
+                  value={mentorship.defaultDuration}
+                  onChange={e => setMentorship(m => ({ ...m, defaultDuration: parseInt(e.target.value) }))}
+                  style={inp}
+                >
+                  {[30, 45, 60, 90, 120].map(d => <option key={d} value={d}>{d} minutes</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={lbl}>Default Buffer Time</label>
+                <select
+                  value={mentorship.defaultBuffer}
+                  onChange={e => setMentorship(m => ({ ...m, defaultBuffer: parseInt(e.target.value) }))}
+                  style={inp}
+                >
+                  {[0, 5, 10, 15, 20, 30].map(b => <option key={b} value={b}>{b} minutes</option>)}
+                </select>
+              </div>
+            </div>
+
             <div style={{ marginBottom: '2rem' }}>
               <label style={lbl}>Weekly Availability Windows</label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
                 {mentorship.slots.map((slot, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#171f33', padding: '0.75rem 1rem', borderRadius: 12, border: '1px solid rgba(70,69,85,0.2)' }}>
                     <div style={{ flex: 1, fontSize: '0.875rem', fontWeight: 600, color: '#dae2fd', textTransform: 'capitalize' }}>{slot.day_of_week}</div>
-                    <div style={{ fontSize: '0.875rem', color: '#c7c4d8' }}>{slot.start_time} – {slot.end_time}</div>
+                    <div style={{ fontSize: '0.875rem', color: '#c7c4d8' }}>{slot.start_time} – {slot.end_time} ({slot.slot_duration || 60}m duration, {slot.buffer_time !== undefined ? slot.buffer_time : 15}m buffer)</div>
                     <button
                       onClick={() => setMentorship(m => ({ ...m, slots: m.slots.filter((_, j) => j !== i) }))}
                       style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ffb4ab' }}
@@ -1148,7 +1188,7 @@ export default function SettingsPage({ role, initialSection, onMentorshipSaved }
                     const start = document.getElementById('new-slot-start').value;
                     const end = document.getElementById('new-slot-end').value;
                     if (day && start && end) {
-                      setMentorship(m => ({ ...m, slots: [...m.slots, { day_of_week: day, start_time: start, end_time: end, slot_duration: 60 }] }));
+                      setMentorship(m => ({ ...m, slots: [...m.slots, { day_of_week: day, start_time: start, end_time: end, slot_duration: m.defaultDuration, buffer_time: m.defaultBuffer }] }));
                     }
                   }}
                   style={{ ...btnOutline, width: '100%', padding: '0.6rem' }}

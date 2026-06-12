@@ -11,6 +11,7 @@ import LogoutConfirmModal from '../components/LogoutConfirmModal';
 import { api, SOCKET_URL } from '../api';
 import { getAllAlumni, getUserById } from '../lib/db';
 import { useNotifications } from '../hooks/useNotifications';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 import { useInterviewRequests } from '../hooks/useInterviewRequests';
 import { subscribeRealtimeSync } from '../lib/realtimeSync';
 import TokenCounter from '../components/TokenCounter';
@@ -156,6 +157,7 @@ export default function Dashboard() {
 
   // ── Real-time notifications using Supabase subscriptions ──────────────────
   const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications(user?.id);
+  usePushNotifications(user?.id);
   const { requests: syncedRequests, loading: requestsLoading } = useInterviewRequests(hasRealUserId ? user?.id : null, hasRealUserId ? user?.role : null);
   const [localRefresh, setLocalRefresh] = useState(0);
 
@@ -329,7 +331,7 @@ export default function Dashboard() {
 
   const SKILL_COLORS = ['#c3c0ff', '#4edea3', '#ffb95f'];
   const myRequests     = hasRealUserId && syncedRequests.length > 0 ? syncedRequests : getRequestsByStudent(user?.name || '');
-  const pendingCount   = myRequests.filter(r => r.status === 'pending').length;
+  const pendingCount   = myRequests.filter(r => r.status === 'pending' || r.status === 'slot_requested').length;
   const interviewCount = myRequests.filter(r => r.status === 'slot_booked' || r.status === 'accepted').length;
   const CIRC   = 2 * Math.PI * 70;
   const offset = CIRC * (1 - profileCompletion / 100);
@@ -371,9 +373,9 @@ export default function Dashboard() {
                 const isSessionEnded = endedSessions[joinRoomId] || endedSessions[n.requestId] || req?.status === 'COMPLETED' || req?.status === 'completed';
                 const canJoin = !isSessionEnded && (n.type === 'slot_booked' || n.type === 'reminder' || isLive) && joinRoomId &&
                   (scheduledTime ? Date.now() >= toUtcDate(scheduledTime).getTime() - 5 * 60 * 1000 : true);
-                const iconMap = { slot_booked: 'event_available', accepted: 'check_circle', declined: 'cancel', live: 'videocam', live_now: 'videocam', reminder: 'schedule', meeting_live: 'videocam', default: 'notifications' };
-                const colorMap = { slot_booked: '#4edea3', accepted: '#c3c0ff', declined: '#ffb4ab', live: '#ff4444', live_now: '#ff4444', reminder: '#ffb95f', meeting_live: '#ff4444', default: '#c7c4d8' };
-                const bgMap = { slot_booked: 'rgba(78,222,163,0.1)', accepted: 'rgba(195,192,255,0.1)', declined: 'rgba(255,180,171,0.1)', live: 'rgba(255,68,68,0.1)', live_now: 'rgba(255,68,68,0.1)', reminder: 'rgba(255,185,95,0.1)', meeting_live: 'rgba(255,68,68,0.1)', default: 'rgba(70,69,85,0.1)' };
+                const iconMap = { slot_booked: 'event_available', accepted: 'check_circle', declined: 'cancel', live: 'videocam', live_now: 'videocam', reminder: 'schedule', meeting_live: 'videocam', slot_requested: 'schedule', default: 'notifications' };
+                const colorMap = { slot_booked: '#4edea3', accepted: '#c3c0ff', declined: '#ffb4ab', live: '#ff4444', live_now: '#ff4444', reminder: '#ffb95f', meeting_live: '#ff4444', slot_requested: '#ffb95f', default: '#c7c4d8' };
+                const bgMap = { slot_booked: 'rgba(78,222,163,0.1)', accepted: 'rgba(195,192,255,0.1)', declined: 'rgba(255,180,171,0.1)', live: 'rgba(255,68,68,0.1)', live_now: 'rgba(255,68,68,0.1)', reminder: 'rgba(255,185,95,0.1)', meeting_live: 'rgba(255,68,68,0.1)', slot_requested: 'rgba(255,185,95,0.1)', default: 'rgba(70,69,85,0.1)' };
                 const type = n.type || 'default';
                 return (
                   <div key={n.id} style={{ background: !n.read ? '#171f33' : '#131b2e', borderRadius: 14, padding: '1.25rem', border: `1px solid ${!n.read ? 'rgba(195,192,255,0.12)' : 'rgba(70,69,85,0.12)'}`, display: 'flex', gap: 14, alignItems: 'flex-start', transition: 'all 0.2s' }}>
@@ -1021,9 +1023,9 @@ export default function Dashboard() {
                         </div>
                       ) : studentNotifs.map((n, i) => (
                         <div key={n.id} style={{ padding: '0.875rem 1.25rem', borderBottom: '1px solid rgba(70,69,85,0.1)', display: 'flex', gap: 12, alignItems: 'flex-start', background: !n.read ? 'rgba(195,192,255,0.04)' : 'transparent' }}>
-                          <div style={{ width: 36, height: 36, borderRadius: 10, background: n.type === 'live' ? 'rgba(255,68,68,0.12)' : n.type === 'slot_booked' ? 'rgba(78,222,163,0.12)' : n.type === 'accepted' ? 'rgba(195,192,255,0.12)' : 'rgba(255,180,171,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <span className="material-symbols-outlined" style={{ fontSize: 18, color: n.type === 'live' ? '#ff6b6b' : n.type === 'slot_booked' ? '#4edea3' : n.type === 'accepted' ? '#c3c0ff' : '#ffb4ab', fontVariationSettings: "'FILL' 1" }}>
-                              {n.type === 'live' ? 'videocam' : n.type === 'slot_booked' ? 'event_available' : n.type === 'accepted' ? 'check_circle' : 'cancel'}
+                          <div style={{ width: 36, height: 36, borderRadius: 10, background: n.type === 'live' ? 'rgba(255,68,68,0.12)' : n.type === 'slot_booked' ? 'rgba(78,222,163,0.12)' : n.type === 'accepted' ? 'rgba(195,192,255,0.12)' : n.type === 'slot_requested' ? 'rgba(255,185,95,0.12)' : 'rgba(255,180,171,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: 18, color: n.type === 'live' ? '#ff6b6b' : n.type === 'slot_booked' ? '#4edea3' : n.type === 'accepted' ? '#c3c0ff' : n.type === 'slot_requested' ? '#ffb95f' : '#ffb4ab', fontVariationSettings: "'FILL' 1" }}>
+                              {n.type === 'live' ? 'videocam' : n.type === 'slot_booked' ? 'event_available' : n.type === 'accepted' ? 'check_circle' : n.type === 'slot_requested' ? 'schedule' : 'cancel'}
                             </span>
                           </div>
                           <div style={{ flex: 1 }}>

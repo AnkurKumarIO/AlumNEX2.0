@@ -500,6 +500,53 @@ export async function rescheduleSlot(requestId, newScheduledTime) {
   return requests[idx];
 }
 
+export async function confirmSlotRequest(requestId) {
+  let finalResult = null;
+  try {
+    const result = await api.updateRequest(requestId, {
+      status: 'SLOT_CONFIRMED',
+    });
+    const finalRoomId = result?.room_id || result?.roomId || null;
+    finalResult = {
+      ...result,
+      id: requestId,
+      status: 'slot_booked',
+      scheduledTime: result?.scheduled_time || result?.scheduledTime,
+      roomId: finalRoomId,
+    };
+  } catch (e) {
+    console.warn('confirmSlotRequest Backend error, trying Supabase:', e.message);
+    try {
+      const result = await dbUpdateRequest(requestId, { status: 'SLOT_BOOKED' });
+      finalResult = {
+        ...result,
+        id: requestId,
+        status: 'slot_booked',
+        roomId: result?.room_id || result?.roomId || null,
+      };
+    } catch (dbErr) {
+      console.warn('confirmSlotRequest Supabase error:', dbErr.message);
+      finalResult = {
+        id: requestId,
+        status: 'slot_booked',
+      };
+    }
+  }
+
+  const requests = loadLocal();
+  const idx = requests.findIndex(r => r.id === requestId);
+  if (idx !== -1) {
+    requests[idx] = normalizeRequestRow({
+      ...requests[idx],
+      ...finalResult,
+      createdAt: requests[idx].createdAt || finalResult.createdAt || finalResult.created_at,
+    });
+    saveLocal(requests);
+    return requests[idx];
+  }
+  return finalResult;
+}
+
 // ── Decline (alumni) ──────────────────────────────────────────────────────────
 
 export async function declineRequest(requestId) {
@@ -557,6 +604,7 @@ export default {
   bookSlot,
   rescheduleSlot,
   declineRequest,
+  confirmSlotRequest,
   acceptRequest,
   isJoinable,
   formatScheduledTime,

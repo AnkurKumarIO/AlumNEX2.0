@@ -204,28 +204,13 @@ router.get('/recent-activity', async (req, res) => {
     const tnpUser = await prisma.user.findFirst({ where: { role: 'TNP' }, select: { id: true } }).catch(() => null);
     const tnpUserId = tnpUser?.id || 'tnp-001'; // fallback to hardcoded ID
 
-    // Collect request_ids that have a TNP-specific notification
-    const tnpNotifRequestIds = new Set(
-      allNotifications
-        .filter(n => n.user_id === tnpUserId && n.request_id)
-        .map(n => n.request_id)
-    );
-
-    // Filter: keep only TNP-targeted notifications + non-request system ones.
-    // For slot/meeting events, ONLY show the TNP-specific notification (not personal student/alumni ones).
-    const notifications = allNotifications.filter(n => {
-      // Always show TNP-targeted notifications
-      if (n.user_id === tnpUserId) return true;
-      // Show general system notifications (no request_id)
-      if (!n.request_id) return true;
-      // Drop all personal student/alumni slot/meeting notifications — TNP has its own
-      if (n.type === 'SLOT_BOOKED' || n.type === 'SLOT_BOOKED_ALUMNI' ||
-          n.type === 'MEETING_LIVE' || n.type === 'ACCEPTED' || n.type === 'DECLINED') {
-        return false;
-      }
-      // Show NEW_REQUEST notifications (alumni receives these — useful for TNP overview)
-      return true;
-    }).slice(0, 20);
+    // Only show notifications explicitly written to the TNP user.
+    // Student/alumni personal notifications (NEW_REQUEST, ACCEPTED, DECLINED,
+    // SLOT_REQUESTED, SLOT_BOOKED, SLOT_BOOKED_ALUMNI, LIVE_ALUMNI, etc.)
+    // are never meant for TNP and must not appear in this feed.
+    const notifications = allNotifications
+      .filter(n => n.user_id === tnpUserId)
+      .slice(0, 20);
 
     // Also pull latest registration events
     const recentUsers = await prisma.user.findMany({
@@ -242,12 +227,12 @@ router.get('/recent-activity', async (req, res) => {
       const iconMap = {
         NEW_REQUEST: 'mail', ACCEPTED: 'check_circle', DECLINED: 'cancel',
         SLOT_BOOKED: 'event_available', SLOT_BOOKED_ALUMNI: 'event_available',
-        MEETING_LIVE: 'videocam',
+        MEETING_LIVE: 'videocam', LIVE: 'videocam', SLOT_REQUESTED: 'schedule',
       };
       const colorMap = {
         NEW_REQUEST: '#c3c0ff', ACCEPTED: '#4edea3', DECLINED: '#ffb4ab',
         SLOT_BOOKED: '#ffb95f', SLOT_BOOKED_ALUMNI: '#ffb95f',
-        MEETING_LIVE: '#60a5fa',
+        MEETING_LIVE: '#60a5fa', LIVE: '#60a5fa', SLOT_REQUESTED: '#c3c0ff',
       };
       activity.push({
         id: n.id,
@@ -256,7 +241,7 @@ router.get('/recent-activity', async (req, res) => {
         title: n.title,
         desc: n.message,
         time: n.createdAt,
-        category: n.type?.includes('SLOT') || n.type?.includes('MEETING') ? 'Interview' : 'Mentorship',
+        category: n.type?.includes('SLOT') || n.type?.includes('MEETING') || n.type === 'LIVE' ? 'Interview' : 'Mentorship',
       });
     }
 

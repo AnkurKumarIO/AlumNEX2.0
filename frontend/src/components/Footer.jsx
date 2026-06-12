@@ -1,5 +1,4 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import AlumNexLogo from '../AlumNexLogo';
 
 export default function Footer() {
@@ -17,7 +16,7 @@ export default function Footer() {
         flexDirection: 'column',
         gap: '1.5rem',
       }}>
-        {/* Top row: Brand + Links */}
+        {/* Top row: Brand */}
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
@@ -25,60 +24,8 @@ export default function Footer() {
           flexWrap: 'wrap',
           gap: '1.5rem',
         }}>
-          {/* Brand */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <AlumNexLogo size="md" />
-          </div>
-
-          {/* Links */}
-          <div style={{
-            display: 'flex',
-            gap: '2rem',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-          }}>
-            <Link
-              to="/privacy"
-              style={{
-                fontSize: '0.8rem',
-                fontWeight: 500,
-                color: '#c7c4d8',
-                textDecoration: 'none',
-                transition: 'color 0.2s',
-              }}
-              onMouseOver={e => e.currentTarget.style.color = '#c3c0ff'}
-              onMouseOut={e => e.currentTarget.style.color = '#c7c4d8'}
-            >
-              Privacy Policy
-            </Link>
-            <Link
-              to="/terms"
-              style={{
-                fontSize: '0.8rem',
-                fontWeight: 500,
-                color: '#c7c4d8',
-                textDecoration: 'none',
-                transition: 'color 0.2s',
-              }}
-              onMouseOver={e => e.currentTarget.style.color = '#c3c0ff'}
-              onMouseOut={e => e.currentTarget.style.color = '#c7c4d8'}
-            >
-              Terms &amp; Conditions
-            </Link>
-            <Link
-              to="/contact"
-              style={{
-                fontSize: '0.8rem',
-                fontWeight: 500,
-                color: '#c7c4d8',
-                textDecoration: 'none',
-                transition: 'color 0.2s',
-              }}
-              onMouseOver={e => e.currentTarget.style.color = '#c3c0ff'}
-              onMouseOut={e => e.currentTarget.style.color = '#c7c4d8'}
-            >
-              Contact Us
-            </Link>
           </div>
         </div>
 

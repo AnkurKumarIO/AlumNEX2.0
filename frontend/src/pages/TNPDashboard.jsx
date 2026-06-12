@@ -4,6 +4,7 @@ import { AuthContext } from '../context/AuthContext';
 import AlumNexLogo from '../AlumNexLogo';
 import LogoutConfirmModal from '../components/LogoutConfirmModal';
 import AnalyticsTab from './TNPAnalytics';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 
 import BulkUploadTab from './TNPBulkUpload';
 import DirectoryTab from './TNPDirectory';
@@ -128,6 +129,7 @@ export default function TNPDashboard() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showNotifPanel, setShowNotifPanel] = useState(false);
+  usePushNotifications(user?.id);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [tnpNotifs, setTnpNotifs] = useState([]);
   const [seenNotifIds, setSeenNotifIds] = useState(() => {

@@ -27,8 +27,14 @@ export default function TNPLiveSessions({ token }) {
   }, []);
 
   const handleJoin = (roomId) => {
-    // TNP joins as a silent observer
-    navigate(`/interview/${roomId}?name=TNP_Observer`);
+    if (!roomId) return;
+    // If it's a full URL (Google Meet / Jitsi), open directly in a new tab
+    if (roomId.startsWith('http')) {
+      window.open(roomId, '_blank', 'noopener,noreferrer');
+    } else {
+      // Fallback: internal Jitsi room by ID
+      navigate(`/interview/${roomId}?name=TNP_Observer`);
+    }
   };
 
   return (
@@ -89,12 +95,13 @@ export default function TNPLiveSessions({ token }) {
 
               <button
                 onClick={() => handleJoin(s.room_id)}
-                style={{ width: '100%', marginTop: '1.5rem', padding: '0.75rem', borderRadius: 12, background: '#4f46e5', color: '#fff', border: 'none', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 0.2s' }}
-                onMouseEnter={e => e.currentTarget.style.background = '#4338ca'}
-                onMouseLeave={e => e.currentTarget.style.background = '#4f46e5'}
+                disabled={!s.room_id}
+                style={{ width: '100%', marginTop: '1.5rem', padding: '0.75rem', borderRadius: 12, background: s.room_id ? '#4f46e5' : '#2d3449', color: s.room_id ? '#fff' : '#6b6880', border: 'none', fontWeight: 700, fontSize: '0.8rem', cursor: s.room_id ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 0.2s' }}
+                onMouseEnter={e => { if (s.room_id) e.currentTarget.style.background = '#4338ca'; }}
+                onMouseLeave={e => { if (s.room_id) e.currentTarget.style.background = '#4f46e5'; }}
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 18 }}>visibility</span>
-                Observe Session
+                {s.room_id ? 'Observe Session' : 'No Meet Link Yet'}
               </button>
             </div>
           ))}

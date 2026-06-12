@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma');
+const { notify } = require('../lib/notify');
 
 /**
  * Scans the database for interview requests that are scheduled to start
@@ -41,27 +42,23 @@ async function sendUpcomingReminders(io) {
         console.log(`[ReminderService] Sending reminder for request ${req.request_id} starting at ${req.scheduled_time}`);
 
         // Notify Student
-        const studentNotif = await prisma.notification.create({
-          data: {
-            user_id: req.student_id,
-            type: 'REMINDER',
-            title: 'Interview Starting Soon! ⏳',
-            message: `Your interview with ${req.alumni?.name || 'the alumni'} starts in 5 minutes. Get ready!`,
-            request_id: req.request_id,
-            room_id: req.room_id,
-          },
+        const studentNotif = await notify({
+          user_id: req.student_id,
+          type: 'REMINDER',
+          title: 'Interview Starting Soon! ⏳',
+          message: `Your interview with ${req.alumni?.name || 'the alumni'} starts in 5 minutes. Get ready!`,
+          request_id: req.request_id,
+          room_id: req.room_id,
         });
 
         // Notify Alumni
-        const alumniNotif = await prisma.notification.create({
-          data: {
-            user_id: req.alumni_id,
-            type: 'REMINDER',
-            title: 'Upcoming Interview 📅',
-            message: `Your interview with ${req.student?.name || 'the student'} starts in 5 minutes.`,
-            request_id: req.request_id,
-            room_id: req.room_id,
-          },
+        const alumniNotif = await notify({
+          user_id: req.alumni_id,
+          type: 'REMINDER',
+          title: 'Upcoming Interview 📅',
+          message: `Your interview with ${req.student?.name || 'the student'} starts in 5 minutes.`,
+          request_id: req.request_id,
+          room_id: req.room_id,
         });
 
         if (io) {

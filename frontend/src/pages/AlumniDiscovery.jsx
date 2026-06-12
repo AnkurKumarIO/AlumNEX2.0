@@ -4,9 +4,9 @@ import { sendRequest, getRequestsByStudent } from '../interviewRequests';
 import { getAllAlumni } from '../lib/db';
 import { api } from '../api';
 import { subscribeRealtimeSync } from '../lib/realtimeSync';
-import { supabase } from '../lib/supabaseClient';
 import SlotPickerModal from '../components/SlotPickerModal';
-import TokenCounter from '../components/TokenCounter';
+import { supabase } from '../lib/supabaseClient';
+
 
 const TOPICS = [
   'Mock Interview – General','Mock Interview – System Design','Mock Interview – Frontend',
@@ -19,7 +19,7 @@ function toDisplay(u, ratingsMap = {}) {
   const company = u.company || p.company || 'Alumni';
   const batch_year = u.batch_year || p.batchYear || p.batch_year || null;
   const yrs = batch_year ? new Date().getFullYear() - batch_year : null;
-  const expRange = !yrs ? '0-2 Years' : yrs <= 2 ? '0-2 Years' : yrs <= 5 ? '3-5 Years' : yrs <= 10 ? '6-10 Years' : '10+ Years';
+  const expRange = yrs === null ? '' : yrs <= 2 ? '0-2 Years' : yrs <= 5 ? '3-5 Years' : yrs <= 10 ? '6-10 Years' : '10+ Years';
   const skills = p.skills || [];
   const domain = skills.length > 0 ? skills[0] : (u.department || 'Engineering');
   const sector = p.sector || '';
@@ -39,8 +39,8 @@ function toDisplay(u, ratingsMap = {}) {
   const totalSessions = ratingData?.totalSessions || 0;
   
   const title = p.title || p.jobTitle || (company ? `Alumni at ${company}` : 'Alumni');
-  const availability = u.availability_slots || [];
-  const maxInterviews = u.max_interviews_per_week || 3;
+  const availability = Array.isArray(u.availability_slots) ? u.availability_slots : [];
+  const maxInterviews = u.max_interviews_per_week ?? null; // null means alumni hasn't configured yet
   const acceptedThisWeek = (u.received_requests || []).filter(r =>
     ['ACCEPTED', 'SLOT_BOOKED'].includes(r.status?.toUpperCase())
   ).length;
@@ -159,7 +159,12 @@ function BookModal({ alumni, studentName, onClose, onSent }) {
           <div style={{ textAlign: 'center', padding: '2rem 0' }}>
             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>✅</div>
             <h3 style={{ fontWeight: 700, color: '#4edea3', marginBottom: 8 }}>Request Sent!</h3>
-            <p style={{ fontSize: '0.875rem', color: '#c7c4d8' }}>Your request has been sent to <strong style={{ color: '#dae2fd' }}>{alumni.name}</strong>.<br />You'll see the scheduled time once they accept.</p>
+            <p style={{ fontSize: '0.875rem', color: '#c7c4d8' }}>
+              {selectedSlot 
+                ? <>Your slot request has been sent! Wait for alumni confirmation.</>
+                : <>Your request has been sent to <strong style={{ color: '#dae2fd' }}>{alumni.name}</strong>.<br />You'll see the scheduled time once they accept.</>
+              }
+            </p>
           </div>
         ) : (
           <>
@@ -220,13 +225,28 @@ function BookModal({ alumni, studentName, onClose, onSent }) {
 
 // ── Availability Badge ───────────────────────────────────────────────────────
 function AvailabilityBadge({ availability, maxInterviews, acceptedThisWeek }) {
-  const isFullyBooked = acceptedThisWeek >= maxInterviews;
+  // No slots configured → alumni hasn't set their availability yet
+  const hasSlots = Array.isArray(availability) && availability.length > 0;
+
+  if (!hasSlots) {
+    return (
+      <div style={{ background: 'rgba(70,69,85,0.15)', border: '1px solid rgba(70,69,85,0.3)', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.7rem', color: '#c7c4d8', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, width: 'fit-content' }}>
+        <span className="material-symbols-outlined" style={{ fontSize: 14, flexShrink: 0 }}>calendar_month</span>
+        <span>Not available this week</span>
+      </div>
+    );
+  }
+
+  // maxInterviews null → alumni set slots but didn't set a cap; treat as unlimited
+  const cap = maxInterviews ?? 999;
+  const slotsLeft = Math.max(0, cap - acceptedThisWeek);
+  const isFullyBooked = cap !== 999 && slotsLeft === 0;
 
   if (isFullyBooked) {
     return (
-      <div style={{ background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.3)', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.7rem', color: '#ffb4ab', display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>event_busy</span>
-        Fully Booked This Week
+      <div style={{ background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.3)', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.7rem', color: '#ffb4ab', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, width: 'fit-content' }}>
+        <span className="material-symbols-outlined" style={{ fontSize: 14, flexShrink: 0 }}>block</span>
+        <span>Fully Booked This Week</span>
       </div>
     );
   }
@@ -234,11 +254,12 @@ function AvailabilityBadge({ availability, maxInterviews, acceptedThisWeek }) {
   const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
   const today = days[new Date().getDay()];
   const todayAvail = availability.find(a => a.day_of_week === today);
+  const slotsText = cap === 999 ? '' : ` • ${slotsLeft} slot${slotsLeft !== 1 ? 's' : ''} left`;
 
   return (
-    <div style={{ background: 'rgba(78,222,163,0.08)', border: '1px solid rgba(78,222,163,0.2)', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.7rem', color: '#4edea3', display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-      <span className="material-symbols-outlined" style={{ fontSize: 14 }}>event_available</span>
-      {todayAvail ? `Available Today • ${maxInterviews - acceptedThisWeek} slots left` : `Available this week • ${maxInterviews - acceptedThisWeek} slots left`}
+    <div style={{ background: 'rgba(78,222,163,0.08)', border: '1px solid rgba(78,222,163,0.2)', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.7rem', color: '#4edea3', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, width: 'fit-content' }}>
+      <span className="material-symbols-outlined" style={{ fontSize: 14, flexShrink: 0 }}>check_circle</span>
+      <span>{todayAvail ? `Available Today${slotsText}` : `Available this week${slotsText}`}</span>
     </div>
   );
 }
@@ -252,6 +273,28 @@ function BookButton({ alumni, studentName, userId, onBook, passedRequests }) {
   useEffect(() => {
     return subscribeRealtimeSync(() => setTick(t => t + 1));
   }, []);
+
+  // Block booking if alumni has no availability slots configured
+  const hasSlots = Array.isArray(alumni.availability) && alumni.availability.length > 0;
+  const cap = alumni.maxInterviews ?? 999;
+  const isFullyBooked = cap !== 999 && Math.max(0, cap - (alumni.acceptedThisWeek || 0)) === 0;
+
+  if (!hasSlots || isFullyBooked) {
+    return (
+      <div style={{
+        width: '100%', padding: '0.6rem',
+        background: 'rgba(70,69,85,0.1)',
+        border: '1px solid rgba(70,69,85,0.25)',
+        borderRadius: 10, fontSize: '0.75rem', fontWeight: 700,
+        textTransform: 'uppercase', letterSpacing: '0.08em',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+        color: '#6b6880', cursor: 'not-allowed',
+      }}>
+        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>do_not_disturb</span>
+        {isFullyBooked ? 'Fully Booked This Week' : 'Not Available This Week'}
+      </div>
+    );
+  }
 
   // Use passedRequests if available (synced from Supabase via Dashboard), else fallback to localStorage
   const myRequests = passedRequests || getRequestsByStudent(studentName);
@@ -296,6 +339,13 @@ function BookButton({ alumni, studentName, userId, onBook, passedRequests }) {
     <div style={{ width: '100%', padding: '0.6rem', background: 'rgba(255,185,95,0.1)', border: '1px solid rgba(255,185,95,0.25)', borderRadius: 10, textAlign: 'center' }}>
       <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#ffb95f', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 }}>⏳ Request Pending</div>
       <div style={{ fontSize: '0.7rem', color: '#c7c4d8' }}>Waiting for {alumni.name.split(' ')[0]} to accept</div>
+    </div>
+  );
+
+  if (status === 'slot_requested') return (
+    <div style={{ width: '100%', padding: '0.6rem', background: 'rgba(255,185,95,0.1)', border: '1px solid rgba(255,185,95,0.25)', borderRadius: 10, textAlign: 'center' }}>
+      <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#ffb95f', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 }}>⏳ Pending Confirmation</div>
+      <div style={{ fontSize: '0.7rem', color: '#c7c4d8' }}>Waiting for {alumni.name.split(' ')[0]} to confirm slot</div>
     </div>
   );
 
@@ -395,23 +445,45 @@ export default function AlumniDiscovery({ searchQuery = '', myRequests = null })
 
   useEffect(() => {
     // Fetch alumni list and ratings in parallel
-    Promise.all([
-      getAllAlumni(),
-      api.getAlumniRatings().catch(() => ({})),
-    ]).then(([data, ratings]) => {
-      const ratingsMap = ratings || {};
-      if (Array.isArray(data) && data.length > 0) {
-        setAllAlumni(data.map(u => toDisplay(u, ratingsMap)));
-      } else {
-        setAllAlumni(MOCK.map(u => toDisplay(u, ratingsMap)));
-      }
-      setLoading(false);
-    }).catch(() => { setAllAlumni(MOCK.map(u => toDisplay(u, {}))); setLoading(false); });
+    const fetchAlumni = () => {
+      Promise.all([
+        getAllAlumni(),
+        api.getAlumniRatings().catch(() => ({})),
+      ]).then(([data, ratings]) => {
+        const ratingsMap = ratings || {};
+        if (Array.isArray(data) && data.length > 0) {
+          setAllAlumni(data.map(u => toDisplay(u, ratingsMap)));
+        } else {
+          setAllAlumni(MOCK.map(u => toDisplay(u, ratingsMap)));
+        }
+        setLoading(false);
+      }).catch(() => { setAllAlumni(MOCK.map(u => toDisplay(u, {}))); setLoading(false); });
+    };
+
+    fetchAlumni();
+
+    // Re-fetch whenever any alumni updates their availability slots
+    const channel = supabase
+      .channel('alumni-availability-changes')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'alumni_availability' },
+        () => fetchAlumni()
+      )
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'users',
+          filter: 'role=eq.ALUMNI' },
+        () => fetchAlumni()
+      )
+      .subscribe();
+
+    return () => { try { supabase.removeChannel(channel); } catch {} };
   }, []);
 
   // Build filter options dynamically from actual data
   const departments = [...new Set(allAlumni.map(a => a.department).filter(Boolean))].sort();
-  const expRanges = ['0-2 Years', '3-5 Years', '6-10 Years', '10+ Years'];
+  const expRanges = ['0-2 Years', '3-5 Years', '6-10 Years', '10+ Years'].filter(r =>
+    allAlumni.some(a => a.expRange === r)
+  );
   const sectors = [...new Set(allAlumni.map(a => a.sector).filter(Boolean))].sort();
 
   const q = searchQuery.toLowerCase().trim();
@@ -449,12 +521,7 @@ export default function AlumniDiscovery({ searchQuery = '', myRequests = null })
     <div key={refreshKey}>
       {bookingAlumni && <BookModal alumni={bookingAlumni} studentName={studentName} onClose={() => setBookingAlumni(null)} onSent={() => setRefreshKey(k => k + 1)} />}
 
-      {/* Token Counter */}
-      {user?.role === 'STUDENT' && (
-        <div style={{ maxWidth: 300, marginBottom: '1.25rem' }}>
-          <TokenCounter studentId={user?.id} refreshTick={refreshKey} />
-        </div>
-      )}
+
 
       {/* ── Filter bar ── */}
       <div style={{ background: '#131b2e', borderRadius: 14, padding: '1.25rem 1.5rem', marginBottom: '1.5rem', border: '1px solid rgba(70,69,85,0.15)' }}>
@@ -469,12 +536,14 @@ export default function AlumniDiscovery({ searchQuery = '', myRequests = null })
             </div>
           )}
           {/* Experience */}
-          <div>
-            <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#c7c4d8', marginBottom: 8 }}>Experience</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {expRanges.map(e => <button key={e} onClick={() => setExpFilter(expFilter === e ? '' : e)} style={selStyle(expFilter === e)}>{e}</button>)}
+          {expRanges.length > 0 && (
+            <div>
+              <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#c7c4d8', marginBottom: 8 }}>Experience</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {expRanges.map(e => <button key={e} onClick={() => setExpFilter(expFilter === e ? '' : e)} style={selStyle(expFilter === e)}>{e}</button>)}
+              </div>
             </div>
-          </div>
+          )}
           {/* Sector */}
           {sectors.length > 0 && (
             <div>
@@ -519,7 +588,8 @@ export default function AlumniDiscovery({ searchQuery = '', myRequests = null })
                   <div style={{ fontSize: '0.78rem', color: '#c7c4d8' }}>{a.title}</div>
                   <div style={{ fontSize: '0.72rem', color: a.scoreColor, fontWeight: 600, marginTop: 1 }}>
                     {a.company}
-                    {a.sector ? ` (${a.sector})` : ''}
+                    {a.department ? ` • ${a.department}` : ''}
+                    {a.sector ? ` • ${a.sector}` : ''}
                     {a.experience ? ` • ${a.experience}` : ''}
                   </div>
                 </div>

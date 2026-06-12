@@ -1,5 +1,6 @@
 const cron = require('node-cron');
 const prisma = require('../lib/prisma');
+const { notify } = require('../lib/notify');
 const { getWeekStart } = require('../lib/timeUtils');
 
 async function promoteWaitingStudent(alumniId) {
@@ -42,25 +43,21 @@ async function promoteWaitingStudent(alumniId) {
       });
 
       // Notify alumni
-      const notification = await prisma.notification.create({
-        data: {
-          user_id: alumniId,
-          type: 'NEW_REQUEST',
-          title: 'Slot Opened Up! 🟢',
-          message: `${firstWaiting.student?.name || 'A student'} was promoted from the waiting list.`,
-          request_id: firstWaiting.request_id
-        }
+      const notification = await notify({
+        user_id: alumniId,
+        type: 'NEW_REQUEST',
+        title: 'Slot Opened Up! 🟢',
+        message: `${firstWaiting.student?.name || 'A student'} was promoted from the waiting list.`,
+        request_id: firstWaiting.request_id
       });
 
       // Notify student
-      await prisma.notification.create({
-        data: {
-          user_id: firstWaiting.student_id,
-          type: 'PROMOTED',
-          title: 'Good news! You are off the waitlist! 🚀',
-          message: `A slot opened up with ${alumni.name}. Your request is now pending.`,
-          request_id: firstWaiting.request_id
-        }
+      await notify({
+        user_id: firstWaiting.student_id,
+        type: 'PROMOTED',
+        title: 'Good news! You are off the waitlist! 🚀',
+        message: `A slot opened up with ${alumni.name}. Your request is now pending.`,
+        request_id: firstWaiting.request_id
       });
     }
   }
@@ -129,13 +126,11 @@ async function grantBonusTokens() {
         data: { bonus_granted: true }
       });
 
-      await prisma.notification.create({
-        data: {
-          user_id: tracker.student_id,
-          type: 'SYSTEM',
-          title: '3 Bonus Tokens Granted 🎁',
-          message: 'All your requests were declined this week. We\'ve added 3 bonus tokens so you can keep trying!'
-        }
+      await notify({
+        user_id: tracker.student_id,
+        type: 'SYSTEM',
+        title: '3 Bonus Tokens Granted 🎁',
+        message: 'All your requests were declined this week. We\'ve added 3 bonus tokens so you can keep trying!'
       });
     }
   }
@@ -182,6 +177,38 @@ async function weeklyReset() {
   }
 }
 
+/**
+ * Deletes AlumniAvailability records for days that have already passed
+ * in the current week. Runs once daily at midnight.
+ *
+ * e.g. if today is Wednesday, any slots set for monday or tuesday this
+ * week are stale — delete them so they don't roll over to next week.
+ */
+async function clearExpiredAvailability() {
+  try {
+    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const todayIndex = new Date().getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+
+    // All days strictly before today in the week are expired
+    const expiredDays = days.filter((_, i) => i < todayIndex);
+
+    if (expiredDays.length === 0) {
+      // It's Sunday (start of week) — nothing to expire yet
+      return;
+    }
+
+    const result = await prisma.alumniAvailability.deleteMany({
+      where: { day_of_week: { in: expiredDays } }
+    });
+
+    if (result.count > 0) {
+      console.log(`[ClearExpiredAvailability] Deleted ${result.count} stale slot(s) for days: ${expiredDays.join(', ')}`);
+    }
+  } catch (err) {
+    console.error('[ClearExpiredAvailability] Error:', err.message);
+  }
+}
+
 // Every 15 mins: No-show detection
 cron.schedule('*/15 * * * *', detectNoShows);
 
@@ -192,6 +219,11 @@ cron.schedule('0 * * * *', grantBonusTokens);
 // 0 0 * * 1 is Monday midnight.
 cron.schedule('0 0 * * 1', weeklyReset);
 
+// Daily at midnight: remove availability slots for days already passed this week
+cron.schedule('0 0 * * *', clearExpiredAvailability);
+// Also run once on startup to clean up any slots that expired while server was down
+clearExpiredAvailability();
+
 console.log('📅 Mentorship System Cron Jobs Initialized');
 
-module.exports = { detectNoShows, grantBonusTokens, weeklyReset, promoteWaitingStudent };
+module.exports = { detectNoShows, grantBonusTokens, weeklyReset, promoteWaitingStudent, clearExpiredAvailability };

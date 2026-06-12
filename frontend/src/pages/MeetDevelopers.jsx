@@ -43,9 +43,9 @@ export default function MeetDevelopers() {
     {
       name: "Chetana Gattani",
       accentColor: "rgba(244, 114, 182, 0.4)",
-      bio: "UI/UX enthusiast with a keen eye for detail. Focuses on creating responsive, accessible, and stunning digital experiences.",
-      email: "mailto:chetana@example.com",
-      linkedin: "#"
+      bio: "I'm Chetana Gattani, a Computer Science Undergraduate at VNIT Nagpur (Batch of 2029). Being part of the team behind AlumNEX has been an exciting and rewarding experience. Together, we built this platform to make alumni-student interactions more seamless and strengthen the connections within our VNIT community. If you enjoyed exploring AlumNEX or would like to connect and discuss technology, innovation, or opportunities, I'd be happy to connect with you on LinkedIn!",
+      email: "mailto:chetanagattani21@gmail.com",
+      linkedin: "https://www.linkedin.com/in/chetana-gattani/"
     },
     {
       name: "Pranjal Chaudhari",

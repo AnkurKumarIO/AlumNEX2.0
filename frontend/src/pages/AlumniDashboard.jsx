@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabaseClient';
 import { io } from 'socket.io-client';
 import { useInterviewRequests } from '../hooks/useInterviewRequests';
 import { useNotifications } from '../hooks/useNotifications';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 import SettingsPage from './SettingsPage';
 import LogoutConfirmModal from '../components/LogoutConfirmModal';
 import { subscribeRealtimeSync, emitRealtimeSync } from '../lib/realtimeSync';
@@ -842,7 +843,7 @@ function AlumniSessionHistory({ userId, userName }) {
         {[
           { label: 'Average Rating (from students)', val: avgRating !== '—' ? `${avgRating} ★` : '—', color: '#ffb95f' },
           { label: 'Total Sessions', val: String(sessions.length), sub: 'Completed', color: '#c3c0ff' },
-          { label: 'Latest Feedback', val: sessions[0]?.student_feedback || 'No feedback yet', highlight: true },
+          { label: 'Latest Feedback', val: sessions.find(s => s.student_feedback)?.student_feedback || 'No feedback yet', highlight: true },
         ].map((m, i) => (
           <div key={i} style={{ background: '#171f33', borderRadius: 12, padding: '2rem', border: '1px solid rgba(70,69,85,0.15)', position: 'relative', overflow: 'hidden' }}>
             {m.highlight && <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: '#c3c0ff' }} />}
@@ -1055,6 +1056,7 @@ export default function AlumniDashboard() {
   const dailyQuote = QUOTES[Math.floor(Date.now() / 8000) % QUOTES.length];
   // ── Real-time notifications for alumni ────────────────────────────────────
   const { notifications, unreadCount, markAsRead } = useNotifications(user?.id);
+  usePushNotifications(user?.id);
   // Profile dropdown
   const [showProfile, setShowProfile] = useState(false);
   const [editProfile, setEditProfile] = useState(false);
@@ -1154,19 +1156,19 @@ export default function AlumniDashboard() {
           setLiveRequests(prev => {
             const prevMap = new Map(prev.map(r => [r.id, r]));
             const merged = dedupedMapped
-              .filter(r => ['pending','accepted','slot_booked','completed'].includes(r.status))
+              .filter(r => ['pending','accepted','slot_booked','completed','slot_requested'].includes(r.status))
               .map(dbReq => {
                 const existing = prevMap.get(dbReq.id);
                 if (!existing) return dbReq;
                 // If local state has a "more advanced" status, keep it
-                const statusOrder = { pending: 0, accepted: 1, slot_booked: 2, completed: 3 };
+                const statusOrder = { pending: 0, slot_requested: 0, accepted: 1, slot_booked: 2, completed: 3 };
                 const localRank = statusOrder[existing.status] ?? -1;
                 const dbRank    = statusOrder[dbReq.status]    ?? -1;
                 return localRank > dbRank ? existing : { ...dbReq, ...existing, status: dbReq.status, scheduledTime: dbReq.scheduledTime || existing.scheduledTime, roomId: dbReq.roomId || existing.roomId };
               });
             // Keep any locally-added requests not yet in DB (e.g. socket-prepended)
             prev.forEach(r => {
-              if (!merged.find(m => m.id === r.id) && ['pending','accepted','slot_booked','completed'].includes(r.status)) {
+              if (!merged.find(m => m.id === r.id) && ['pending','accepted','slot_booked','completed','slot_requested'].includes(r.status)) {
                 merged.push(r);
               }
             });
@@ -1180,7 +1182,7 @@ export default function AlumniDashboard() {
       if (!usedSupabase) {
         const all = getRequests();
         const mine = dedupeRequestsById(all.filter(r => r.alumniName === user.name || r.alumniId === user.id));
-        setLiveRequests(mine.filter(r => ['pending','accepted','slot_booked','completed'].includes(r.status)));
+        setLiveRequests(mine.filter(r => ['pending','accepted','slot_booked','completed','slot_requested'].includes(r.status)));
       }
     };
     load();
@@ -1333,6 +1335,21 @@ export default function AlumniDashboard() {
     if (req) {
       setDeclinedToast({ name: req.studentName });
       setTimeout(() => setDeclinedToast(null), 3000);
+    }
+  };
+
+  const handleConfirmSlotRequest = async (requestId) => {
+    const req = liveRequests.find(r => r.id === requestId);
+    try {
+      const { confirmSlotRequest } = await import('../interviewRequests');
+      const updated = await confirmSlotRequest(requestId);
+      if (updated) {
+        setLiveRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: 'slot_booked', roomId: updated.roomId || updated.room_id } : r));
+        setAcceptedToast({ name: req?.studentName || 'Student' });
+        setTimeout(() => setAcceptedToast(null), 3500);
+      }
+    } catch (err) {
+      console.error('Confirm slot request error:', err);
     }
   };
   const handleAccepted = (requestId) => {
@@ -1738,6 +1755,59 @@ export default function AlumniDashboard() {
     }
     if (activeTab === 'requests') return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      {/* Awaiting Your Confirmation Section */}
+      {liveRequests.filter(r => r.status === 'slot_requested').length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#ffb95f' }}>Awaiting Your Confirmation</h2>
+            <span style={{ background: 'rgba(255,185,95,0.1)', color: '#ffb95f', padding: '0.2rem 0.6rem', borderRadius: 6, fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+              {liveRequests.filter(r => r.status === 'slot_requested').length} Requests
+            </span>
+          </div>
+          <p style={{ fontSize: '0.8rem', color: '#c7c4d8', marginTop: -10 }}>These students have requested specific time slots. Please accept or decline their requests.</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1rem' }}>
+            {liveRequests.filter(r => r.status === 'slot_requested').map(r => (
+              <div key={r.id} style={{ background: '#131b2e', borderRadius: 16, padding: '1.25rem', border: '1px solid rgba(255,185,95,0.35)', display: 'flex', gap: 14, flexDirection: 'column' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <div style={{ width: 44, height: 44, borderRadius: '50%', background: r.studentProfile?.photoPreview ? 'transparent' : 'linear-gradient(135deg,#222a3d,#2d3449)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', fontWeight: 700, color: '#c3c0ff', flexShrink: 0 }}>
+                    {r.studentProfile?.photoPreview ? <img src={r.studentProfile.photoPreview} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : r.studentName[0]}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#dae2fd' }}>{r.studentName}</div>
+                    <div style={{ fontSize: '0.7rem', color: '#c7c4d8' }}>{r.topic}</div>
+                    {r.scheduledTime && (
+                      <div style={{ fontSize: '0.75rem', color: '#ffb95f', fontWeight: 600, marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>calendar_today</span>
+                        Requested Slot: {formatScheduledTime(r.scheduledTime)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {r.message && (
+                  <div style={{ fontSize: '0.75rem', color: '#c7c4d8', background: 'rgba(255,185,95,0.05)', padding: '0.5rem 0.75rem', borderRadius: 8, fontStyle: 'italic' }}>
+                    "{r.message}"
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button
+                    onClick={() => handleConfirmSlotRequest(r.id)}
+                    style={{ flex: 2, padding: '0.5rem', background: 'linear-gradient(135deg,#00a572,#4edea3)', color: '#003d29', border: 'none', borderRadius: 8, fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 14 }}>check</span> Confirm Slot
+                  </button>
+                  <button
+                    onClick={() => handleDeclineRequest(r.id)}
+                    style={{ flex: 1, padding: '0.5rem', background: 'rgba(255,107,107,0.15)', color: '#ff8b8b', border: '1px solid rgba(255,107,107,0.25)', borderRadius: 8, fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span> Decline
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Waiting List Section */}
       {liveRequests.filter(r => r.status === 'waiting').length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -1778,20 +1848,25 @@ export default function AlumniDashboard() {
           <span style={{ background: 'rgba(195,192,255,0.1)', color: '#c3c0ff', padding: '0.2rem 0.6rem', borderRadius: 6, fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
             {liveRequests.filter(r => r.status === 'pending').length} Pending
           </span>
+          {liveRequests.filter(r => r.status === 'slot_requested').length > 0 && (
+            <span style={{ background: 'rgba(255,185,95,0.1)', color: '#ffb95f', padding: '0.2rem 0.6rem', borderRadius: 6, fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+              {liveRequests.filter(r => r.status === 'slot_requested').length} Confirmations
+            </span>
+          )}
           {liveRequests.filter(r => r.status === 'accepted').length > 0 && (
             <span style={{ background: 'rgba(255,185,95,0.1)', color: '#ffb95f', padding: '0.2rem 0.6rem', borderRadius: 6, fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
               {liveRequests.filter(r => r.status === 'accepted').length} Awaiting Slot
             </span>
           )}
         </div>
-        {liveRequests.length === 0 && (
+        {liveRequests.filter(r => r.status !== 'waiting' && r.status !== 'slot_requested').length === 0 && (
           <div style={{ textAlign: 'center', padding: '3rem', color: '#c7c4d8' }}>
             <span className="material-symbols-outlined" style={{ fontSize: 48, opacity: 0.3, display: 'block', marginBottom: 12 }}>task_alt</span>
             <p style={{ fontWeight: 600 }}>No pending requests</p>
             <p style={{ fontSize: '0.875rem', opacity: 0.6, marginTop: 6 }}>New requests from students will appear here</p>
           </div>
         )}
-        {liveRequests.filter(r => r.status !== 'waiting').map(r => (
+        {liveRequests.filter(r => r.status !== 'waiting' && r.status !== 'slot_requested').map(r => (
           <div key={r.id} style={{ background: '#171f33', borderRadius: 16, padding: '1.25rem 1.5rem', border: `1px solid ${r.status === 'accepted' ? 'rgba(255,185,95,0.2)' : 'rgba(70,69,85,0.2)'}`, cursor: 'pointer', transition: 'all 0.2s' }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = r.status === 'accepted' ? 'rgba(255,185,95,0.4)' : 'rgba(195,192,255,0.2)'; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = r.status === 'accepted' ? 'rgba(255,185,95,0.2)' : 'rgba(70,69,85,0.2)'; }}>
@@ -1981,7 +2056,7 @@ export default function AlumniDashboard() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontWeight: 700, fontSize: '1.1rem' }}>Interview Requests</span>
-                <span style={{ background: 'rgba(195,192,255,0.1)', color: '#c3c0ff', padding: '0.2rem 0.6rem', borderRadius: 6, fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{liveRequests.filter(r => r.status === 'pending').length} Pending</span>
+                <span style={{ background: 'rgba(195,192,255,0.1)', color: '#c3c0ff', padding: '0.2rem 0.6rem', borderRadius: 6, fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{liveRequests.filter(r => r.status === 'pending' || r.status === 'slot_requested').length} Pending</span>
               </div>
               <button onClick={() => setActiveTab('requests')} style={{ fontSize: '0.65rem', fontWeight: 700, color: '#c7c4d8', background: 'none', border: 'none', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.1em' }}>View All</button>
             </div>
@@ -2018,13 +2093,25 @@ export default function AlumniDashboard() {
                         </button>
                       </>
                     )}
+                    {r.status === 'slot_requested' && (
+                      <>
+                        <button onClick={() => handleConfirmSlotRequest(r.id)} style={{ padding: '0.4rem 0.875rem', background: 'linear-gradient(135deg,#00a572,#4edea3)', color: '#003d29', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                          Confirm
+                        </button>
+                        <button onClick={() => handleDeclineRequest(r.id)} style={{ padding: '0.4rem 0.75rem', background: '#222a3d', color: '#c7c4d8', borderRadius: 8, fontSize: '0.65rem', fontWeight: 700, border: 'none', cursor: 'pointer' }}>
+                          Decline
+                        </button>
+                      </>
+                    )}
                     {(r.status === 'accepted' || r.status === 'slot_booked' || r.status === 'completed') && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         {/* Status badge */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '0.35rem 0.75rem', background: r.status === 'completed' ? 'rgba(100,100,100,0.12)' : 'rgba(78,222,163,0.12)', border: `1px solid ${r.status === 'completed' ? 'rgba(100,100,100,0.25)' : 'rgba(78,222,163,0.25)'}`, borderRadius: 8 }}>
-                          <span className="material-symbols-outlined" style={{ fontSize: 14, color: r.status === 'completed' ? '#6b7280' : '#4edea3', fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-                          <span style={{ fontSize: '0.65rem', fontWeight: 700, color: r.status === 'completed' ? '#6b7280' : '#4edea3', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                            {r.status === 'completed' ? 'Completed' : r.status === 'slot_booked' ? 'Booked' : 'Accepted'}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '0.35rem 0.75rem', background: r.status === 'completed' ? 'rgba(100,100,100,0.12)' : r.status === 'slot_requested' ? 'rgba(255,185,95,0.12)' : 'rgba(78,222,163,0.12)', border: `1px solid ${r.status === 'completed' ? 'rgba(100,100,100,0.25)' : r.status === 'slot_requested' ? 'rgba(255,185,95,0.25)' : 'rgba(78,222,163,0.25)'}`, borderRadius: 8 }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: 14, color: r.status === 'completed' ? '#6b7280' : r.status === 'slot_requested' ? '#ffb95f' : '#4edea3', fontVariationSettings: "'FILL' 1" }}>
+                            {r.status === 'completed' ? 'videocam_off' : r.status === 'slot_requested' ? 'schedule' : 'check_circle'}
+                          </span>
+                          <span style={{ fontSize: '0.65rem', fontWeight: 700, color: r.status === 'completed' ? '#6b7280' : r.status === 'slot_requested' ? '#ffb95f' : '#4edea3', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                            {r.status === 'completed' ? 'Completed' : r.status === 'slot_requested' ? 'Pending Slot' : r.status === 'slot_booked' ? 'Booked' : 'Accepted'}
                           </span>
                         </div>
                         {/* Book Slot / View button / Ended label */}
@@ -2338,7 +2425,17 @@ export default function AlumniDashboard() {
           {NAV_ITEMS.map(({ icon, label, tab }) => {
             const active = activeTab === tab;
             return (
-              <button key={tab} onClick={() => setActiveTab(tab)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0.75rem 1rem', borderRadius: 12, background: active ? '#222a3d' : 'transparent', color: active ? '#c3c0ff' : '#c7c4d8', fontWeight: active ? 600 : 400, fontSize: '0.875rem', border: 'none', cursor: 'pointer', textAlign: 'left', width: '100%' }}>
+              <button 
+                key={tab} 
+                onClick={() => {
+                  // When clicking Settings tab, default to 'profile' section
+                  if (tab === 'settings') {
+                    setSettingsSection('profile');
+                  }
+                  setActiveTab(tab);
+                }} 
+                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0.75rem 1rem', borderRadius: 12, background: active ? '#222a3d' : 'transparent', color: active ? '#c3c0ff' : '#c7c4d8', fontWeight: active ? 600 : 400, fontSize: '0.875rem', border: 'none', cursor: 'pointer', textAlign: 'left', width: '100%' }}
+              >
                 <span className="material-symbols-outlined" style={{ fontSize: 20 }}>{icon}</span>{label}
               </button>
             );
@@ -2499,7 +2596,7 @@ export default function AlumniDashboard() {
                             )}
                           </div>
                           <div style={{ padding: '0.75rem 1rem', borderTop: '1px solid rgba(70,69,85,0.15)', display: 'flex', gap: 8 }}>
-                            <button onClick={() => { setShowProfile(false); setActiveTab('settings'); }} style={{ flex: 1, padding: '0.5rem', background: 'rgba(195,192,255,0.1)', border: '1px solid rgba(195,192,255,0.2)', borderRadius: 8, color: '#c3c0ff', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>
+                            <button onClick={() => { setShowProfile(false); setSettingsSection('profile'); setActiveTab('settings'); }} style={{ flex: 1, padding: '0.5rem', background: 'rgba(195,192,255,0.1)', border: '1px solid rgba(195,192,255,0.2)', borderRadius: 8, color: '#c3c0ff', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>
                               Edit Profile
                             </button>
                             <button onClick={() => setShowLogoutConfirm(true)} style={{ flex: 1, padding: '0.5rem', background: 'rgba(255,180,171,0.08)', border: '1px solid rgba(255,180,171,0.2)', borderRadius: 8, color: '#ffb4ab', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>
