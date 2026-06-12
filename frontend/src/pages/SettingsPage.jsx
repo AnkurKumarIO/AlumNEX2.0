@@ -595,12 +595,28 @@ export default function SettingsPage({ role, initialSection, onMentorshipSaved }
     try {
       setSaving(true);
       console.log('[Mentorship] === SAVE STARTED ===');
+      console.log('[Mentorship] Environment:', import.meta.env.MODE);
+      console.log('[Mentorship] API URL:', import.meta.env.VITE_API_URL || 'http://localhost:5001');
+      console.log('[Mentorship] User ID:', user?.id);
+      
+      // Check token
+      const token = localStorage.getItem('alumnex_token');
+      console.log('[Mentorship] Token exists:', !!token);
+      if (token) {
+        console.log('[Mentorship] Token length:', token.length);
+        console.log('[Mentorship] Token preview:', token.substring(0, 30) + '...');
+      } else {
+        console.error('[Mentorship] ❌ NO TOKEN - Save will fail!');
+      }
       
       // Save availability slots
+      console.log('[Mentorship] Calling POST /alumni/' + user.id + '/availability');
+      console.log('[Mentorship] Sending slots:', mentorship.slots);
       const slotsResponse = await api.post(`/alumni/${user.id}/availability`, { slots: mentorship.slots });
       console.log('[Mentorship] ✓ Slots saved:', slotsResponse.count);
       
       // Save max interviews per week
+      console.log('[Mentorship] Calling POST /alumni/' + user.id + '/settings');
       await api.post(`/alumni/${user.id}/settings`, { max_interviews_per_week: mentorship.maxInterviews });
       console.log('[Mentorship] ✓ Settings saved');
       
@@ -633,9 +649,24 @@ export default function SettingsPage({ role, initialSection, onMentorshipSaved }
       // and the UI already shows the correct data from cache
       
     } catch (err) {
-      console.error('[Mentorship] SAVE FAILED:', err.message);
-      setSaveError('Failed to save: ' + err.message);
-      flashSaved('Save failed: ' + err.message);
+      console.error('[Mentorship] SAVE FAILED:', err);
+      console.error('[Mentorship] Error message:', err.message);
+      console.error('[Mentorship] Error response:', err.response?.data);
+      
+      // Check if it's an auth error
+      if (err.response?.status === 401 || err.response?.status === 403 || err.message?.includes('token')) {
+        setSaveError('Session expired. Please login again.');
+        flashSaved('Changes failed: Session expired');
+        // Optionally redirect to login after a delay
+        setTimeout(() => {
+          localStorage.removeItem('alumnex_token');
+          window.location.href = '/login';
+        }, 2000);
+      } else {
+        const errorMsg = err.response?.data?.error || err.message || 'Unknown error';
+        setSaveError('Failed to save: ' + errorMsg);
+        flashSaved('Changes failed: ' + errorMsg);
+      }
     } finally {
       setSaving(false);
     }
