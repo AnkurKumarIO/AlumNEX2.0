@@ -21,16 +21,27 @@ if (!process.env.JWT_SECRET) {
  */
 function authenticate(req, res, next) {
   const authHeader = req.headers.authorization;
+  
+  // Enhanced logging for debugging
+  console.log('[Auth] Request:', req.method, req.path);
+  console.log('[Auth] Authorization header present:', !!authHeader);
+  
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.log('[Auth] ❌ No Bearer token in header');
     return res.status(401).json({ error: 'Authentication required. Provide a Bearer token.' });
   }
 
   const token = authHeader.slice(7);
+  console.log('[Auth] Token length:', token.length);
+  console.log('[Auth] Token preview:', token.substring(0, 20) + '...');
+  
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
+    console.log('[Auth] ✓ Token valid, user:', decoded.userId, 'role:', decoded.role);
     req.user = decoded; // { userId, role, name }
     next();
   } catch (err) {
+    console.log('[Auth] ❌ Token verification failed:', err.name, err.message);
     if (err.name === 'TokenExpiredError') {
       return res.status(401).json({ error: 'Token expired. Please log in again.' });
     }

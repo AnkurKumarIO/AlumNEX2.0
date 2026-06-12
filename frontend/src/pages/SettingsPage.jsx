@@ -649,23 +649,34 @@ export default function SettingsPage({ role, initialSection, onMentorshipSaved }
       // and the UI already shows the correct data from cache
       
     } catch (err) {
-      console.error('[Mentorship] SAVE FAILED:', err);
+      console.error('[Mentorship] === SAVE FAILED ===');
+      console.error('[Mentorship] Error:', err);
       console.error('[Mentorship] Error message:', err.message);
-      console.error('[Mentorship] Error response:', err.response?.data);
+      console.error('[Mentorship] Error response:', err.response);
       
       // Check if it's an auth error
-      if (err.response?.status === 401 || err.response?.status === 403 || err.message?.includes('token')) {
-        setSaveError('Session expired. Please login again.');
-        flashSaved('Changes failed: Session expired');
-        // Optionally redirect to login after a delay
+      const errorMsg = err.message || 'Unknown error';
+      const isAuthError = err.response?.status === 401 || 
+                         err.response?.status === 403 || 
+                         errorMsg.includes('token') || 
+                         errorMsg.includes('Authentication required') ||
+                         errorMsg.includes('expired');
+      
+      if (isAuthError) {
+        console.log('[Mentorship] Auth error detected - showing login prompt');
+        setSaveError('Your session has expired. Redirecting to login...');
+        flashSaved('Session expired - Please login again');
+        
+        // Clear invalid token and redirect after delay
         setTimeout(() => {
           localStorage.removeItem('alumnex_token');
-          window.location.href = '/login';
+          localStorage.removeItem('alumnex_user');
+          window.location.href = '/';
         }, 2000);
       } else {
-        const errorMsg = err.response?.data?.error || err.message || 'Unknown error';
-        setSaveError('Failed to save: ' + errorMsg);
-        flashSaved('Changes failed: ' + errorMsg);
+        const displayError = err.response?.data?.error || errorMsg;
+        setSaveError('Failed to save: ' + displayError);
+        flashSaved('Save failed: ' + displayError);
       }
     } finally {
       setSaving(false);
