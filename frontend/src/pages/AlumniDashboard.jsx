@@ -2208,37 +2208,40 @@ export default function AlumniDashboard() {
       return cached === 'true';
     });
     
-    const [loading, setLoading] = useState(false); // Start as false since we show cached data
-    
     useEffect(() => {
       if (!user?.id) return;
       
-      // Fetch fresh data in background
-      Promise.all([
-        api.get(`/alumni/${user.id}/availability`)
-          .then(res => {
-            const hasSlots = res.availability && res.availability.length > 0;
-            const hasMaxInterviews = (res.max_interviews_per_week || 0) > 0;
-            const isComplete = hasSlots && hasMaxInterviews;
-            setMentorshipComplete(isComplete);
-            sessionStorage.setItem('alumnex_mentorship_complete', isComplete.toString());
-          })
-          .catch(() => {
-            setMentorshipComplete(false);
-            sessionStorage.setItem('alumnex_mentorship_complete', 'false');
-          }),
-        
+      // Fetch fresh data in background with timeout
+      const mentorshipPromise = api.get(`/alumni/${user.id}/availability`)
+        .then(res => {
+          const hasSlots = res.availability && res.availability.length > 0;
+          const hasMaxInterviews = (res.max_interviews_per_week || 0) > 0;
+          const isComplete = hasSlots && hasMaxInterviews;
+          setMentorshipComplete(isComplete);
+          sessionStorage.setItem('alumnex_mentorship_complete', isComplete.toString());
+        })
+        .catch(() => {
+          // Keep cached value on error
+          console.log('[RequirementsCheck] Mentorship check failed, using cache');
+        });
+      
+      // Google Calendar check with faster timeout
+      const googlePromise = Promise.race([
         api.googleCalendarStatus(user.id)
           .then(data => {
             const isConnected = data.connected === true;
             setGoogleMeetConnected(isConnected);
             sessionStorage.setItem('alumnex_google_connected', isConnected.toString());
-          })
-          .catch(() => {
-            setGoogleMeetConnected(false);
-            sessionStorage.setItem('alumnex_google_connected', 'false');
-          })
-      ]);
+          }),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('timeout')), 3000) // 3 second timeout
+        )
+      ]).catch(() => {
+        // Keep cached value on error or timeout
+        console.log('[RequirementsCheck] Google Calendar check timed out, using cache');
+      });
+      
+      Promise.all([mentorshipPromise, googlePromise]);
     }, [user?.id, refreshKey]); // Re-run when refreshKey changes
     
     const allComplete = mentorshipComplete && googleMeetConnected;

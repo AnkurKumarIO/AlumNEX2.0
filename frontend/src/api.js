@@ -379,12 +379,20 @@ export const api = {
     return fetch(`${API_BASE}${path}${query}`).then(parseJsonOrThrow);
   },
 
-  post: (path, body = {}, options = {}) => fetch(`${API_BASE}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
-    body: body === undefined ? undefined : JSON.stringify(body),
-    ...options,
-  }).then(parseJsonOrThrow),
+  post: (path, body = {}, options = {}) => {
+    // Add logging to debug production auth issues
+    const token = localStorage.getItem('alumnex_token');
+    console.log('[API] POST', path);
+    console.log('[API] Has token:', !!token);
+    console.log('[API] API_BASE:', API_BASE);
+    
+    return fetch(`${API_BASE}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+      body: body === undefined ? undefined : JSON.stringify(body),
+      ...options,
+    }).then(parseJsonOrThrow);
+  },
 
   markNotifsRead: (userId) => callOrMock(
     () => fetch(`${API_BASE}/notifications/read`, {
