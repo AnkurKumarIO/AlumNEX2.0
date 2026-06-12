@@ -89,25 +89,62 @@ router.get('/:id/availability', async (req, res) => {
 router.post('/:id/availability', authenticate, verifyRole('ALUMNI'), async (req, res) => {
   try {
     const { id } = req.params;
-    if (req.user.userId !== id) return res.status(403).json({ error: 'Unauthorized' });
+    console.log('[Alumni Routes] POST /availability - User:', req.user?.userId, 'Target:', id);
+    
+    if (req.user.userId !== id) {
+      console.log('[Alumni Routes] Unauthorized: user mismatch');
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    
     const { slots } = req.body; // Array of { day_of_week, start_time, end_time, slot_duration, buffer_time }
+    console.log('[Alumni Routes] Received slots:', JSON.stringify(slots));
+    
+    if (!Array.isArray(slots)) {
+      console.log('[Alumni Routes] Error: slots is not an array');
+      return res.status(400).json({ error: 'Invalid slots data' });
+    }
 
-    // Clear existing and replace (simple approach for MVP)
-    await prisma.alumniAvailability.deleteMany({ where: { alumni_id: id } });
+    // AGGRESSIVE FIX: Use individual transactions with raw SQL
+    // Step 1: Force delete ALL existing slots using raw SQL with explicit COMMIT
+    console.log('[Alumni Routes] 🔥 FORCE DELETING with raw SQL...');
+    try {
+      await prisma.$executeRawUnsafe(`DELETE FROM alumni_availabilities WHERE alumni_id = '${id}'`);
+      console.log('[Alumni Routes] ✓ Force delete completed');
+    } catch (delErr) {
+      console.error('[Alumni Routes] ❌ Delete failed:', delErr.message);
+      // Continue anyway - maybe no rows exist
+    }
 
-    const created = await prisma.alumniAvailability.createMany({
-      data: slots.map(s => ({
-        alumni_id: id,
-        day_of_week: s.day_of_week.toLowerCase(),
-        start_time: s.start_time,
-        end_time: s.end_time,
-        slot_duration: s.slot_duration || 60,
-        buffer_time: s.buffer_time !== undefined ? s.buffer_time : 15,
-      }))
-    });
+    // Step 2: If no slots to create, return early
+    if (slots.length === 0) {
+      console.log('[Alumni Routes] No slots to create (empty array)');
+      return res.json({ success: true, count: 0 });
+    }
 
-    res.json({ success: true, count: created.count });
+    // Step 3: Insert each slot individually using raw SQL to avoid Prisma transaction issues
+    console.log('[Alumni Routes] 🔥 Inserting', slots.length, 'slots with raw SQL...');
+    let insertedCount = 0;
+    
+    for (const slot of slots) {
+      try {
+        const dayLower = slot.day_of_week.toLowerCase();
+        const bufferTime = slot.buffer_time !== undefined ? slot.buffer_time : 15;
+        await prisma.$executeRawUnsafe(`
+          INSERT INTO alumni_availabilities (id, alumni_id, day_of_week, start_time, end_time, slot_duration, buffer_time, created_at)
+          VALUES (gen_random_uuid(), '${id}', '${dayLower}', '${slot.start_time}', '${slot.end_time}', ${slot.slot_duration || 60}, ${bufferTime}, NOW())
+        `);
+        insertedCount++;
+        console.log('[Alumni Routes] ✓ Inserted slot:', dayLower, slot.start_time);
+      } catch (insertErr) {
+        console.error('[Alumni Routes] ❌ Failed to insert slot:', insertErr.message);
+      }
+    }
+
+    console.log('[Alumni Routes] 🎉 Final count:', insertedCount, '/', slots.length);
+    res.json({ success: true, count: insertedCount });
   } catch (err) {
+    console.error('[Alumni Routes] ❌ FATAL ERROR:', err.message);
+    console.error('[Alumni Routes] Stack:', err.stack);
     res.status(500).json({ error: err.message });
   }
 });
@@ -116,14 +153,25 @@ router.post('/:id/availability', authenticate, verifyRole('ALUMNI'), async (req,
 router.post('/:id/settings', authenticate, verifyRole('ALUMNI'), async (req, res) => {
   try {
     const { id } = req.params;
-    if (req.user.userId !== id) return res.status(403).json({ error: 'Unauthorized' });
+    console.log('[Alumni Routes] POST /settings - User:', req.user?.userId, 'Target:', id);
+    
+    if (req.user.userId !== id) {
+      console.log('[Alumni Routes] Unauthorized: user mismatch');
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    
     const { max_interviews_per_week } = req.body;
+    console.log('[Alumni Routes] Setting max_interviews_per_week:', max_interviews_per_week);
+    
     await prisma.user.update({
       where: { id },
       data: { max_interviews_per_week }
     });
+    
+    console.log('[Alumni Routes] Settings updated successfully');
     res.json({ success: true });
   } catch (err) {
+    console.error('[Alumni Routes] Error saving settings:', err);
     res.status(500).json({ error: err.message });
   }
 });
