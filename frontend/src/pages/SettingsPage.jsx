@@ -39,7 +39,7 @@ function TagInput({ tags, onChange, placeholder }) {
   );
 }
 
-export default function SettingsPage({ role }) {
+export default function SettingsPage({ role, initialSection, onMentorshipSaved }) {
   const { user, login } = useContext(AuthContext);
   const resumeInputRef = useRef(null);
   const photoInputRef = useRef(null);
@@ -117,8 +117,25 @@ export default function SettingsPage({ role }) {
     loadAssetsFromDatabase();
   }, [user?.id]); // Reload when user changes
 
-  const [activeSection, setActiveSection] = useState('profile');
+  const [activeSection, setActiveSection] = useState(() => {
+    // Try to restore from sessionStorage first, then initialSection, then default to 'profile'
+    const saved = sessionStorage.getItem('alumnex_settings_section');
+    return saved || initialSection || 'profile';
+  });
+  
+  // Persist activeSection to sessionStorage whenever it changes
+  useEffect(() => {
+    sessionStorage.setItem('alumnex_settings_section', activeSection);
+  }, [activeSection]);
+  // Update activeSection when initialSection prop changes
+  useEffect(() => {
+    if (initialSection) {
+      setActiveSection(initialSection);
+    }
+  }, [initialSection]);
+
   const [saved, setSaved] = useState(false);
+  const [savedMessage, setSavedMessage] = useState('Changes saved!');
   const [showPwModal, setShowPwModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
@@ -494,7 +511,11 @@ export default function SettingsPage({ role }) {
     }
     flashSaved();
   };
-  const flashSaved = () => { setSaved(true); setTimeout(() => setSaved(false), 2500); };
+  const flashSaved = (message = 'Changes saved!') => { 
+    setSavedMessage(message);
+    setSaved(true); 
+    setTimeout(() => setSaved(false), 3000); 
+  };
 
   const inp = {
     width: '100%', background: '#222a3d', border: '1px solid rgba(70,69,85,0.4)',
@@ -511,34 +532,93 @@ export default function SettingsPage({ role }) {
     { id: 'account',       icon: 'manage_accounts', label: 'Account'      },
   ];
 
-  // Mentorship settings state
-  const [mentorship, setMentorship] = useState({
-    maxInterviews: 3,
-    slots: []
+  // Mentorship settings state - Initialize from cache for instant display
+  const [mentorship, setMentorship] = useState(() => {
+    try {
+      const cached = sessionStorage.getItem('alumnex_mentorship_settings');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        console.log('[Mentorship] Loaded from cache:', parsed.slots.length, 'slots');
+        return parsed;
+      }
+    } catch (err) {
+      console.error('[Mentorship] Cache load failed:', err);
+    }
+    return { maxInterviews: 3, slots: [] };
   });
 
   useEffect(() => {
     if (isAlumni && user?.id) {
       api.get(`/alumni/${user.id}/availability`)
         .then(res => {
-          setMentorship({
+          const data = {
             maxInterviews: res.max_interviews_per_week || 3,
             slots: res.availability || []
-          });
+          };
+          console.log('[Mentorship] Fetched from server:', data.slots.length, 'slots');
+          setMentorship(data);
+          // Cache for instant display next time
+          sessionStorage.setItem('alumnex_mentorship_settings', JSON.stringify(data));
         })
-        .catch(err => console.error('Fetch availability error:', err));
+        .catch(err => console.error('[Mentorship] Fetch availability error:', err));
     }
   }, [isAlumni, user?.id]);
 
   const saveMentorship = async () => {
     try {
       setSaving(true);
-      await api.post(`/alumni/${user.id}/availability`, { slots: mentorship.slots });
+      console.log('[Mentorship] === SAVE STARTED ===');
+      
+      // Save availability slots
+      const slotsResponse = await api.post(`/alumni/${user.id}/availability`, { slots: mentorship.slots });
+      console.log('[Mentorship] ✓ Slots saved:', slotsResponse.count);
+      
+      // Save max interviews per week
       await api.post(`/alumni/${user.id}/settings`, { max_interviews_per_week: mentorship.maxInterviews });
-      flashSaved();
+      console.log('[Mentorship] ✓ Settings saved');
+      
+      // Update cache immediately
+      const savedData = {
+        maxInterviews: mentorship.maxInterviews,
+        slots: mentorship.slots
+      };
+      sessionStorage.setItem('alumnex_mentorship_settings', JSON.stringify(savedData));
+      
+      // Update completion status based on actual data
+      const hasSlots = mentorship.slots.length > 0;
+      const hasMaxInterviews = mentorship.maxInterviews > 0;
+      const isComplete = hasSlots && hasMaxInterviews;
+      sessionStorage.setItem('alumnex_mentorship_complete', isComplete.toString());
+      console.log('[Mentorship] Cache updated - complete:', isComplete, 'slots:', mentorship.slots.length);
+      
+      // Show immediate success toast
+      flashSaved('Changes saved!');
+      console.log('[Mentorship] === SAVE COMPLETED ===');
+      
+      // Notify parent to refresh requirements checklist
+      if (onMentorshipSaved) {
+        onMentorshipSaved();
+      }
+      
+      // Reload to confirm save
+      setTimeout(() => {
+        api.get(`/alumni/${user.id}/availability`)
+          .then(res => {
+            console.log('[Mentorship] ✓ Verified:', res.availability?.length, 'slots persisted');
+            setMentorship({
+              maxInterviews: res.max_interviews_per_week || 3,
+              slots: res.availability || []
+            });
+          })
+          .catch(err => {
+            console.error('[Mentorship] Verification failed:', err);
+          });
+      }, 500);
+      
     } catch (err) {
-      console.error('Save mentorship error:', err);
-      setSaveError('Failed to save mentorship settings');
+      console.error('[Mentorship] SAVE FAILED:', err.message);
+      setSaveError('Failed to save: ' + err.message);
+      flashSaved('Save failed: ' + err.message);
     } finally {
       setSaving(false);
     }
@@ -591,11 +671,11 @@ export default function SettingsPage({ role }) {
       <ErrorBoundary>
       <div style={{ flex: 1 }}>
 
-        {/* Save toast */}
+        {/* Save toast - transparent with blur */}
         {saved && (
-          <div style={{ position: 'fixed', top: 80, right: 24, background: 'rgba(78,222,163,0.15)', border: '1px solid rgba(78,222,163,0.3)', borderRadius: 12, padding: '0.75rem 1.25rem', display: 'flex', alignItems: 'center', gap: 8, zIndex: 100, animation: 'slideIn 0.3s ease' }}>
-            <span className="material-symbols-outlined" style={{ color: '#4edea3', fontSize: 18, fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-            <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#4edea3' }}>Changes saved!</span>
+          <div style={{ position: 'fixed', top: 80, right: 24, background: 'rgba(78, 222, 163, 0.15)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(78, 222, 163, 0.3)', borderRadius: 12, padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', gap: 10, zIndex: 500, boxShadow: '0 8px 24px rgba(0,0,0,0.3)', animation: 'slideIn 0.3s ease' }}>
+            <span className="material-symbols-outlined" style={{ color: '#4edea3', fontSize: 24, fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+            <span style={{ fontSize: '1rem', fontWeight: 700, color: '#4edea3' }}>{savedMessage}</span>
           </div>
         )}
 
@@ -1008,7 +1088,7 @@ export default function SettingsPage({ role }) {
 
         {/* ── MENTORSHIP SETTINGS ── */}
         {activeSection === 'mentorship' && isAlumni && (
-          <div style={{ background: '#131b2e', borderRadius: 16, padding: '2rem', border: '1px solid rgba(70,69,85,0.15)' }}>
+          <div data-section="mentorship" style={{ background: '#131b2e', borderRadius: 16, padding: '2rem', border: '1px solid rgba(70,69,85,0.15)' }}>
             <h3 style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: '0.5rem' }}>Mentorship Settings</h3>
             <p style={{ fontSize: '0.875rem', color: '#c7c4d8', marginBottom: '1.75rem' }}>Set your weekly capacity and availability windows.</p>
 
@@ -1120,7 +1200,7 @@ export default function SettingsPage({ role }) {
 
         {/* ── ACCOUNT ── */}
         {activeSection === 'account' && (
-          <div style={{ background: '#131b2e', borderRadius: 16, padding: '2rem', border: '1px solid rgba(70,69,85,0.15)' }}>
+          <div data-section="account" style={{ background: '#131b2e', borderRadius: 16, padding: '2rem', border: '1px solid rgba(70,69,85,0.15)' }}>
             <h3 style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: '1.75rem' }}>Account Settings</h3>
             
             {/* Google Meet Integration — Dynamic Status */}

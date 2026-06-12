@@ -985,7 +985,35 @@ function AlumniSessionHistory({ userId, userName }) {
 export default function AlumniDashboard() {
   const { user, login, logout } = useContext(AuthContext);
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('home');
+  
+  // Persist activeTab across page refreshes
+  const [activeTab, setActiveTab] = useState(() => {
+    const saved = sessionStorage.getItem('alumni_activeTab');
+    return saved || 'home';
+  });
+  
+  // Save activeTab to sessionStorage whenever it changes
+  useEffect(() => {
+    sessionStorage.setItem('alumni_activeTab', activeTab);
+  }, [activeTab]);
+  
+  // Persist settingsSection across page refreshes
+  const [settingsSection, setSettingsSection] = useState(() => {
+    const saved = sessionStorage.getItem('alumni_settingsSection');
+    return saved || 'profile';
+  });
+  
+  // Save settingsSection to sessionStorage whenever it changes
+  useEffect(() => {
+    if (settingsSection) {
+      sessionStorage.setItem('alumni_settingsSection', settingsSection);
+    }
+  }, [settingsSection]);
+  
+  // Refresh trigger for RequirementsChecklist
+  const [checklistRefreshKey, setChecklistRefreshKey] = useState(0);
+  const refreshChecklist = () => setChecklistRefreshKey(prev => prev + 1);
+  
   const [localRefresh, setLocalRefresh] = useState(0);
   useEffect(() => subscribeRealtimeSync(() => setLocalRefresh(v => v + 1)), []);
   const [showSlotModal, setShowSlotModal] = useState(false);
@@ -1908,7 +1936,7 @@ export default function AlumniDashboard() {
     if (activeTab === 'history') {
       return <AlumniSessionHistory userId={user?.id} userName={user?.name} />;
     }
-    if (activeTab === 'settings') return <SettingsPage role="ALUMNI" />;
+    if (activeTab === 'settings') return <SettingsPage role="ALUMNI" initialSection={settingsSection} onMentorshipSaved={refreshChecklist} />;
     // home
     return (
       <>
@@ -2070,22 +2098,153 @@ export default function AlumniDashboard() {
                 Manage Availability
               </button>
             </div>
-            <div style={{ background: 'linear-gradient(135deg,#1e1b4b,#171f33)', borderRadius: 16, padding: '1.5rem', border: '1px solid rgba(195,192,255,0.15)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                <span className="material-symbols-outlined" style={{ color: '#ffb95f', fontSize: 20 }}>tips_and_updates</span>
-                <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#ffb95f', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Mentor's Edge</span>
-              </div>
-              <p style={{ fontSize: '0.75rem', color: '#dad7ff', lineHeight: 1.6, opacity: 0.85 }}>
-                Students are 40% more likely to succeed when mentors provide specific feedback on soft skills during mock interviews.
-              </p>
-            </div>
+            
+            {/* Requirements Checklist - Back at bottom in sidebar */}
+            <RequirementsChecklist user={user} setActiveTab={setActiveTab} setActiveSection={setSettingsSection} refreshKey={checklistRefreshKey} />
+            
           </div>
         </div>
       </>
     );
   };
+  
+  // ── Requirements Checklist Component ────────────────────────────────────────
+  function RequirementsChecklist({ user, setActiveTab, setActiveSection, refreshKey }) {
+    // Load from cache immediately for instant display
+    const [mentorshipComplete, setMentorshipComplete] = useState(() => {
+      const cached = sessionStorage.getItem('alumnex_mentorship_complete');
+      return cached === 'true';
+    });
+    
+    const [googleMeetConnected, setGoogleMeetConnected] = useState(() => {
+      const cached = sessionStorage.getItem('alumnex_google_connected');
+      return cached === 'true';
+    });
+    
+    const [loading, setLoading] = useState(false); // Start as false since we show cached data
+    
+    useEffect(() => {
+      if (!user?.id) return;
+      
+      // Fetch fresh data in background
+      Promise.all([
+        api.get(`/alumni/${user.id}/availability`)
+          .then(res => {
+            const hasSlots = res.availability && res.availability.length > 0;
+            const hasMaxInterviews = (res.max_interviews_per_week || 0) > 0;
+            const isComplete = hasSlots && hasMaxInterviews;
+            setMentorshipComplete(isComplete);
+            sessionStorage.setItem('alumnex_mentorship_complete', isComplete.toString());
+          })
+          .catch(() => {
+            setMentorshipComplete(false);
+            sessionStorage.setItem('alumnex_mentorship_complete', 'false');
+          }),
+        
+        api.googleCalendarStatus(user.id)
+          .then(data => {
+            const isConnected = data.connected === true;
+            setGoogleMeetConnected(isConnected);
+            sessionStorage.setItem('alumnex_google_connected', isConnected.toString());
+          })
+          .catch(() => {
+            setGoogleMeetConnected(false);
+            sessionStorage.setItem('alumnex_google_connected', 'false');
+          })
+      ]);
+    }, [user?.id, refreshKey]); // Re-run when refreshKey changes
+    
+    const allComplete = mentorshipComplete && googleMeetConnected;
+    
+    const navigateToMentorship = () => {
+      setActiveTab('settings');
+      if (setActiveSection) {
+        setTimeout(() => setActiveSection('mentorship'), 50);
+      }
+    };
+    
+    const navigateToAccount = () => {
+      setActiveTab('settings');
+      if (setActiveSection) {
+        setTimeout(() => setActiveSection('account'), 50);
+      }
+    };
+    
+    if (allComplete) {
+      return (
+        <div style={{ background: 'rgba(78,222,163,0.08)', borderRadius: 16, padding: '1.5rem', border: '1px solid rgba(78,222,163,0.25)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <span className="material-symbols-outlined" style={{ color: '#4edea3', fontSize: 18, fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+            <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#4edea3', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Ready for Sessions</span>
+          </div>
+          <p style={{ fontSize: '0.8rem', color: '#c7c4d8', lineHeight: 1.6, margin: 0 }}>
+            All set! Students can see your availability and book sessions.
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div style={{ background: 'rgba(255,185,95,0.08)', borderRadius: 16, padding: '1.5rem', border: '1px solid rgba(255,185,95,0.25)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+          <span className="material-symbols-outlined" style={{ color: '#ffb95f', fontSize: 18 }}>warning</span>
+          <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#ffb95f', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Action Required</span>
+        </div>
+        <p style={{ fontSize: '0.8rem', color: '#c7c4d8', lineHeight: 1.5, marginBottom: 14 }}>
+          Complete setup so students can book sessions:
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {/* Mentorship Settings */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 16, color: mentorshipComplete ? '#4edea3' : '#ffb95f', marginTop: 1, fontVariationSettings: "'FILL' 1" }}>
+              {mentorshipComplete ? 'check_circle' : 'radio_button_unchecked'}
+            </span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 600, color: mentorshipComplete ? '#4edea3' : '#dae2fd', marginBottom: 2 }}>
+                Mentorship Settings
+              </div>
+              <div style={{ fontSize: '0.72rem', color: '#c7c4d8', lineHeight: 1.4, marginBottom: mentorshipComplete ? 0 : 6 }}>
+                {mentorshipComplete ? 'Availability configured' : "Students can't see your slots until configured"}
+              </div>
+              {!mentorshipComplete && (
+                <button onClick={navigateToMentorship} style={{ padding: '0.3rem 0.75rem', background: 'rgba(255,185,95,0.15)', border: '1px solid rgba(255,185,95,0.3)', borderRadius: 6, color: '#ffb95f', fontSize: '0.68rem', fontWeight: 600, cursor: 'pointer' }}>
+                  Configure →
+                </button>
+              )}
+            </div>
+          </div>
+          {/* Google Meet */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 16, color: googleMeetConnected ? '#4edea3' : '#ffb95f', marginTop: 1, fontVariationSettings: "'FILL' 1" }}>
+              {googleMeetConnected ? 'check_circle' : 'radio_button_unchecked'}
+            </span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 600, color: googleMeetConnected ? '#4edea3' : '#dae2fd', marginBottom: 2 }}>
+                Google Meet Integration
+              </div>
+              <div style={{ fontSize: '0.72rem', color: '#c7c4d8', lineHeight: 1.4, marginBottom: googleMeetConnected ? 0 : 6 }}>
+                {googleMeetConnected ? 'Meeting links auto-generated' : 'Required to conduct meetings'}
+              </div>
+              {!googleMeetConnected && (
+                <button onClick={navigateToAccount} style={{ padding: '0.3rem 0.75rem', background: 'rgba(255,185,95,0.15)', border: '1px solid rgba(255,185,95,0.3)', borderRadius: 6, color: '#ffb95f', fontSize: '0.68rem', fontWeight: 600, cursor: 'pointer' }}>
+                  Connect →
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#0b1326', color: '#dae2fd', fontFamily: 'Inter, sans-serif' }}>
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.7; transform: scale(1.05); }
+        }
+      `}</style>
       {showSlotModal && <AddSlotModal onClose={() => setShowSlotModal(false)} onAdd={handleAddSlot} />}
       {viewingStudentProfile && (
         <StudentFullProfileModal
@@ -2135,7 +2294,7 @@ export default function AlumniDashboard() {
       )}
       {/* â”€â”€ SIDEBAR â”€â”€ */}
       {/* Sidebar overlay */}
-      {sidebarOpen && <div className="sidebar-backdrop" onClick={() => setSidebarOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 45 }} />}
+      {/* Sidebar backdrop removed - it covered all main content and blocked every button click */}
       <aside style={{ width: 256, minHeight: '100vh', position: 'fixed', left: sidebarOpen ? 0 : -256, top: 0, background: '#131b2e', display: 'flex', flexDirection: 'column', padding: '1.5rem', zIndex: 50, transition: 'left 0.3s ease' }}>
         <div style={{ marginBottom: '2rem' }}>
           {/* Logo row: logo left, collapse button right */}

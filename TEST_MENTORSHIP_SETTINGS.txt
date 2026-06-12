@@ -1,0 +1,122 @@
+═══════════════════════════════════════════════════════════════════════════════
+  🧪 MENTORSHIP SETTINGS - TESTING GUIDE
+═══════════════════════════════════════════════════════════════════════════════
+
+🎯 ISSUE: Availability windows disappear after page refresh
+
+✅ FIX: Added logging + verification fetch after save
+
+═══════════════════════════════════════════════════════════════════════════════
+
+📋 STEP-BY-STEP TEST:
+
+1. OPEN BROWSER CONSOLE (F12)
+   - Keep console visible during entire test
+   - Look for [Mentorship] logs
+
+2. GO TO SETTINGS → MENTORSHIP
+   - Should see mentorship settings section
+   
+3. ADD AVAILABILITY WINDOW
+   - Day: Monday
+   - Start: 17:00 (5 PM)
+   - End: 19:00 (7 PM)
+   - Click "Add Availability Window"
+   - ✓ Should appear in list above
+
+4. SET MAX INTERVIEWS
+   - Set to: 3 (or any number)
+
+5. CLICK "SAVE MENTORSHIP SETTINGS"
+   - Should see "Saved!" message
+   - WATCH CONSOLE for these logs:
+     ✓ [Mentorship] Saving slots: [...]
+     ✓ [Mentorship] Saving max interviews: X
+     ✓ [Mentorship] Slots save response: {success: true}
+     ✓ [Mentorship] Settings save response: {success: true}
+     ✓ [Mentorship] Verification fetch after save: {...}
+
+6. REFRESH PAGE (F5 or Ctrl+R)
+   - WATCH CONSOLE for these logs:
+     ✓ [Mentorship] Fetching availability for user: ...
+     ✓ [Mentorship] Availability response: {...}
+     ✓ [Mentorship] Slots array: [...]
+
+7. GO BACK TO SETTINGS → MENTORSHIP
+   - CHECK: Do you see your availability window?
+     ✓ YES = Fix worked! 🎉
+     ✗ NO = See troubleshooting below
+
+═══════════════════════════════════════════════════════════════════════════════
+
+✅ SUCCESS CRITERIA:
+
+After refresh, you should see:
+  ✓ Availability window still in list
+  ✓ Monday 17:00 – 19:00
+  ✓ Max interviews per week value preserved
+
+═══════════════════════════════════════════════════════════════════════════════
+
+❌ IF SLOTS STILL DISAPPEAR:
+
+1. CHECK CONSOLE LOGS:
+   
+   On Save - Should see:
+   [Mentorship] Slots save response: {success: true, count: 1}
+   
+   If you see error instead:
+   [Mentorship] Save error: ...
+   → Check backend is running
+   → Check you're logged in (try logout/login)
+
+2. CHECK AFTER REFRESH:
+   
+   [Mentorship] Availability response: {availability: [], ...}
+   
+   If availability array is empty []:
+   → Backend didn't save to database
+   → Check backend console for errors
+   → Check database connection
+
+3. CHECK BACKEND:
+   
+   In backend terminal, should see:
+   POST /alumni/<user-id>/availability
+   
+   If not seeing this:
+   → Backend route not being hit
+   → Check API URL is correct
+   → Check authentication token
+
+═══════════════════════════════════════════════════════════════════════════════
+
+🐛 COMMON ISSUES:
+
+Issue 1: Console shows "401 Unauthorized"
+Fix: Logout and login again
+
+Issue 2: Console shows "availability: []"
+Fix: Check backend database has the data
+
+Issue 3: No console logs at all
+Fix: Clear browser cache, hard refresh (Ctrl+Shift+R)
+
+Issue 4: Backend not running
+Fix: cd backend && npm run dev
+
+═══════════════════════════════════════════════════════════════════════════════
+
+📊 WHAT TO SHARE IF STILL BROKEN:
+
+Copy from console and share:
+1. All [Mentorship] logs from save
+2. All [Mentorship] logs from refresh
+3. Any error messages (red text)
+4. Backend terminal output (if accessible)
+
+═══════════════════════════════════════════════════════════════════════════════
+
+✅ STATUS: Ready to test!
+
+Run the test above and report results. 🔍
