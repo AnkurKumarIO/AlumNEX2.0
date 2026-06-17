@@ -165,36 +165,30 @@ router.get('/room/:roomId', async (req, res) => {
  */
 router.get('/alumni-ratings', async (req, res) => {
   try {
-    const sessions = await prisma.sessionFeedback.findMany({
+    // ⚡ Bolt: Optimized aggregation using Prisma groupBy to offload computation to the database.
+    // This avoids fetching thousands of records into memory and performing manual loops.
+    const aggregations = await prisma.sessionFeedback.groupBy({
+      by: ['alumni_id'],
       where: {
         student_rating: { not: null },
       },
-      select: {
-        alumni_id: true,
+      _avg: {
+        student_rating: true,
+      },
+      _count: {
         student_rating: true,
       },
     });
 
-    // Group by alumni_id and compute averages
-    const ratingMap = {};
-    const countMap = {};
-    for (const s of sessions) {
-      if (!s.alumni_id || s.student_rating === null) continue;
-      if (!ratingMap[s.alumni_id]) {
-        ratingMap[s.alumni_id] = 0;
-        countMap[s.alumni_id] = 0;
-      }
-      ratingMap[s.alumni_id] += s.student_rating;
-      countMap[s.alumni_id] += 1;
-    }
-
     const result = {};
-    for (const id of Object.keys(ratingMap)) {
-      result[id] = {
-        avgRating: Math.round((ratingMap[id] / countMap[id]) * 100) / 100,
-        totalSessions: countMap[id],
-      };
-    }
+    aggregations.forEach(agg => {
+      if (agg.alumni_id) {
+        result[agg.alumni_id] = {
+          avgRating: Math.round((agg._avg.student_rating || 0) * 100) / 100,
+          totalSessions: agg._count.student_rating,
+        };
+      }
+    });
 
     res.json(result);
   } catch (error) {
